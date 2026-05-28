@@ -1,0 +1,334 @@
+<script setup lang="ts">
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { commentsService, dealsService, reservationsService } from '../services/api'
+import { getSocket } from '../services/socket/socket'
+import { useAuthStore } from '../stores/auth.store'
+import { useUiStore } from '../stores/ui.store'
+import type { Comment, Deal, Reservation } from '../types'
+import RoutesPanel from '../components/map/RoutesPanel.vue'
+import { formatVND } from '../utils/currency'
+
+const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
+const uiStore = useUiStore()
+
+const deal = ref<Deal | null>(null)
+const comments = ref<Comment[]>([])
+const reservation = ref<Reservation | null>(null)
+const isLoading = ref(true)
+const isReserving = ref(false)
+const commentText = ref('')
+const error = ref('')
+const success = ref('')
+const countdown = ref<number | null>(null)
+const showDirections = ref(false)
+let countdownTimer: number | undefined
+
+const expiresInText = computed(() => {
+  if (!deal.value) return ''
+  const diff = new Date(deal.value.expiresAt).getTime() - Date.now()
+  const hours = Math.max(Math.floor(diff / 3600000), 0)
+  const minutes = Math.max(Math.floor((diff % 3600000) / 60000), 0)
+  return `${hours}h ${minutes}m`
+})
+
+onMounted(async () => {
+  await Promise.all([loadDeal(), loadComments(), loadReservation()])
+  const socket = getSocket()
+  socket.emit('deal:join', route.params.id)
+  socket.on('deal:updated', (update: any) => {
+    if (deal.value && update.id === deal.value.id) Object.assign(deal.value, update.changes)
+  })
+  socket.on('deal:quantity', (payload: { id: string; remaining: number }) => {
+    if (deal.value && payload.id === deal.value.id) deal.value.remainingQuantity = payload.remaining
+  })
+  socket.on('comment:added', (incoming: Comment) => {
+    if (incoming.dealId === route.params.id) comments.value.unshift(incoming)
+  })
+})
+
+onUnmounted(() => {
+  if (countdownTimer) window.clearInterval(countdownTimer)
+  const socket = getSocket()
+  socket.emit('deal:leave', route.params.id)
+  socket.off('deal:updated')
+  socket.off('deal:quantity')
+  socket.off('comment:added')
+})
+
+async function loadDeal() {
+  isLoading.value = true
+  error.value = ''
+  try {
+    deal.value = await dealsService.findById(String(route.params.id))
+  } catch (err: any) {
+    const msg = err.response?.data?.message || 'Deal not found'
+    error.value = msg
+    if (err.response?.status === 404) {
+      uiStore.addToast(msg, 'error')
+      await router.push('/explore')
+    }
+  } finally {
+    isLoading.value = false
+  }
+}
+
+async function loadComments() {
+  try {
+    comments.value = await commentsService.findByDeal(String(route.params.id))
+  } catch {
+    comments.value = []
+  }
+}
+
+async function loadReservation() {
+  if (!auth.isAuthenticated) return
+  try {
+    const mine = await reservationsService.myReservations()
+    reservation.value = mine.find((item: Reservation) => item.dealId === route.params.id && item.status === 'active') || null
+    startCountdownFromReservation()
+  } catch {
+    reservation.value = null
+  }
+}
+
+function startCountdownFromReservation() {
+  if (countdownTimer) window.clearInterval(countdownTimer)
+  if (!reservation.value?.expiresAt) {
+    countdown.value = null
+    return
+  }
+  const tick = () => {
+    const diff = Math.floor((new Date(reservation.value!.expiresAt).getTime() - Date.now()) / 1000)
+    countdown.value = Math.max(diff, 0)
+    if (diff <= 0 && countdownTimer) {
+      window.clearInterval(countdownTimer)
+      reservation.value = null
+    }
+  }
+  tick()
+  countdownTimer = window.setInterval(tick, 1000)
+}
+
+async function handleReserve() {
+  if (!auth.isAuthenticated) {
+    router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+  isReserving.value = true
+  error.value = ''
+  success.value = ''
+  try {
+    reservation.value = await reservationsService.reserve(String(route.params.id))
+    if (deal.value) deal.value.remainingQuantity = Math.max(deal.value.remainingQuantity - 1, 0)
+    success.value = 'Reservation created. Your 15-minute pickup code is ready.'
+    startCountdownFromReservation()
+  } catch (err: any) {
+    error.value = err.response?.data?.message || 'Could not reserve this item.'
+  } finally {
+    isReserving.value = false
+  }
+}
+
+async function addComment() {
+  if (!commentText.value.trim()) return
+  if (!auth.isAuthenticated) {
+    router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+  try {
+    const comment = await commentsService.create(String(route.params.id), commentText.value.trim())
+    comments.value.unshift(comment)
+    if (deal.value) deal.value.commentCount += 1
+    commentText.value = ''
+  } catch (err: any) {
+    error.value = err.response?.data?.message || 'Could not post your comment.'
+  }
+}
+
+function formatCountdown(seconds: number) {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+function openRouteFromExplore() {
+  if (!deal.value) return
+  router.push({ path: '/explore', query: { dealId: deal.value.id } })
+}
+</script>
+
+<template>
+  <div class="deal-detail-page">
+    <div class="container">
+      <router-link to="/explore" class="back-link">Back to explore</router-link>
+
+      <div v-if="error" class="state-banner error" role="alert">{{ error }}</div>
+      <div v-if="success" class="state-banner success">{{ success }}</div>
+
+      <div v-if="isLoading" class="skeleton-detail">
+        <div class="skeleton hero-skeleton"></div>
+        <div class="skeleton line-skeleton"></div>
+        <div class="skeleton short-skeleton"></div>
+      </div>
+
+      <div v-else-if="deal" class="deal-detail">
+        <div class="deal-detail-grid">
+          <div class="deal-images">
+            <div class="main-image">
+              <img :src="deal.images?.[0] || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80'" :alt="deal.title" />
+            </div>
+          </div>
+
+          <div class="deal-info">
+            <div class="badge-row">
+              <span v-if="deal.verified" class="badge badge-verified">Verified by moderator</span>
+              <span class="badge badge-store">{{ deal.store?.name || 'Community store' }}</span>
+            </div>
+
+            <h1>{{ deal.title }}</h1>
+
+            <div class="deal-pricing">
+              <span class="price-big">{{ formatVND(Number(deal.discountPrice)) }}</span>
+              <span class="price-strike">{{ formatVND(Number(deal.originalPrice)) }}</span>
+              <span class="discount-badge">Save {{ Math.round((1 - Number(deal.discountPrice) / Number(deal.originalPrice)) * 100) }}%</span>
+            </div>
+
+            <p class="deal-description">{{ deal.description }}</p>
+
+            <div class="deal-expiry">
+              <span>Expires in <strong>{{ expiresInText }}</strong></span>
+              <span>{{ deal.address }}</span>
+              <span><strong>{{ deal.remainingQuantity }}</strong> items remaining</span>
+            </div>
+
+            <div class="reservation-section">
+              <div v-if="reservation && countdown !== null" class="reserved-card">
+                <h4>Reserved successfully</h4>
+                <p>Pickup code <strong>{{ reservation.reservationCode }}</strong></p>
+                <p>Hold expires in <strong>{{ formatCountdown(countdown) }}</strong></p>
+                <button
+                  class="btn btn-outline directions-btn"
+                  @click="showDirections = !showDirections"
+                >
+                  🗺️ {{ showDirections ? 'Hide Directions' : 'Get Directions' }}
+                </button>
+              </div>
+
+              <button
+                v-else-if="deal.remainingQuantity > 0"
+                class="btn btn-primary btn-lg reserve-btn"
+                :disabled="isReserving"
+                @click="handleReserve"
+              >
+                {{ isReserving ? 'Reserving...' : 'Reserve 15-Minute Hold' }}
+              </button>
+
+              <div v-else class="sold-out">
+                <h4>Sold out</h4>
+                <p>This listing has already been claimed.</p>
+              </div>
+            </div>
+
+            <RoutesPanel
+              :destination-lat="deal.latitude"
+              :destination-lng="deal.longitude"
+              :destination-name="deal.store?.name || deal.title"
+              :visible="showDirections"
+              @close="showDirections = false"
+            />
+
+            <div class="secondary-actions">
+              <button class="btn btn-outline" @click="openRouteFromExplore">Open Route in Map View</button>
+            </div>
+
+            <div class="deal-stats">
+              <span>{{ deal.likeCount }} likes</span>
+              <span>{{ deal.bookmarkCount }} bookmarks</span>
+              <span>{{ deal.commentCount }} comments</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="comments-section">
+          <h3>Community comments</h3>
+
+          <div class="comment-form">
+            <textarea v-model="commentText" rows="3" placeholder="Share pickup tips, freshness notes, or confirmation..." />
+            <button class="btn btn-primary" :disabled="!commentText.trim()" @click="addComment">Post Comment</button>
+          </div>
+
+          <div v-if="comments.length === 0" class="empty-state">
+            <h3>No comments yet</h3>
+            <p>Be the first to help the next user with pickup context.</p>
+          </div>
+
+          <article v-for="comment in comments" :key="comment.id" class="comment-item">
+            <div class="comment-avatar">{{ comment.user?.username?.charAt(0).toUpperCase() || '?' }}</div>
+            <div class="comment-body">
+              <div class="comment-header">
+                <strong>{{ comment.user?.username || 'Community member' }}</strong>
+                <span>{{ new Date(comment.createdAt).toLocaleString() }}</span>
+              </div>
+              <p>{{ comment.content }}</p>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div v-else class="empty-state">
+        <h3>Deal not found</h3>
+        <p>This listing may have expired or been removed.</p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.deal-detail-page { padding: 24px 0 60px; animation: fade-in 0.4s ease; }
+.back-link { display: inline-block; margin-bottom: 20px; color: var(--color-text-secondary); font-weight: 600; }
+.state-banner { margin-bottom: 16px; padding: 14px 16px; border-radius: var(--radius-sm); font-size: 0.92rem; }
+.state-banner.error { background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; }
+.state-banner.success { background: #f0fdf4; color: #166534; border: 1px solid #86efac; }
+.deal-detail-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 40px; }
+.main-image { border-radius: var(--radius-lg); overflow: hidden; background: var(--color-bg-tertiary); box-shadow: var(--shadow-lg); }
+.main-image img { width: 100%; height: 430px; object-fit: cover; }
+.badge-row { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.badge { padding: 6px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; }
+.badge-verified { background: #dcfce7; color: #166534; }
+.badge-store { background: var(--color-bg-tertiary); color: var(--color-text-secondary); }
+.deal-info h1 { font-size: 1.9rem; margin-bottom: 12px; color: var(--color-text); }
+.deal-pricing { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+.price-big { font-size: 2.6rem; font-weight: 800; color: var(--color-accent); }
+.price-strike { color: var(--color-text-tertiary); text-decoration: line-through; font-size: 1.05rem; }
+.discount-badge { padding: 5px 10px; border-radius: 999px; background: var(--color-accent-light); color: var(--color-accent); font-weight: 700; font-size: 0.82rem; }
+.deal-description { color: var(--color-text-secondary); line-height: 1.7; margin-bottom: 22px; }
+.deal-expiry { display: grid; gap: 8px; padding: 16px; background: var(--color-bg-secondary); border-radius: var(--radius-md); margin-bottom: 24px; color: var(--color-text-secondary); }
+.reservation-section { margin-bottom: 16px; }
+.reserve-btn { width: 100%; justify-content: center; }
+.reserved-card { padding: 22px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-lg); text-align: center; }
+.reserved-card h4 { color: #166534; margin-bottom: 6px; }
+.reserved-card p + p { margin-top: 6px; }
+.directions-btn { margin-top: 12px; width: 100%; justify-content: center; }
+.sold-out { padding: 22px; background: var(--color-bg-secondary); border-radius: var(--radius-lg); text-align: center; }
+.secondary-actions { margin-bottom: 18px; }
+.deal-stats { display: flex; gap: 20px; flex-wrap: wrap; color: var(--color-text-secondary); font-size: 0.92rem; }
+.comments-section { margin-top: 48px; padding-top: 28px; border-top: 1px solid var(--color-border); }
+.comments-section h3 { margin-bottom: 18px; font-size: 1.2rem; }
+.comment-form { display: grid; gap: 10px; margin-bottom: 28px; }
+.comment-form textarea { width: 100%; padding: 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg); color: var(--color-text); font-family: var(--font-family); }
+.comment-form textarea:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12); }
+.comment-item { display: flex; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--color-border); }
+.comment-avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--color-accent-light); color: var(--color-accent); display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0; }
+.comment-header { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.comment-header span, .comment-body p { color: var(--color-text-secondary); }
+.hero-skeleton { height: 430px; border-radius: var(--radius-lg); }
+.line-skeleton { height: 32px; width: 62%; margin-top: 18px; }
+.short-skeleton { height: 18px; width: 38%; }
+@media (max-width: 900px) {
+  .deal-detail-grid { grid-template-columns: 1fr; gap: 24px; }
+  .main-image img { height: 320px; }
+}
+</style>
