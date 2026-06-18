@@ -24,7 +24,7 @@ const mockAnalytics = {
   getHistory: jest.fn(),
 }
 
-describe('DealMap AI (e2e)', () => {
+describe('Foodly (e2e)', () => {
   let app: INestApplication
 
   beforeAll(async () => {
@@ -50,8 +50,8 @@ describe('DealMap AI (e2e)', () => {
   })
 
   const suffix = Date.now()
-  const testUser = { email: `test${suffix}@dealmap.ai`, username: `testuser${suffix}`, password: 'TestPass123!' }
-  const secondUser = { email: `test2${suffix}@dealmap.ai`, username: `testuser2${suffix}`, password: 'TestPass123!' }
+  const testUser = { email: `test${suffix}@foodly.app`, username: `testuser${suffix}`, password: 'TestPass123!' }
+  const secondUser = { email: `test2${suffix}@foodly.app`, username: `testuser2${suffix}`, password: 'TestPass123!' }
   let userToken: string
   let secondUserToken: string
   let dealId: string

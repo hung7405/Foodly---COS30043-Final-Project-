@@ -33,7 +33,7 @@ async function handleSubmit() {
     <div class="auth-card">
       <div class="auth-header">
         <h1>Welcome back</h1>
-        <p>Sign in to your DealMap AI account</p>
+        <p>Sign in to your Foodly account</p>
       </div>
 
       <form @submit.prevent="handleSubmit" class="auth-form">

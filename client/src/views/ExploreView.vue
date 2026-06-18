@@ -498,7 +498,7 @@ function formatDuration(value?: number) {
       <div class="location-dialog">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
         <h3>Cho phép lấy vị trí của bạn?</h3>
-        <p>DealMap sẽ sử dụng vị trí để tìm các deal ưu đãi gần bạn nhất.</p>
+        <p>Foodly sẽ sử dụng vị trí để tìm các deal ưu đãi gần bạn nhất.</p>
         <div v-if="error" class="location-error">{{ error }}</div>
         <div class="location-actions">
           <button class="btn btn-primary" @click="handleAllowLocation">

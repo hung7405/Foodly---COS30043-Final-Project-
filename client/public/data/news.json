@@ -10,7 +10,7 @@
   {
     "id": 2,
     "title": "New Partnership with Local Farmers Market",
-    "content": "DealMap AI is excited to announce a new partnership with the City Farmers Market. Starting this week, fresh produce that would otherwise go unsold will be listed on our platform at up to 70% off. This initiative supports local farmers while making healthy food accessible to more community members.",
+    "content": "Foodly is excited to announce a new partnership with the City Farmers Market. Starting this week, fresh produce that would otherwise go unsold will be listed on our platform at up to 70% off. This initiative supports local farmers while making healthy food accessible to more community members.",
     "category": "Community Support",
     "imageUrl": "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80",
     "publishedDate": "2026-05-28"
@@ -34,7 +34,7 @@
   {
     "id": 5,
     "title": "How Real-Time Technology is Fighting Food Waste",
-    "content": "Real-time technology platforms like DealMap AI are transforming how communities tackle food waste. By enabling instant communication between stores with surplus food and consumers looking for deals, these platforms reduce the time between markdown and purchase, ensuring more food is consumed rather than discarded.",
+    "content": "Real-time technology platforms like Foodly are transforming how communities tackle food waste. By enabling instant communication between stores with surplus food and consumers looking for deals, these platforms reduce the time between markdown and purchase, ensuring more food is consumed rather than discarded.",
     "category": "Sustainability",
     "imageUrl": "https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=800&q=80",
     "publishedDate": "2026-05-15"
@@ -57,8 +57,8 @@
   },
   {
     "id": 8,
-    "title": "Major Supermarket Chain Joins DealMap AI",
-    "content": "One of the largest supermarket chains in the country has partnered with DealMap AI to list near-expiry products across 200 locations. This partnership is expected to prevent over 50,000 meals from going to waste monthly and provide significant savings to budget-conscious shoppers.",
+    "title": "Major Supermarket Chain Joins Foodly",
+    "content": "One of the largest supermarket chains in the country has partnered with Foodly to list near-expiry products across 200 locations. This partnership is expected to prevent over 50,000 meals from going to waste monthly and provide significant savings to budget-conscious shoppers.",
     "category": "Food Rescue",
     "imageUrl": "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80",
     "publishedDate": "2026-04-28"
@@ -66,7 +66,7 @@
   {
     "id": 9,
     "title": "Food Waste in Australia: The Statistics",
-    "content": "Australia wastes 7.6 million tonnes of food annually — that's 300kg per person. Food waste costs the economy $36.6 billion each year. Meanwhile, 1 in 5 Australians experience food insecurity. Platforms like DealMap AI bridge this gap by redirecting surplus food to those who need it most.",
+    "content": "Australia wastes 7.6 million tonnes of food annually — that's 300kg per person. Food waste costs the economy $36.6 billion each year. Meanwhile, 1 in 5 Australians experience food insecurity. Platforms like Foodly bridge this gap by redirecting surplus food to those who need it most.",
     "category": "Sustainability",
     "imageUrl": "https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=800&q=80",
     "publishedDate": "2026-04-20"

@@ -23,7 +23,7 @@ function handleSearch() {
 <template>
   <nav class="navbar" role="navigation" aria-label="Main navigation">
     <div class="navbar-inner container">
-      <router-link to="/" class="navbar-brand" aria-label="DealMap AI Home">
+      <router-link to="/" class="navbar-brand" aria-label="Foodly Home">
         <svg class="navbar-logo" width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true">
           <rect width="32" height="32" rx="8" fill="var(--color-accent)"/>
           <path d="M8 22V10l8 6-8 6z" fill="white"/>

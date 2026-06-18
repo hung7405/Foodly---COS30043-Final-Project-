@@ -30,7 +30,7 @@ import { RecommendationModule } from './recommendation/recommendation.module'
         }
       : {
           type: 'better-sqlite3',
-          database: process.env.DATABASE_PATH || './data/dealmap.db',
+          database: process.env.DATABASE_PATH || './data/foodly.db',
           autoLoadEntities: true,
           synchronize: process.env.TYPEORM_SYNC !== 'false',
           extra: { enableWAL: true },

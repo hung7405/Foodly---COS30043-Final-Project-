@@ -1,4 +1,4 @@
-# DealMap AI — Real-Time Food Discovery & Community Intelligence Platform
+# Foodly — Real-Time Food Discovery & Community Intelligence Platform
 
 ## COS30043 — Interface Design and Development
 ### High Distinction Project Proposal & Implementation Blueprint
@@ -9,7 +9,7 @@
 
 ## Vision Statement
 
-DealMap AI is a real-time geospatial platform that connects communities with discounted and near-expiry food products. By combining live community intelligence, interactive map exploration, and transaction-safe reservation mechanics, the platform reduces food waste while helping users save money — all delivered through a premium, minimalist interface.
+Foodly is a real-time geospatial platform that connects communities with discounted and near-expiry food products. By combining live community intelligence, interactive map exploration, and transaction-safe reservation mechanics, the platform reduces food waste while helping users save money — all delivered through a premium, minimalist interface.
 
 ## Core Value Proposition
 
@@ -23,7 +23,7 @@ DealMap AI is a real-time geospatial platform that connects communities with dis
 
 ## Guiding Design Philosophy
 
-> "The best interface is the one that disappears. DealMap AI prioritises content discovery over chrome, speed over features, and clarity over complexity."
+> "The best interface is the one that disappears. Foodly prioritises content discovery over chrome, speed over features, and clarity over complexity."
 
 ---
 
@@ -49,7 +49,7 @@ DealMap AI is a real-time geospatial platform that connects communities with dis
 | Complex checkout flows | High abandonment rates |
 | No personalisation | Users see irrelevant deals |
 
-## How DealMap AI Solves This
+## How Foodly Solves This
 
 1. **Real-time map** — See deals as they are posted within your viewport
 2. **Instant reservation** — Secure items before travelling with optimistic locking
@@ -266,7 +266,7 @@ Error: No matching deals → display empty state with suggestion
 ## Content Hierarchy
 
 ```
-DealMap AI
+Foodly
 ├── Public
 │   ├── Home (Landing Page)
 │   │   ├── Hero Banner
@@ -472,7 +472,7 @@ stateDiagram-v2
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│ [Logo] DealMap AI              [Explore] [About] [Sign In]         │
+│ [Logo] Foodly              [Explore] [About] [Sign In]         │
 ├────────────────────────────────────────────────────────────────────┤
 │                                                                    │
 │  ┌──────────────────────────────────────────────────────────┐      │
@@ -497,7 +497,7 @@ stateDiagram-v2
 │  │  Browse map.  Hold item.  Pick up.    Get verified.       │    │
 │  └──────────────────────────────────────────────────────────┘    │
 │                                                                    │
-│  [Footer: About · Privacy · Terms · © 2026 DealMap AI]            │
+│  [Footer: About · Privacy · Terms · © 2026 Foodly]            │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -576,7 +576,7 @@ stateDiagram-v2
 
 ```
 ┌─────────────────────┐
-│ [⇤] DealMap    [👤]│
+│ [⇤] Foodly    [👤]│
 ├─────────────────────┤
 │                     │
 │ 🗺️ Map (50% view)  │
@@ -2079,7 +2079,7 @@ graph TB
 mercury.yml
 ---
 version: 1
-name: dealmap-ai
+name: foodly
 services:
   - name: frontend
     type: static
@@ -2103,7 +2103,7 @@ services:
     memory: 256MB
 
 databases:
-  - name: dealmap-db
+  - name: foodly-db
     type: postgres
     version: 15
     extensions:
@@ -2115,7 +2115,7 @@ databases:
 # 22. FOLDER STRUCTURE
 
 ```
-dealmap-ai/
+foodly/
 │
 ├── client/                          # Vue 3 Frontend
 │   ├── public/
@@ -2427,7 +2427,7 @@ dealmap-ai/
 
 ```mermaid
 gantt
-    title DealMap AI Development Roadmap
+    title Foodly Development Roadmap
     dateFormat  YYYY-MM-DD
     axisFormat  %b %d
     
@@ -2594,11 +2594,11 @@ describe('Real-Time Map Updates', () => {
 
 # 25. HD ASSESSMENT JUSTIFICATION
 
-## Why DealMap AI Deserves a High Distinction
+## Why Foodly Deserves a High Distinction
 
 ### 1. Technical Complexity Beyond Standard CRUD
 
-| Standard CRUD App | DealMap AI |
+| Standard CRUD App | Foodly |
 |---|---|
 | Static list views | Real-time map with viewport culling |
 | Basic pagination | Virtual scrolling with 10,000+ items at 60fps |
@@ -2685,7 +2685,7 @@ This demonstrates understanding of the assessment constraint while still showing
 
 ### 7. Assessment Criteria Mapping
 
-| Assessment Criteria | How DealMap AI Addresses It |
+| Assessment Criteria | How Foodly Addresses It |
 |---|---|
 | **Stage 1 Requirements** | Home, News (JSON, search, pagination, filters), About (dynamic greeting, radio, images), responsive |
 | **Stage 2 Requirements** | Auth, RBAC (4 roles), CRUD, search/filter/sort, likes/votes/bookmarks/comments, PostgreSQL |
@@ -2968,9 +2968,9 @@ socket.on('deal:updated', (update: { id: string, changes: Partial<Deal> }) => {
 });
 ```
 
-### Comparison: Traditional CRUD vs. DealMap AI
+### Comparison: Traditional CRUD vs. Foodly
 
-| Aspect | Traditional CRUD | DealMap AI |
+| Aspect | Traditional CRUD | Foodly |
 |---|---|---|
 | Data loading | Page load → render all | Viewport-aware, real-time streaming |
 | Updates | Manual refresh / poll | Socket.IO push events |
@@ -3031,7 +3031,7 @@ socket.on('deal:updated', (update: { id: string, changes: Partial<Deal> }) => {
 
 ---
 
-*End of Document — DealMap AI Project Proposal*
+*End of Document — Foodly Project Proposal*
 
 **Prepared for:** COS30043 — Interface Design and Development
 **Target Grade:** High Distinction (HD)

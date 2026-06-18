@@ -13,7 +13,7 @@ import { ActivityEvent, AnalyticsSnapshot } from './analytics/entities/analytics
 
 const dataSource = new DataSource({
   type: 'better-sqlite3',
-  database: process.env.DATABASE_PATH || './data/dealmap.db',
+  database: process.env.DATABASE_PATH || './data/foodly.db',
   synchronize: true,
   entities: [
     User, Store, Deal, Reservation, Comment,
@@ -254,18 +254,18 @@ async function upsertUser(email: string, username: string, role: UserRole, trust
 async function run() {
   await dataSource.initialize()
 
-  await upsertUser('admin@dealmap.ai', 'admin', UserRole.ADMIN, 5, 999)
-  await upsertUser('moderator@dealmap.ai', 'moderator', UserRole.MODERATOR, 4.8, 450)
-  await upsertUser('demo@dealmap.ai', 'demo_user', UserRole.USER, 4.6, 120)
-  await upsertUser('lan@dealmap.ai', 'lan_nguyen', UserRole.USER, 4.3, 95)
-  await upsertUser('huy@dealmap.ai', 'huy_tran', UserRole.USER, 4.7, 230)
-  await upsertUser('mai@dealmap.ai', 'mai_vo', UserRole.USER, 4.0, 55)
+  await upsertUser('admin@foodly.app', 'admin', UserRole.ADMIN, 5, 999)
+  await upsertUser('moderator@foodly.app', 'moderator', UserRole.MODERATOR, 4.8, 450)
+  await upsertUser('demo@foodly.app', 'demo_user', UserRole.USER, 4.6, 120)
+  await upsertUser('lan@foodly.app', 'lan_nguyen', UserRole.USER, 4.3, 95)
+  await upsertUser('huy@foodly.app', 'huy_tran', UserRole.USER, 4.7, 230)
+  await upsertUser('mai@foodly.app', 'mai_vo', UserRole.USER, 4.0, 55)
 
-  const admin = await dataSource.getRepository(User).findOne({ where: { email: 'admin@dealmap.ai' } })!
-  const demo = await dataSource.getRepository(User).findOne({ where: { email: 'demo@dealmap.ai' } })!
-  const lan = await dataSource.getRepository(User).findOne({ where: { email: 'lan@dealmap.ai' } })!
-  const huy = await dataSource.getRepository(User).findOne({ where: { email: 'huy@dealmap.ai' } })!
-  const moderator = await dataSource.getRepository(User).findOne({ where: { email: 'moderator@dealmap.ai' } })!
+  const admin = await dataSource.getRepository(User).findOne({ where: { email: 'admin@foodly.app' } })!
+  const demo = await dataSource.getRepository(User).findOne({ where: { email: 'demo@foodly.app' } })!
+  const lan = await dataSource.getRepository(User).findOne({ where: { email: 'lan@foodly.app' } })!
+  const huy = await dataSource.getRepository(User).findOne({ where: { email: 'huy@foodly.app' } })!
+  const moderator = await dataSource.getRepository(User).findOne({ where: { email: 'moderator@foodly.app' } })!
 
   const storeRepo = dataSource.getRepository(Store)
   const dealRepo = dataSource.getRepository(Deal)
@@ -335,11 +335,11 @@ async function run() {
 
   console.log(`Seed hoàn tất — ${dealSeeds.length} deal tại ${storeSeeds.length} cửa hàng tiện lợi TP.HCM`)
   console.log()
-  console.log('ADMIN:  admin@dealmap.ai / Password123!')
-  console.log('MOD:    moderator@dealmap.ai / Password123!')
-  console.log('USERS:  demo@dealmap.ai / Password123!')
-  console.log('        lan@dealmap.ai / Password123!')
-  console.log('        huy@dealmap.ai / Password123!')
+  console.log('ADMIN:  admin@foodly.app / Password123!')
+  console.log('MOD:    moderator@foodly.app / Password123!')
+  console.log('USERS:  demo@foodly.app / Password123!')
+  console.log('        lan@foodly.app / Password123!')
+  console.log('        huy@foodly.app / Password123!')
   await dataSource.destroy()
 }
 

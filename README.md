@@ -1,4 +1,4 @@
-# DealMap AI — Real-Time Food Discovery & Community Intelligence Platform
+# Foodly — Real-Time Food Discovery & Community Intelligence Platform
 
 [![Server Health](http://localhost:3000/api/health)](http://localhost:3000)
 [![Vue 3](https://img.shields.io/badge/Vue-3.5-4FC08D)](https://vuejs.org)
@@ -36,7 +36,7 @@
 
 ## Overview
 
-DealMap AI is a **real-time geospatial platform** that connects communities with discounted and near-expiry food products. By combining live community intelligence, interactive map exploration, and transaction-safe reservation mechanics, the platform reduces food waste while helping users save money — all delivered through a premium, accessible interface.
+Foodly is a **real-time geospatial platform** that connects communities with discounted and near-expiry food products. By combining live community intelligence, interactive map exploration, and transaction-safe reservation mechanics, the platform reduces food waste while helping users save money — all delivered through a premium, accessible interface.
 
 **Current Status: ✅ Fully Operational**
 - Server: `http://localhost:3000` (NestJS)
@@ -62,7 +62,7 @@ DealMap AI is a **real-time geospatial platform** that connects communities with
 | No community verification | Scams and expired deals erode trust |
 | Poor mobile experience | Primary use case is on-the-go discovery |
 
-### How DealMap AI Solves This
+### How Foodly Solves This
 1. **Real-time map** — See deals as they are posted within your viewport
 2. **Instant reservation** — Secure items before travelling with optimistic locking
 3. **Community trust** — Verification badges, trust scores, and moderation
@@ -73,7 +73,7 @@ DealMap AI is a **real-time geospatial platform** that connects communities with
 
 ## Vision
 
-> *"The best interface is the one that disappears. DealMap AI prioritises content discovery over chrome, speed over features, and clarity over complexity."*
+> *"The best interface is the one that disappears. Foodly prioritises content discovery over chrome, speed over features, and clarity over complexity."*
 
 | Principle | Application |
 |-----------|-------------|
@@ -225,7 +225,7 @@ server/
 ├── test/
 │   └── app.e2e-spec.ts         # 6 E2E integration tests
 ├── data/
-│   └── dealmap.db              # SQLite database (dev)
+│   └── foodly.db              # SQLite database (dev)
 ├── Dockerfile                  # Multi-stage build (node:20-alpine + tini)
 ├── .env                        # Environment variables
 └── .env.example                # Template for .env
@@ -287,12 +287,12 @@ client/
 
 | Email | Role | Password | Trust Score |
 |-------|------|----------|-------------|
-| `admin@dealmap.ai` | **admin** | `password123` | 5.0 |
-| `moderator@dealmap.ai` | **moderator** | `password123` | 4.8 |
-| `demo@dealmap.ai` | **user** | `password123` | 4.6 |
-| `lan@dealmap.ai` | user | `password123` | 4.3 |
-| `huy@dealmap.ai` | user | `password123` | 4.7 |
-| `mai@dealmap.ai` | user | `password123` | 4.0 |
+| `admin@foodly.app` | **admin** | `password123` | 5.0 |
+| `moderator@foodly.app` | **moderator** | `password123` | 4.8 |
+| `demo@foodly.app` | **user** | `password123` | 4.6 |
+| `lan@foodly.app` | user | `password123` | 4.3 |
+| `huy@foodly.app` | user | `password123` | 4.7 |
+| `mai@foodly.app` | user | `password123` | 4.0 |
 
 ---
 
@@ -431,9 +431,9 @@ cd ../client && npm install
 # server/.env (already configured for dev)
 NODE_ENV=development
 PORT=3000
-DATABASE_PATH=./data/dealmap.db
+DATABASE_PATH=./data/foodly.db
 TYPEORM_SYNC=true
-JWT_SECRET=dealmap-ai-dev-secret-key-2026
+JWT_SECRET=foodly-dev-secret-key-2026
 CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 
 # client/.env (already configured)
@@ -506,7 +506,7 @@ cd server && npm test
 ## Proposal & Documentation
 
 Detailed project documentation is available:
-- **Project Proposal:** `DEALMAP_AI_PROJECT_PROPOSAL.md` — Full HD proposal with user stories, use cases, wireframes, ERD, API design, component hierarchy
+- **Project Proposal:** `FOODLY_PROJECT_PROPOSAL.md` — Full HD proposal with user stories, use cases, wireframes, ERD, API design, component hierarchy
 - **Design Docs:** `docs/design/` — Product vision, problem statement, user personas
 - **Technical Architecture:** `docs/architecture/`, `docs/database/`, `docs/websocket/`, `docs/websocket/`
 - **Accessibility:** `docs/accessibility/`
@@ -514,9 +514,9 @@ Detailed project documentation is available:
 - **Deployment:** `docs/deployment/`
 - **Testing:** `docs/testing/`
 - **Word Documents:**
-  - `DealMap_AI_Proposal_HD.docx` — HD proposal (Word format)
-  - `DealMap_AI_Proposal_HD_v2.docx` — Updated HD proposal
-  - `DealMap_AI_Proposal_IEEE.docx` — IEEE-format proposal
+  - `Foodly_Proposal_HD.docx` — HD proposal (Word format)
+  - `Foodly_Proposal_HD_v2.docx` — Updated HD proposal
+  - `Foodly_Proposal_IEEE.docx` — IEEE-format proposal
 
 ---
 
@@ -543,4 +543,4 @@ This is an academic project for COS30043 at Swinburne University of Technology.
 
 ## License
 
-© 2026 DealMap AI — COS30043 Interface Design & Development
+&copy; 2026 Foodly &mdash; COS30043 Interface Design & Development

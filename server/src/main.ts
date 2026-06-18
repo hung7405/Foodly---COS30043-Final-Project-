@@ -31,7 +31,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api')
 
   await app.listen(port)
-  logger.log(`DealMap AI API running on http://localhost:${port}`)
+  logger.log(`Foodly API running on http://localhost:${port}`)
 
   const signals = ['SIGTERM', 'SIGINT']
   for (const signal of signals) {

@@ -9,7 +9,7 @@ const newsData = [
   },
   {
     id: 2, title: 'New Partnership with Local Farmers Market',
-    content: 'DealMap AI is excited to announce a new partnership with the City Farmers Market...',
+    content: 'Foodly is excited to announce a new partnership with the City Farmers Market...',
     category: 'Community Support', imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
     publishedDate: '2026-05-28',
   },
@@ -27,7 +27,7 @@ const newsData = [
   },
   {
     id: 5, title: 'How Real-Time Technology is Fighting Food Waste',
-    content: 'Real-time technology platforms like DealMap AI are transforming how communities tackle food waste...',
+    content: 'Real-time technology platforms like Foodly are transforming how communities tackle food waste...',
     category: 'Sustainability', imageUrl: 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=800&q=80',
     publishedDate: '2026-05-15',
   },

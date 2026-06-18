@@ -1,4 +1,4 @@
-# DealMap AI - Problem Statement
+# Foodly - Problem Statement
 
 ## Primary Problem
 

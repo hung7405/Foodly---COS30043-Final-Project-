@@ -1,4 +1,4 @@
-# DealMap AI - User Personas
+# Foodly - User Personas
 
 ## Primary Personas
 

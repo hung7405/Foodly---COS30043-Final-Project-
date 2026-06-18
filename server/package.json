@@ -1,7 +1,7 @@
 {
-  "name": "dealmap-ai-server",
+  "name": "foodly-server",
   "version": "1.0.0",
-  "description": "DealMap AI Backend API",
+  "description": "Foodly Backend API",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",

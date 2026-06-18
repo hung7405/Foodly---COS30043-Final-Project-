@@ -9,5 +9,5 @@ export const CATEGORIES = [
 
 export const PAGE_SIZE = 6;
 
-export const SITE_NAME = 'DealMap AI';
+export const SITE_NAME = 'Foodly';
 export const SITE_TAGLINE = 'Real-Time Food Discovery & Community Intelligence';

@@ -2,13 +2,13 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: dealmap
-      POSTGRES_USER: dealmap
-      POSTGRES_PASSWORD: dealmap_secret
+      POSTGRES_DB: foodly
+      POSTGRES_USER: foodly
+      POSTGRES_PASSWORD: foodly_secret
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dealmap"]
+      test: ["CMD-SHELL", "pg_isready -U foodly"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -18,7 +18,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgresql://dealmap:dealmap_secret@postgres:5432/dealmap
+      DATABASE_URL: postgresql://foodly:foodly_secret@postgres:5432/foodly
       TYPEORM_SYNC: "true"
       CORS_ORIGINS: http://localhost:80,http://localhost:5173
       JWT_SECRET: change-in-production

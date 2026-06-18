@@ -1,4 +1,4 @@
-# DealMap AI — Real-Time Food Discovery Platform
+# Foodly — Real-Time Food Discovery Platform
 
 ## COS30043 — Interface Design and Development
 ### Project Proposal — High Distinction Pathway
@@ -7,7 +7,7 @@
 
 ## 1. Product Vision
 
-DealMap AI is a real-time geospatial platform that connects communities with discounted and near-expiry food products. By combining live community intelligence, interactive map exploration, and transaction-safe reservation mechanics, the platform reduces food waste while helping users save money — all delivered through a premium, minimalist interface that follows Apple/Linear design principles.
+Foodly is a real-time geospatial platform that connects communities with discounted and near-expiry food products. By combining live community intelligence, interactive map exploration, and transaction-safe reservation mechanics, the platform reduces food waste while helping users save money — all delivered through a premium, minimalist interface that follows Apple/Linear design principles.
 
 The platform is built on five core principles. First, Real-Time First — every interaction is live; deals, reservations, verifications, and comments update instantly via Socket.IO [1] without page refresh. Second, Community-Powered — users drive content quality through trust scoring and verification rather than relying on central authority. Third, Geospatial-First — map-based discovery serves as the primary navigation paradigm, not just a supplementary view. Fourth, Performance Obsession — virtual scrolling, viewport culling, marker clustering, and optimistic UI updates ensure the platform remains responsive even with thousands of concurrent users. Fifth, Accessibility by Default — WCAG 2.1 AA [2] compliance across all states and interactions, including keyboard navigation, screen reader support, and colour contrast of at least 4.5:1.
 
@@ -37,7 +37,7 @@ The global food waste crisis is staggering: 1.3 billion tonnes of food are waste
 
 Existing food discovery solutions suffer from six critical UX gaps. Static deal listings mean users cannot trust the freshness of information — a deal posted six hours ago may already be sold out. The absence of real-time reservation leads to disappointment and wasted trips when users arrive at stores only to find items gone [5]. Poor mobile experience is especially damaging because the primary use case is on-the-go discovery. No community verification allows scams and expired deals to erode trust over time. Complex checkout flows cause high abandonment rates. Finally, no personalisation means all users see the same irrelevant deals regardless of their preferences or location.
 
-DealMap AI solves each of these problems through targeted technical solutions. The real-time map shows deals as they are posted within the user's viewport using Socket.IO push events [1]. Instant reservation with optimistic locking prevents overselling — if five users try to reserve the last three items, only three succeed. Community trust is built through verification badges assigned by moderators, trust scores calculated from user activity, and moderation tools for flagging inappropriate content. Premium UX with skeleton screens, dark mode, and micro-interactions creates a polished feel. AI-assisted image search provides an alternative discovery path without dominating the interface.
+Foodly solves each of these problems through targeted technical solutions. The real-time map shows deals as they are posted within the user's viewport using Socket.IO push events [1]. Instant reservation with optimistic locking prevents overselling — if five users try to reserve the last three items, only three succeed. Community trust is built through verification badges assigned by moderators, trust scores calculated from user activity, and moderation tools for flagging inappropriate content. Premium UX with skeleton screens, dark mode, and micro-interactions creates a polished feel. AI-assisted image search provides an alternative discovery path without dominating the interface.
 
 ### Comparison with Existing Solutions
 
@@ -46,9 +46,9 @@ DealMap AI solves each of these problems through targeted technical solutions. T
 | Too Good To Go [17] | Static list only | No | Rating only | No | Basic |
 | Olio [18] | Static map | No | Rating only | No | Basic |
 | Flashfood [19] | Store list only | No | No | No | Basic |
-| **DealMap AI** | Real-time clustered map | Optimistic locking + TTL | Verification + trust score | Image search | Premium (skeletons, dark mode, responsive) |
+| **Foodly** | Real-time clustered map | Optimistic locking + TTL | Verification + trust score | Image search | Premium (skeletons, dark mode, responsive) |
 
-DealMap AI addresses gaps that existing food rescue platforms have not solved: real-time data freshness, concurrent reservation safety, community verification, and premium user experience.
+Foodly addresses gaps that existing food rescue platforms have not solved: real-time data freshness, concurrent reservation safety, community verification, and premium user experience.
 
 ---
 
@@ -82,7 +82,7 @@ graph TB
         MO[Moderator]
         AD[Admin]
     end
-    subgraph System["DealMap AI System"]
+    subgraph System["Foodly System"]
         UC1[Browse Home / News / About]
         UC2[Explore deals on map]
         UC3[Register / Login]
@@ -231,11 +231,11 @@ graph TB
 
 **Beyond CRUD:** The platform is not a simple data entry system. It features real-time bidirectional communication, concurrent transaction handling with optimistic locking, performance-critical rendering optimisations, live data stream processing, and coordinated client-server state management. Each of these represents a technical challenge that goes beyond standard CRUD operations taught in introductory courses.
 
-**Figure 4: Why DealMap AI Deserves D/HD** — This diagram summarises the six key differentiators that elevate this project beyond standard CRUD: Real-Time Engine, Concurrency Control, Performance Optimisation, High Volume Analytics, Supporting AI, and Production UX. Each addresses a specific limitation of conventional web applications.
+**Figure 4: Why Foodly Deserves D/HD** — This diagram summarises the six key differentiators that elevate this project beyond standard CRUD: Real-Time Engine, Concurrency Control, Performance Optimisation, High Volume Analytics, Supporting AI, and Production UX. Each addresses a specific limitation of conventional web applications.
 
 ```mermaid
 graph TB
-    subgraph HD["Why DealMap AI Deserves D/HD"]
+    subgraph HD["Why Foodly Deserves D/HD"]
         REALTIME["1. Real-Time Engine\nSocket.IO + Room-based Events\n→ Live data, no refresh needed"]
         CONCUR["2. Concurrency\nOptimistic Locking + Version Column\n→ No overselling"]
         PERF["3. Performance\nClustering + Viewport Culling\n+ Virtual Scrolling → Smooth 60fps"]
@@ -288,7 +288,7 @@ graph TB
 
 ```mermaid
 gantt
-    title DealMap AI Development Roadmap
+    title Foodly Development Roadmap
     dateFormat  YYYY-MM-DD
     axisFormat  %d %b
     

@@ -1,8 +1,8 @@
-# DealMap AI - Product Vision
+# Foodly - Product Vision
 
 ## Vision Statement
 
-> **DealMap AI** is a real-time food discovery and community intelligence platform that transforms how people find discounted and near-expiry food products nearby, reducing food waste while helping communities save money through live, collaborative deal mapping.
+> **Foodly** is a real-time food discovery and community intelligence platform that transforms how people find discounted and near-expiry food products nearby, reducing food waste while helping communities save money through live, collaborative deal mapping.
 
 ## Core Value Proposition
 
@@ -34,7 +34,7 @@
 
 ## Differentiation from Traditional CRUD Apps
 
-| Traditional CRUD | DealMap AI |
+| Traditional CRUD | Foodly |
 |------------------|------------|
 | Poll-based updates | Event-driven WebSocket push |
 | Full page reloads | Granular DOM patching |
