@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common'
-import { TypeOrmModule } from '@nestjs/typeorm'
 import { ScheduleModule } from '@nestjs/schedule'
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler'
 import { APP_GUARD } from '@nestjs/core'
+import { SupabaseModule } from './supabase/supabase.module'
 import { AuthModule } from './auth/auth.module'
 import { UsersModule } from './users/users.module'
 import { DealsModule } from './deals/deals.module'
@@ -16,26 +16,15 @@ import { AiModule } from './ai/ai.module'
 import { HealthModule } from './health/health.module'
 import { NewsModule } from './news/news.module'
 import { RecommendationModule } from './recommendation/recommendation.module'
+import { PaymentModule } from './payment/payment.module'
+import { GeoModule } from './geo/geo.module'
+import { InteractionsModule } from './interactions/interactions.module'
 
 @Module({
   imports: [
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
-    TypeOrmModule.forRoot(process.env.DATABASE_URL
-      ? {
-          type: 'postgres',
-          url: process.env.DATABASE_URL,
-          autoLoadEntities: true,
-          synchronize: process.env.TYPEORM_SYNC !== 'false',
-          ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-        }
-      : {
-          type: 'better-sqlite3',
-          database: process.env.DATABASE_PATH || './data/foodly.db',
-          autoLoadEntities: true,
-          synchronize: process.env.TYPEORM_SYNC !== 'false',
-          extra: { enableWAL: true },
-        }),
     ScheduleModule.forRoot(),
+    SupabaseModule,
     AuthModule,
     UsersModule,
     DealsModule,
@@ -48,6 +37,9 @@ import { RecommendationModule } from './recommendation/recommendation.module'
     AiModule,
     NewsModule,
     RecommendationModule,
+    PaymentModule,
+    GeoModule,
+    InteractionsModule,
     HealthModule,
   ],
   providers: [
