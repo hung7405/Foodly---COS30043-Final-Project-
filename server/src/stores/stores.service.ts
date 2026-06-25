@@ -1,30 +1,45 @@
 import { Injectable } from '@nestjs/common'
-import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
-import { Store } from './entities/store.entity'
+import { SupabaseService } from '../supabase/supabase.service'
 
 @Injectable()
 export class StoresService {
-  constructor(
-    @InjectRepository(Store)
-    private storeRepository: Repository<Store>,
-  ) {}
+  constructor(private supabase: SupabaseService) {}
 
   async findAll() {
-    return this.storeRepository.find({ where: { isActive: true } })
+    const { data } = await this.supabase.client
+      .from('stores')
+      .select('*')
+      .eq('is_active', true)
+    return data ?? []
   }
 
   async findById(id: string) {
-    return this.storeRepository.findOne({ where: { id }, relations: { deals: true } })
+    const { data } = await this.supabase.client
+      .from('stores')
+      .select('*, deals(*)')
+      .eq('id', id)
+      .single()
+    return data
   }
 
-  async create(data: Partial<Store>) {
-    const store = this.storeRepository.create(data)
-    return this.storeRepository.save(store)
+  async create(data: Record<string, any>) {
+    const { data: store, error } = await this.supabase.client
+      .from('stores')
+      .insert(data)
+      .select()
+      .single()
+    if (error) throw error
+    return store
   }
 
-  async update(id: string, data: Partial<Store>) {
-    await this.storeRepository.update(id, data)
-    return this.findById(id)
+  async update(id: string, data: Record<string, any>) {
+    const { data: store, error } = await this.supabase.client
+      .from('stores')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return store
   }
 }
