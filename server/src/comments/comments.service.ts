@@ -1,69 +1,116 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common'
-import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
-import { Comment, CommentStatus } from './entities/comment.entity'
-import { Deal } from '../deals/entities/deal.entity'
+import { SupabaseService } from '../supabase/supabase.service'
 import { SocketGateway } from '../socket/socket.gateway'
 import { AnalyticsService } from '../analytics/analytics.service'
 
 @Injectable()
 export class CommentsService {
   constructor(
-    @InjectRepository(Comment)
-    private commentRepository: Repository<Comment>,
-    @InjectRepository(Deal)
-    private dealRepository: Repository<Deal>,
+    private supabaseService: SupabaseService,
     private socketGateway: SocketGateway,
     private analyticsService: AnalyticsService,
   ) {}
 
   async findByDeal(dealId: string) {
-    const comments = await this.commentRepository.find({
-      where: { dealId, status: CommentStatus.ACTIVE },
-      relations: { user: true, replies: { user: true } },
-      order: { createdAt: 'DESC' },
-    })
-    return comments.map(comment => this.sanitizeComment(comment))
+    const { data: comments, error } = await this.supabaseService.client
+      .from('comments')
+      .select('*, user:user_id(*), replies:comments!parent_id(*, user:user_id(*)))')
+      .eq('deal_id', dealId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return (comments || []).map(comment => this.sanitizeComment(comment))
   }
 
   async create(dealId: string, userId: string, content: string, parentId?: string) {
     if (!content?.trim()) throw new BadRequestException('Comment cannot be empty')
-    const deal = await this.dealRepository.findOne({ where: { id: dealId } })
-    if (!deal) throw new NotFoundException('Deal not found')
-    const comment = this.commentRepository.create({ dealId, userId, content: content.trim(), parentId })
-    const saved = await this.commentRepository.save(comment)
-    await this.dealRepository.increment({ id: dealId }, 'commentCount', 1)
-    const fullComment = await this.commentRepository.findOne({ where: { id: saved.id }, relations: { user: true } })
-    this.socketGateway.emitCommentAdded(fullComment)
+
+    const { data: deal, error: dealError } = await this.supabaseService.client
+      .from('deals')
+      .select('id')
+      .eq('id', dealId)
+      .single()
+    if (dealError || !deal) throw new NotFoundException('Deal not found')
+
+    const { data: saved, error: insertError } = await this.supabaseService.client
+      .from('comments')
+      .insert({ deal_id: dealId, user_id: userId, content: content.trim(), parent_id: parentId || null })
+      .select('*, user:user_id(*)')
+      .single()
+    if (insertError) throw insertError
+
+    const { data: current } = await this.supabaseService.client
+      .from('deals')
+      .select('comment_count')
+      .eq('id', dealId)
+      .single()
+    await this.supabaseService.client
+      .from('deals')
+      .update({ comment_count: (current?.comment_count || 0) + 1 })
+      .eq('id', dealId)
+
+    this.socketGateway.emitCommentAdded(saved)
     this.analyticsService.recordEvent({ userId, eventType: 'comment_added', dealId }).catch(() => {})
-    return this.sanitizeComment(fullComment)
+    return this.sanitizeComment(saved)
   }
 
   async update(id: string, content: string, userId: string) {
-    const comment = await this.commentRepository.findOne({ where: { id } })
-    if (!comment) throw new NotFoundException('Comment not found')
-    if (comment.userId !== userId) throw new ForbiddenException('Not your comment')
+    const { data: comment, error: findError } = await this.supabaseService.client
+      .from('comments')
+      .select('*')
+      .eq('id', id)
+      .single()
+    if (findError || !comment) throw new NotFoundException('Comment not found')
+    if (comment.user_id !== userId) throw new ForbiddenException('Not your comment')
     if (!content?.trim()) throw new BadRequestException('Comment cannot be empty')
-    comment.content = content.trim()
-    return this.sanitizeComment(await this.commentRepository.save(comment))
+
+    const { data: updated, error: updateError } = await this.supabaseService.client
+      .from('comments')
+      .update({ content: content.trim() })
+      .eq('id', id)
+      .select('*')
+      .single()
+    if (updateError) throw updateError
+    return this.sanitizeComment(updated)
   }
 
   async remove(id: string, userId: string, userRole: string) {
-    const comment = await this.commentRepository.findOne({ where: { id } })
-    if (!comment) throw new NotFoundException('Comment not found')
-    if (comment.userId !== userId && userRole !== 'admin' && userRole !== 'moderator') {
+    const { data: comment, error: findError } = await this.supabaseService.client
+      .from('comments')
+      .select('*')
+      .eq('id', id)
+      .single()
+    if (findError || !comment) throw new NotFoundException('Comment not found')
+    if (comment.user_id !== userId && userRole !== 'admin' && userRole !== 'moderator') {
       throw new ForbiddenException('Cannot delete this comment')
     }
-    comment.status = CommentStatus.HIDDEN
-    const saved = await this.commentRepository.save(comment)
-    await this.dealRepository.decrement({ id: comment.dealId }, 'commentCount', 1)
-    return this.sanitizeComment(saved)
+
+    const { data: updated, error: updateError } = await this.supabaseService.client
+      .from('comments')
+      .update({ status: 'hidden' })
+      .eq('id', id)
+      .select('*')
+      .single()
+    if (updateError) throw updateError
+
+    const { data: current } = await this.supabaseService.client
+      .from('deals')
+      .select('comment_count')
+      .eq('id', comment.deal_id)
+      .single()
+    await this.supabaseService.client
+      .from('deals')
+      .update({ comment_count: Math.max(0, (current?.comment_count || 0) - 1) })
+      .eq('id', comment.deal_id)
+
+    return this.sanitizeComment(updated)
   }
 
   private sanitizeComment(comment: any) {
     if (!comment) return comment
-    if (comment.user?.passwordHash) {
-      const { passwordHash, ...safeUser } = comment.user
+    if (comment.user?.password_hash) {
+      const { password_hash, ...safeUser } = comment.user
       comment.user = safeUser
     }
     if (comment.replies) {

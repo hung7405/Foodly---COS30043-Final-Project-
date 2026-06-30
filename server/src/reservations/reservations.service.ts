@@ -1,9 +1,8 @@
 import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common'
 import { Cron } from '@nestjs/schedule'
-import { InjectRepository } from '@nestjs/typeorm'
-import { Repository, DataSource } from 'typeorm'
-import { Reservation, ReservationStatus } from './entities/reservation.entity'
-import { Deal, DealStatus } from '../deals/entities/deal.entity'
+import { SupabaseService } from '../supabase/supabase.service'
+import { ReservationStatus } from './entities/reservation.entity'
+import { DealStatus } from '../deals/entities/deal.entity'
 import { SocketGateway } from '../socket/socket.gateway'
 import { AnalyticsService } from '../analytics/analytics.service'
 import * as crypto from 'crypto'
@@ -11,128 +10,153 @@ import * as crypto from 'crypto'
 @Injectable()
 export class ReservationsService {
   constructor(
-    @InjectRepository(Reservation)
-    private reservationRepository: Repository<Reservation>,
-    @InjectRepository(Deal)
-    private dealRepository: Repository<Deal>,
-    private dataSource: DataSource,
+    private supabase: SupabaseService,
     private socketGateway: SocketGateway,
     private analyticsService: AnalyticsService,
   ) {}
 
   async reserve(dealId: string, userId: string) {
-    const queryRunner = this.dataSource.createQueryRunner()
-    await queryRunner.connect()
-    await queryRunner.startTransaction()
+    const { data: deal, error: dealError } = await this.supabase.client
+      .from('deals')
+      .select('*')
+      .eq('id', dealId)
+      .single()
 
-    try {
-      const deal = await queryRunner.manager
-        .createQueryBuilder(Deal, 'deal')
-        .where('deal.id = :id', { id: dealId })
-        .getOne()
+    if (dealError || !deal) throw new NotFoundException('Deal not found')
+    if (deal.user_id === userId) throw new BadRequestException('You cannot reserve your own deal')
+    if (deal.remaining_quantity <= 0) throw new BadRequestException('No items remaining')
+    if (deal.status !== DealStatus.ACTIVE) throw new BadRequestException('Deal is not available')
 
-      if (!deal) throw new NotFoundException('Deal not found')
-      if (deal.userId === userId) throw new BadRequestException('You cannot reserve your own deal')
-      if (deal.remainingQuantity <= 0) throw new BadRequestException('No items remaining')
-      if (deal.status !== DealStatus.ACTIVE) throw new BadRequestException('Deal is not available')
+    const { data: activeReservation } = await this.supabase.client
+      .from('reservations')
+      .select('*')
+      .eq('deal_id', dealId)
+      .eq('user_id', userId)
+      .eq('status', ReservationStatus.ACTIVE)
+      .maybeSingle()
+    if (activeReservation) throw new ConflictException('You already have an active reservation for this deal')
 
-      const activeReservation = await queryRunner.manager.findOne(Reservation, {
-        where: { dealId, userId, status: ReservationStatus.ACTIVE },
-      })
-      if (activeReservation) throw new ConflictException('You already have an active reservation for this deal')
+    const code = crypto.randomBytes(4).toString('hex').toUpperCase()
 
-      const code = crypto.randomBytes(4).toString('hex').toUpperCase()
+    const { data: currentDeal, error: currentError } = await this.supabase.client
+      .from('deals')
+      .select('remaining_quantity, version')
+      .eq('id', dealId)
+      .single()
+    if (currentError || !currentDeal) throw new NotFoundException('Deal not found')
+    if (currentDeal.remaining_quantity <= 0) throw new BadRequestException('No items remaining')
 
-      const reservation = queryRunner.manager.create(Reservation, {
-        dealId,
-        userId,
-        status: ReservationStatus.ACTIVE,
-        expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-        reservationCode: code,
-      })
+    const { data: updatedDeal, error: updateError } = await this.supabase.client
+      .from('deals')
+      .update({ remaining_quantity: currentDeal.remaining_quantity - 1, version: currentDeal.version + 1 })
+      .eq('id', dealId)
+      .eq('version', currentDeal.version)
+      .select()
+      .single()
 
-      await queryRunner.manager.save(reservation)
-
-      const result = await queryRunner.manager
-        .createQueryBuilder()
-        .update(Deal)
-        .set({ remainingQuantity: () => 'remainingQuantity - 1', version: () => 'version + 1' })
-        .where('id = :id AND version = :version AND remainingQuantity > 0', { id: dealId, version: deal.version })
-        .execute()
-
-      if (result.affected === 0) {
-        throw new ConflictException('Concurrent reservation conflict — please try again')
-      }
-
-      await queryRunner.commitTransaction()
-      const updatedDeal = await this.dealRepository.findOne({ where: { id: dealId } })
-      this.socketGateway.emitReservationCreated(reservation)
-      this.socketGateway.emitDealQuantity(dealId, updatedDeal?.remainingQuantity ?? 0)
-      this.analyticsService.recordEvent({ userId, eventType: 'reservation_made', dealId }).catch(() => {})
-      return reservation
-    } catch (err) {
-      await queryRunner.rollbackTransaction()
-      throw err
-    } finally {
-      await queryRunner.release()
+    if (updateError || !updatedDeal) {
+      throw new ConflictException('Concurrent reservation conflict — please try again')
     }
+
+    const { data: reservation, error: insertError } = await this.supabase.client
+      .from('reservations')
+      .insert({
+        deal_id: dealId,
+        user_id: userId,
+        status: ReservationStatus.ACTIVE,
+        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        reservation_code: code,
+      })
+      .select()
+      .single()
+
+    if (insertError) throw insertError
+
+    this.socketGateway.emitReservationCreated(reservation)
+    this.socketGateway.emitDealQuantity(dealId, updatedDeal.remaining_quantity)
+    this.analyticsService.recordEvent({ userId, eventType: 'reservation_made', dealId }).catch(() => {})
+    this.supabase.client.from('user_interactions').insert({ user_id: userId, deal_id: dealId, action: 'reserve' }).then(undefined, () => {})
+    return reservation
   }
 
   async findByUser(userId: string) {
-    return this.reservationRepository.find({
-      where: { userId },
-      relations: { deal: true },
-      order: { reservedAt: 'DESC' },
-    })
+    const { data, error } = await this.supabase.client
+      .from('reservations')
+      .select('*, deal:deal_id(*)')
+      .eq('user_id', userId)
+      .order('reserved_at', { ascending: false })
+
+    if (error) throw error
+    return data || []
   }
 
   async confirm(id: string, userId: string) {
-    const reservation = await this.reservationRepository.findOne({ where: { id, userId } })
-    if (!reservation) throw new NotFoundException('Reservation not found')
-    reservation.status = ReservationStatus.CONFIRMED
-    reservation.confirmedAt = new Date()
-    return this.reservationRepository.save(reservation)
+    const { data: reservation, error: fetchError } = await this.supabase.client
+      .from('reservations')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single()
+    if (fetchError || !reservation) throw new NotFoundException('Reservation not found')
+
+    const { data, error } = await this.supabase.client
+      .from('reservations')
+      .update({ status: ReservationStatus.CONFIRMED, confirmed_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return data
   }
 
   async cancel(id: string, userId: string) {
-    const queryRunner = this.dataSource.createQueryRunner()
-    await queryRunner.connect()
-    await queryRunner.startTransaction()
+    const { data: reservation, error: fetchError } = await this.supabase.client
+      .from('reservations')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single()
+    if (fetchError || !reservation) throw new NotFoundException('Reservation not found')
 
-    try {
-      const reservation = await queryRunner.manager.findOne(Reservation, { where: { id, userId } })
-      if (!reservation) throw new NotFoundException('Reservation not found')
+    const { error: updateError } = await this.supabase.client
+      .from('reservations')
+      .update({ status: ReservationStatus.CANCELLED })
+      .eq('id', id)
+    if (updateError) throw updateError
 
-      reservation.status = ReservationStatus.CANCELLED
-      await queryRunner.manager.save(reservation)
+    const { data: deal } = await this.supabase.client
+      .from('deals')
+      .select('remaining_quantity, version')
+      .eq('id', reservation.deal_id)
+      .single()
 
-      await queryRunner.manager
-        .createQueryBuilder()
-        .update(Deal)
-        .set({ remainingQuantity: () => `remainingQuantity + ${reservation.quantityReserved}`, version: () => 'version + 1' })
-        .where('id = :id', { id: reservation.dealId })
-        .execute()
-
-      await queryRunner.commitTransaction()
-      const updatedDeal = await this.dealRepository.findOne({ where: { id: reservation.dealId } })
-      this.socketGateway.emitDealQuantity(reservation.dealId, updatedDeal?.remainingQuantity ?? 0)
-      return reservation
-    } catch (err) {
-      await queryRunner.rollbackTransaction()
-      throw err
-    } finally {
-      await queryRunner.release()
+    if (deal) {
+      await this.supabase.client
+        .from('deals')
+        .update({ remaining_quantity: deal.remaining_quantity + reservation.quantity_reserved, version: deal.version + 1 })
+        .eq('id', reservation.deal_id)
     }
+
+    const { data: updatedDeal } = await this.supabase.client
+      .from('deals')
+      .select('remaining_quantity')
+      .eq('id', reservation.deal_id)
+      .single()
+    this.socketGateway.emitDealQuantity(reservation.deal_id, updatedDeal?.remaining_quantity ?? 0)
+    return reservation
   }
 
   async expireReservations() {
-    const expired = await this.reservationRepository
-      .createQueryBuilder('r')
-      .where('r.status = :status', { status: ReservationStatus.ACTIVE })
-      .andWhere('r.expiresAt < :now', { now: new Date() })
-      .getMany()
+    const { data: expired, error } = await this.supabase.client
+      .from('reservations')
+      .select('*')
+      .eq('status', ReservationStatus.ACTIVE)
+      .lt('expires_at', new Date().toISOString())
 
-    for (const reservation of expired) {
+    if (error) throw error
+    const list = expired || []
+
+    for (const reservation of list) {
       try {
         await this.expireReservation(reservation)
       } catch {
@@ -140,7 +164,7 @@ export class ReservationsService {
       }
     }
 
-    return expired.length
+    return list.length
   }
 
   @Cron('*/60 * * * * *')
@@ -148,29 +172,32 @@ export class ReservationsService {
     await this.expireReservations()
   }
 
-  private async expireReservation(reservation: Reservation) {
-    const queryRunner = this.dataSource.createQueryRunner()
-    await queryRunner.connect()
-    await queryRunner.startTransaction()
+  private async expireReservation(reservation: any) {
+    const { error: updateError } = await this.supabase.client
+      .from('reservations')
+      .update({ status: ReservationStatus.EXPIRED })
+      .eq('id', reservation.id)
+    if (updateError) throw updateError
 
-    try {
-      reservation.status = ReservationStatus.EXPIRED
-      await queryRunner.manager.save(reservation)
-      await queryRunner.manager
-        .createQueryBuilder()
-        .update(Deal)
-        .set({ remainingQuantity: () => `remainingQuantity + ${reservation.quantityReserved}`, version: () => 'version + 1' })
-        .where('id = :id', { id: reservation.dealId })
-        .execute()
-      await queryRunner.commitTransaction()
-      this.socketGateway.emitReservationExpired(reservation.id, reservation.dealId)
-      const updatedDeal = await this.dealRepository.findOne({ where: { id: reservation.dealId } })
-      this.socketGateway.emitDealQuantity(reservation.dealId, updatedDeal?.remainingQuantity ?? 0)
-    } catch (err) {
-      await queryRunner.rollbackTransaction()
-      throw err
-    } finally {
-      await queryRunner.release()
+    const { data: deal } = await this.supabase.client
+      .from('deals')
+      .select('remaining_quantity, version')
+      .eq('id', reservation.deal_id)
+      .single()
+
+    if (deal) {
+      await this.supabase.client
+        .from('deals')
+        .update({ remaining_quantity: deal.remaining_quantity + reservation.quantity_reserved, version: deal.version + 1 })
+        .eq('id', reservation.deal_id)
     }
+
+    this.socketGateway.emitReservationExpired(reservation.id, reservation.deal_id)
+    const { data: updatedDeal } = await this.supabase.client
+      .from('deals')
+      .select('remaining_quantity')
+      .eq('id', reservation.deal_id)
+      .single()
+    this.socketGateway.emitDealQuantity(reservation.deal_id, updatedDeal?.remaining_quantity ?? 0)
   }
 }
