@@ -14,7 +14,7 @@ export class ActivityEvent {
   @Column()
   eventType: string
 
-  @Column('simple-json', { nullable: true })
+  @Column('jsonb', { nullable: true })
   metadata: any
 
   @CreateDateColumn()

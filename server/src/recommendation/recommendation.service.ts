@@ -1,27 +1,22 @@
 import { Injectable } from '@nestjs/common'
-import { InjectRepository } from '@nestjs/typeorm'
-import { Repository, In } from 'typeorm'
+import { SupabaseService } from '../supabase/supabase.service'
 import { Deal, DealStatus } from '../deals/entities/deal.entity'
-import { Reservation } from '../reservations/entities/reservation.entity'
-import { Like as LikeEntity } from '../deals/entities/like.entity'
-import { Bookmark } from '../deals/entities/bookmark.entity'
+import { InteractionAction } from '../interactions/entities/interaction.entity'
 
-const DISTANCE_WEIGHT = 0.50
+const DISTANCE_WEIGHT = 0.40
 const HISTORY_WEIGHT = 0.30
-const POPULARITY_WEIGHT = 0.20
+const POPULARITY_WEIGHT = 0.15
+const INTERACTION_WEIGHT = 0.15
 
 @Injectable()
 export class RecommendationService {
   constructor(
-    @InjectRepository(Deal)
-    private dealRepository: Repository<Deal>,
-    @InjectRepository(Reservation)
-    private reservationRepository: Repository<Reservation>,
-    @InjectRepository(LikeEntity)
-    private likeRepository: Repository<LikeEntity>,
-    @InjectRepository(Bookmark)
-    private bookmarkRepository: Repository<Bookmark>,
+    private supabaseService: SupabaseService,
   ) {}
+
+  private get supabase() {
+    return this.supabaseService.client
+  }
 
   async getRecommendations(options: {
     userId?: string
@@ -31,12 +26,13 @@ export class RecommendationService {
   }) {
     const limit = Math.min(Math.max(options.limit || 20, 1), 50)
 
-    const deals = await this.dealRepository.find({
-      where: { status: DealStatus.ACTIVE },
-      relations: { user: true, store: true },
-    })
+    const { data: deals, error } = await this.supabase
+      .from('deals')
+      .select('*, user:user_id(*), store:stores(*)')
+      .eq('status', DealStatus.ACTIVE)
 
-    if (deals.length === 0) return { recommendations: [], total: 0 }
+    if (error) throw error
+    if (!deals || deals.length === 0) return { recommendations: [], total: 0 }
 
     const userTagProfile = await this.buildUserTagProfile(options.userId)
 
@@ -48,40 +44,79 @@ export class RecommendationService {
 
     if (!userId) return tagScores
 
-    const reservations = await this.reservationRepository.find({
-      where: { userId },
-      relations: { deal: true },
-    })
+    const { data: reservations } = await this.supabase
+      .from('reservations')
+      .select('*, deal:deals(*)')
+      .eq('user_id', userId)
 
-    for (const r of reservations) {
-      if (r.deal?.tags) {
-        for (const tag of r.deal.tags) {
-          tagScores.set(tag, (tagScores.get(tag) || 0) + 3)
+    if (reservations) {
+      for (const r of reservations) {
+        if (r.deal?.tags) {
+          for (const tag of r.deal.tags) {
+            tagScores.set(tag, (tagScores.get(tag) || 0) + 3)
+          }
         }
       }
     }
 
-    const likeDealIds = (await this.likeRepository.find({
-      where: { userId, targetType: 'deal' },
-      select: { targetId: true },
-    })).map(l => l.targetId)
+    const { data: likes } = await this.supabase
+      .from('likes')
+      .select('target_id')
+      .eq('user_id', userId)
+      .eq('target_type', 'deal')
 
+    const likeDealIds = (likes || []).map(l => l.target_id)
     if (likeDealIds.length > 0) {
-      const likedDeals = await this.dealRepository.find({ where: { id: In(likeDealIds) } })
-      for (const d of likedDeals) {
-        if (d.tags) for (const tag of d.tags) tagScores.set(tag, (tagScores.get(tag) || 0) + 2)
+      const { data: likedDeals } = await this.supabase
+        .from('deals')
+        .select('tags')
+        .in('id', likeDealIds)
+
+      if (likedDeals) {
+        for (const d of likedDeals) {
+          if (d.tags) for (const tag of d.tags) tagScores.set(tag, (tagScores.get(tag) || 0) + 2)
+        }
       }
     }
 
-    const bookmarkDealIds = (await this.bookmarkRepository.find({
-      where: { userId },
-      select: { dealId: true },
-    })).map(b => b.dealId)
+    const { data: bookmarks } = await this.supabase
+      .from('bookmarks')
+      .select('deal_id')
+      .eq('user_id', userId)
 
+    const bookmarkDealIds = (bookmarks || []).map(b => b.deal_id)
     if (bookmarkDealIds.length > 0) {
-      const bookmarkedDeals = await this.dealRepository.find({ where: { id: In(bookmarkDealIds) } })
-      for (const d of bookmarkedDeals) {
-        if (d.tags) for (const tag of d.tags) tagScores.set(tag, (tagScores.get(tag) || 0) + 1)
+      const { data: bookmarkedDeals } = await this.supabase
+        .from('deals')
+        .select('tags')
+        .in('id', bookmarkDealIds)
+
+      if (bookmarkedDeals) {
+        for (const d of bookmarkedDeals) {
+          if (d.tags) for (const tag of d.tags) tagScores.set(tag, (tagScores.get(tag) || 0) + 1)
+        }
+      }
+    }
+
+    const { data: viewInteractions } = await this.supabase
+      .from('user_interactions')
+      .select('deal_id')
+      .eq('user_id', userId)
+      .eq('action', InteractionAction.VIEW)
+      .order('created_at', { ascending: false })
+      .limit(100)
+
+    const viewedDealIds = [...new Set((viewInteractions || []).map(v => v.deal_id))]
+    if (viewedDealIds.length > 0) {
+      const { data: viewedDeals } = await this.supabase
+        .from('deals')
+        .select('tags')
+        .in('id', viewedDealIds)
+
+      if (viewedDeals) {
+        for (const d of viewedDeals) {
+          if (d.tags) for (const tag of d.tags) tagScores.set(tag, (tagScores.get(tag) || 0) + 0.5)
+        }
       }
     }
 
@@ -97,19 +132,22 @@ export class RecommendationService {
   ) {
     const maxTagScore = Math.max(1, ...userTagProfile.values())
     const now = Date.now()
+    const maxViewCount = Math.max(1, ...deals.map((d: any) => d.like_count + d.bookmark_count + (d.comment_count || 0)))
 
     const scored = deals.map(deal => {
       const distance = this.distanceKm(lat, lng, Number(deal.latitude), Number(deal.longitude))
       const distanceScore = this.calcDistanceScore(distance, Number.isFinite(lat) && Number.isFinite(lng))
       const historyScore = this.calcHistoryScore(deal.tags || [], userTagProfile, maxTagScore)
       const popularityScore = this.calcPopularityScore(deal)
-      const freshnessScore = this.calcFreshnessScore(deal.expiresAt, now)
+      const freshnessScore = this.calcFreshnessScore((deal as any).expires_at, now)
+      const interactionScore = this.calcInteractionScore(deal, maxViewCount)
 
       const totalScore =
         distanceScore * DISTANCE_WEIGHT +
         historyScore * HISTORY_WEIGHT +
         popularityScore * POPULARITY_WEIGHT +
-        freshnessScore * 0.10
+        freshnessScore * 0.10 +
+        interactionScore * INTERACTION_WEIGHT
 
       return {
         ...deal,
@@ -120,6 +158,7 @@ export class RecommendationService {
           history: Math.round(historyScore * 100) / 100,
           popularity: Math.round(popularityScore * 100) / 100,
           freshness: Math.round(freshnessScore * 100) / 100,
+          interaction: Math.round(interactionScore * 100) / 100,
         },
       }
     })
@@ -162,10 +201,10 @@ export class RecommendationService {
     return Math.min(100, (score / dealTags.length) * 100)
   }
 
-  private calcPopularityScore(deal: Deal): number {
-    const likeScore = Math.min(40, (deal.likeCount || 0) / 50 * 40)
+  private calcPopularityScore(deal: any): number {
+    const likeScore = Math.min(40, (deal.like_count || 0) / 50 * 40)
     const verifiedScore = deal.verified ? 30 : 0
-    const remainingScore = Math.min(30, ((deal.remainingQuantity || 0) / 20) * 30)
+    const remainingScore = Math.min(30, ((deal.remaining_quantity || 0) / 20) * 30)
     return Math.round(likeScore + verifiedScore + remainingScore)
   }
 
@@ -179,6 +218,13 @@ export class RecommendationService {
     if (hoursLeft <= 12) return 60
     if (hoursLeft <= 24) return 40
     return 20
+  }
+
+  private calcInteractionScore(deal: any, maxViewCount: number): number {
+    const viewScore = Math.min(50, ((deal.like_count + deal.bookmark_count) / Math.max(1, maxViewCount)) * 50)
+    const commentScore = Math.min(30, ((deal.comment_count || 0) / 15) * 30)
+    const remainingScore = Math.min(20, (deal.remaining_quantity / Math.max(1, deal.original_quantity)) * 20)
+    return Math.round(viewScore + commentScore + remainingScore)
   }
 
   private distanceKm(lat1?: number, lng1?: number, lat2?: number, lng2?: number): number {

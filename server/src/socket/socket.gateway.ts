@@ -100,12 +100,17 @@ export class SocketGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   }
 
   emitReservationCreated(reservation: any) {
-    this.server.to(`deal:${reservation.dealId}`).emit('reservation:created', reservation)
+    const dealId = reservation.deal_id || reservation.dealId
+    this.server.to(`deal:${dealId}`).emit('reservation:created', reservation)
     this.server.to(`feed:global`).emit('feed:activity', {
       type: 'reservation',
       message: 'New reservation made',
-      dealId: reservation.dealId,
+      dealId: dealId,
     })
+  }
+
+  emitReservationConfirmed(reservationId: string) {
+    this.server.emit('reservation:confirmed', { id: reservationId })
   }
 
   emitReservationExpired(reservationId: string, dealId: string) {
@@ -113,7 +118,8 @@ export class SocketGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   }
 
   emitCommentAdded(comment: any) {
-    this.server.to(`deal:${comment.dealId}`).emit('comment:added', comment)
+    const dealId = comment.deal_id || comment.dealId
+    this.server.to(`deal:${dealId}`).emit('comment:added', comment)
   }
 
   emitFeedActivity(activity: any) {

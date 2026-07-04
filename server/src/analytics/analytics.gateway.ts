@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common'
+import { Logger, OnModuleDestroy } from '@nestjs/common'
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -14,7 +14,7 @@ import { config } from '../config'
   cors: { origin: config.corsOrigins, credentials: true },
   namespace: '/analytics',
 })
-export class AnalyticsGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+export class AnalyticsGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy {
   private readonly logger = new Logger(AnalyticsGateway.name)
   @WebSocketServer() server: Server
   private interval: ReturnType<typeof setInterval>
@@ -39,5 +39,9 @@ export class AnalyticsGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
   handleDisconnect(client: Socket) {
     this.logger.log(`Analytics client disconnected: ${client.id}`)
+  }
+
+  onModuleDestroy() {
+    if (this.interval) clearInterval(this.interval)
   }
 }
