@@ -1,4 +1,6 @@
 import api from './axios'
+
+export { api as http }
 import type { User } from '../../types'
 
 export const authService = {
@@ -151,6 +153,17 @@ export const recommendationsService = {
   },
 }
 
+export const interactionsService = {
+  async record(dealId: string, action: string) {
+    const { data } = await api.post('/interactions', { dealId, action })
+    return data
+  },
+  async recordAnonymous(dealId: string, action: string) {
+    const { data } = await api.post('/interactions/anonymous', { dealId, action })
+    return data
+  },
+}
+
 export const analyticsService = {
   async getLive() {
     const { data } = await api.get('/analytics/live')
@@ -181,6 +194,25 @@ export const adminService = {
 
   async changeUserRole(id: string, role: string) {
     const { data } = await api.put(`/admin/users/${id}/role`, { role })
+    return data
+  },
+}
+
+export const paymentsService = {
+  async create(reservationId: string, provider = 'mock') {
+    const { data } = await api.post(`/payments/reservations/${reservationId}/pay`, { provider })
+    return data
+  },
+  async myPayments() {
+    const { data } = await api.get('/payments')
+    return data
+  },
+  async findById(id: string) {
+    const { data } = await api.get(`/payments/${id}`)
+    return data
+  },
+  async completeMock(id: string) {
+    const { data } = await api.put(`/payments/${id}/complete-mock`)
     return data
   },
 }

@@ -20,6 +20,12 @@ const routes = [
     component: () => import('../views/CommunityFeedView.vue'),
   },
   {
+    path: '/payments/:reservationId',
+    name: 'Payment',
+    component: () => import('../views/PaymentView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/ai-search',
     name: 'AISearch',
     component: () => import('../views/AISearchView.vue'),

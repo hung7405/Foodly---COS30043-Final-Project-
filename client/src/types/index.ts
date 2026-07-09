@@ -91,6 +91,23 @@ export interface NewsArticle {
   publishedDate: string
 }
 
+export interface Payment {
+  id: string
+  userId: string
+  reservationId: string
+  amount: number
+  currency: string
+  provider: 'mock' | 'momo' | 'vnpay'
+  status: 'pending' | 'processing' | 'success' | 'failed' | 'refunded' | 'expired'
+  providerTransactionId?: string
+  paymentUrl?: string
+  qrCodeUrl?: string
+  paidAt?: string
+  failureReason?: string
+  reservation?: Reservation
+  createdAt: string
+}
+
 export interface LiveMetrics {
   activeUsers: number
   reservationsPerMinute: number
