@@ -14,11 +14,11 @@ const fullName = computed(() => {
 const currentImage = computed(() => {
   return selectedMode.value === 'Food Rescue'
     ? {
-        src: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&q=80',
+        src: 'https://images.unsplash.com/photo-1588964895597-cfccd6e2dbf9?w=800&q=80',
         alt: 'Food rescue volunteers sorting fresh produce',
       }
     : {
-        src: 'https://images.unsplash.com/photo-1593113630400-ea4288922497?w=800&q=80',
+        src: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=800&q=80',
         alt: 'Community support and food sharing',
       }
 })

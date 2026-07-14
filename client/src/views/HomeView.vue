@@ -1,718 +1,326 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { SITE_NAME, SITE_TAGLINE } from '../utils/constants'
-import { recommendationsService } from '../services/api'
+import { onMounted, onUnmounted, ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { recommendationsService, dealsService, http } from '../services/api'
 import { formatVND } from '../utils/currency'
 import type { Deal } from '../types'
 
-const recommendedDeals = ref<Deal[]>([])
-const recommendationsLoading = ref(true)
+const router = useRouter()
 
-const foodImages = [
-  {
-    src: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&q=80',
-    alt: 'Fresh vegetables at a market',
-    label: 'Fresh Produce'
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=600&q=80',
-    alt: 'Community food sharing',
-    label: 'Community Sharing'
-  }
+const recommendedDeals = ref<Deal[]>([])
+const flashDeals = ref<Deal[]>([])
+const currentBanner = ref(0)
+let bannerTimer: number | undefined
+const flashSaleEnd = ref(0)
+let flashTimer: number | undefined
+
+const categories = [
+  { id: 'food', name: 'Food', icon: '🍔', color: '#fff3e0' },
+  { id: 'drinks', name: 'Drinks', icon: '🥤', color: '#e3f2fd' },
+  { id: 'bakery', name: 'Bakery', icon: '🥐', color: '#fff8e1' },
+  { id: 'grocery', name: 'Grocery', icon: '🛒', color: '#e8f5e9' },
+  { id: 'asian', name: 'Asian', icon: '🍜', color: '#fce4ec' },
+  { id: 'western', name: 'Western', icon: '🍕', color: '#fff3e0' },
+  { id: 'dessert', name: 'Dessert', icon: '🍰', color: '#f3e5f5' },
+  { id: 'healthy', name: 'Healthy', icon: '🥗', color: '#e8f5e9' },
+]
+
+const banners = [
+  { image: 'https://images.unsplash.com/photo-1588964895597-cfccd6e2dbf9?w=800&q=80', title: 'Big Discounts Today', subtitle: 'Up to 70% off on grocery items', color: 'linear-gradient(135deg, #ee4d2d, #ff6f00)' },
+  { image: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=800&q=80', title: 'Snack Deals', subtitle: 'Stock up on your favorites', color: 'linear-gradient(135deg, #00b14f, #00e676)' },
+  { image: 'https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=800&q=80', title: 'Drinks & Beverages', subtitle: 'Cool down with great offers', color: 'linear-gradient(135deg, #3b82f6, #6366f1)' },
 ]
 
 const FOOD_IMGS = [
-  'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=80',
-  'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80',
-  'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&q=80',
-  'https://images.unsplash.com/photo-1563379926898-05f4575a45d8?w=400&q=80',
-  'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&q=80',
-  'https://images.unsplash.com/photo-1482049016688-2d3e1b311543?w=400&q=80',
+  'https://images.unsplash.com/photo-1586999768265-24af89630739?w=400&q=80',
+  'https://images.unsplash.com/photo-1578916171728-46686eacb58c?w=400&q=80',
+  'https://images.unsplash.com/photo-1598392065795-5fc3b0de9c0d?w=400&q=80',
+  'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&q=80',
+  'https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=400&q=80',
+  'https://images.unsplash.com/photo-1583258292688-dba3d89166d7?w=400&q=80',
 ]
 
-onMounted(async () => {
-  try {
-    const result = await recommendationsService.getRecommendations({ limit: 8 })
-    recommendedDeals.value = (result.recommendations || []).map((deal: any) => ({
-      ...deal,
-      images: deal.images?.length ? deal.images : [FOOD_IMGS[Math.floor(Math.random() * FOOD_IMGS.length)]],
-    }))
-  } catch {
-    recommendedDeals.value = []
-  } finally {
-    recommendationsLoading.value = false
-  }
+const flashCountdown = computed(() => {
+  const h = Math.floor(flashSaleEnd.value / 3600)
+  const m = Math.floor((flashSaleEnd.value % 3600) / 60)
+  const s = flashSaleEnd.value % 60
+  return h.toString().padStart(2, '0') + ':' + m.toString().padStart(2, '0') + ':' + s.toString().padStart(2, '0')
 })
 
+onMounted(async () => {
+  await loadDeals()
+  bannerTimer = window.setInterval(() => { currentBanner.value = (currentBanner.value + 1) % banners.length }, 4000)
+  flashTimer = window.setInterval(() => { if (flashSaleEnd.value > 0) flashSaleEnd.value-- }, 1000)
+})
+
+onUnmounted(() => {
+  if (bannerTimer) window.clearInterval(bannerTimer)
+  if (flashTimer) window.clearInterval(flashTimer)
+})
+
+async function loadDeals() {
+  try {
+    const [recs, all, flash] = await Promise.all([
+      recommendationsService.getRecommendations({ limit: 8 }),
+      dealsService.findAll({ limit: 20, status: 'active', sort: 'discount' }),
+      http.get('/recommendations/flash-sale'),
+    ])
+    recommendedDeals.value = (recs.recommendations || []).map((deal: any) => ({
+      ...deal, images: deal.images?.length ? deal.images : [FOOD_IMGS[Math.floor(Math.random() * FOOD_IMGS.length)]],
+    }))
+    flashDeals.value = (all.deals || []).slice(0, 8).map((deal: any) => ({
+      ...deal, images: deal.images?.length ? deal.images : [FOOD_IMGS[Math.floor(Math.random() * FOOD_IMGS.length)]],
+    }))
+    const endTime = new Date(flash.data.endTime).getTime()
+    flashSaleEnd.value = Math.max(0, Math.floor((endTime - Date.now()) / 1000))
+  } catch {
+    recommendedDeals.value = []; flashDeals.value = []; flashSaleEnd.value = 0
+  }
+}
+
+function selectCategory(id: string) { router.push('/explore?category=' + id) }
 function distanceLabel(deal: any) {
   if (deal.distanceKm === undefined || deal.distanceKm === null) return ''
-  return deal.distanceKm < 1 ? `${Math.round(deal.distanceKm * 1000)}m` : `${deal.distanceKm.toFixed(1)}km`
+  return deal.distanceKm < 1 ? Math.round(deal.distanceKm * 1000) + 'm' : deal.distanceKm.toFixed(1) + 'km'
+}
+function discountPercent(deal: any) {
+  if (!deal.originalPrice || !deal.discountPrice) return 0
+  return Math.round((1 - deal.discountPrice / deal.originalPrice) * 100)
+}
+function dealRating(deal: any) {
+  return Math.min(5, Math.round((3.5 + ((deal.likeCount || 0) / 20)) * 10) / 10)
 }
 </script>
 
 <template>
   <div class="home-page">
-    <!-- Hero Section -->
-    <section class="hero-section">
-      <div class="hero-bg" aria-hidden="true"></div>
-      <div class="container">
-        <div class="hero-content">
-          <div class="hero-badge">
-            <span class="live-dot"></span>
-            Beta Now Live
+    <div class="top-bar">
+      <div class="location-row">
+        <router-link to="/explore" class="location-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span class="location-text">Deliver to</span>
+          <span class="location-addr">Home</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </router-link>
+      </div>
+      <div class="search-bar" @click="router.push('/explore')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span class="search-placeholder">Search food, stores near you...</span>
+      </div>
+    </div>
+
+    <section class="banner-section">
+      <div class="banner-carousel">
+        <div v-for="(banner, i) in banners" :key="i" class="banner-slide" :class="{ active: currentBanner === i }" :style="{ background: banner.color }">
+          <div class="banner-content">
+            <h2 class="banner-title">{{ banner.title }}</h2>
+            <p class="banner-subtitle">{{ banner.subtitle }}</p>
+            <router-link to="/explore" class="banner-cta">Shop Now</router-link>
           </div>
-          <h1 class="hero-title">
-            Discover Fresh Deals.
-            <span class="hero-highlight">Near You. Now.</span>
-          </h1>
-          <p class="hero-description">
-            {{ SITE_TAGLINE }}. Find discounted and near-expiry food near you,
-            reserve instantly, and join a community committed to reducing food waste.
-          </p>
-          <div class="hero-actions">
-            <router-link to="/explore" class="btn btn-primary btn-lg">
-              Explore Deals
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-              </svg>
-            </router-link>
-            <router-link to="/about" class="btn btn-outline btn-lg">
-              Learn More
-            </router-link>
-          </div>
-          <div class="hero-stats">
-            <div class="stat">
-              <span class="stat-value">2,340+</span>
-              <span class="stat-label">Deals Shared</span>
-            </div>
-            <div class="stat-divider" aria-hidden="true"></div>
-            <div class="stat">
-              <span class="stat-value">890+</span>
-              <span class="stat-label">Meals Saved</span>
-            </div>
-            <div class="stat-divider" aria-hidden="true"></div>
-            <div class="stat">
-              <span class="stat-value">1.2k+</span>
-              <span class="stat-label">Community Members</span>
-            </div>
+          <div class="banner-image-wrapper">
+            <img :src="banner.image" :alt="banner.title" class="banner-image" loading="lazy" />
           </div>
         </div>
       </div>
+      <div class="banner-dots">
+        <button v-for="(_, i) in banners" :key="i" class="banner-dot" :class="{ active: currentBanner === i }" @click="currentBanner = i" />
+      </div>
     </section>
 
-    <!-- Food Images Section -->
-    <section class="section images-section" aria-label="Featured food images">
-      <div class="container">
-        <div class="images-grid">
-          <div
-            v-for="(image, index) in foodImages"
-            :key="index"
-            class="image-card"
-            :style="{ animationDelay: `${index * 0.15}s` }"
-          >
-            <div class="image-wrapper">
-              <img :src="image.src" :alt="image.alt" loading="lazy" />
-              <div class="image-overlay">
-                <span class="image-label">{{ image.label }}</span>
-              </div>
-            </div>
+    <section class="category-section">
+      <div class="cat-scroll">
+        <button v-for="cat in categories" :key="cat.id" class="cat-item" @click="selectCategory(cat.id)">
+          <div class="cat-icon" :style="{ background: cat.color }"><span class="cat-emoji">{{ cat.icon }}</span></div>
+          <span class="cat-name">{{ cat.name }}</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="flash-section">
+      <div class="flash-header">
+        <div class="flash-header-left">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#ee4d2d"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          <h2 class="flash-title">Flash Sale</h2>
+          <span class="flash-end-label">Ends in</span>
+          <div class="flash-countdown">
+            <span class="cd-num">{{ flashCountdown.slice(0,2) }}</span><span class="cd-sep">:</span>
+            <span class="cd-num">{{ flashCountdown.slice(3,5) }}</span><span class="cd-sep">:</span>
+            <span class="cd-num">{{ flashCountdown.slice(6,8) }}</span>
           </div>
         </div>
+        <router-link to="/explore?sort=discount" class="flash-view-all">View All</router-link>
       </div>
-    </section>
-
-    <!-- Introduction Section -->
-    <section class="section intro-section">
-      <div class="container">
-        <div class="intro-content">
-          <h2 class="section-title">How {{ SITE_NAME }} Works</h2>
-          <p class="section-subtitle">
-            We connect you with nearby stores and community members sharing discounted food
-            that would otherwise go to waste. Simple, fast, and impact-driven.
-          </p>
-          <div class="steps-grid">
-            <div class="step-card">
-              <div class="step-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              </div>
-              <h3 class="step-title">Discover</h3>
-              <p class="step-desc">Browse our interactive map to find deals near you. Filter by category, price, and distance.</p>
+      <div v-if="flashDeals.length" class="flash-scroll">
+        <router-link v-for="deal in flashDeals" :key="deal.id" :to="'/deals/' + deal.id" class="flash-card">
+          <div class="flash-card-img">
+            <img :src="deal.images?.[0] || FOOD_IMGS[0]" :alt="deal.title" loading="lazy" />
+            <span class="flash-discount-badge">-{{ discountPercent(deal) }}%</span>
+          </div>
+          <div class="flash-card-body">
+            <p class="flash-card-title">{{ deal.title }}</p>
+            <p class="flash-card-store">{{ deal.store?.name || 'Store' }}</p>
+            <div class="flash-card-price-row">
+              <span class="flash-card-price">{{ formatVND(deal.discountPrice) }}</span>
+              <span class="flash-card-original">{{ formatVND(deal.originalPrice) }}</span>
             </div>
-            <div class="step-card">
-              <div class="step-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-              </div>
-              <h3 class="step-title">Reserve</h3>
-              <p class="step-desc">Secure your item instantly with our real-time reservation system. No queues, no hassle.</p>
-            </div>
-            <div class="step-card">
-              <div class="step-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
-              <h3 class="step-title">Collect</h3>
-              <p class="step-desc">Pick up your reserved food at the store. Show your reservation code and enjoy your savings.</p>
-            </div>
-            <div class="step-card">
-              <div class="step-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              </div>
-              <h3 class="step-title">Contribute</h3>
-              <p class="step-desc">Share deals you find, verify listings, and build trust in your community.</p>
+            <div class="flash-card-rating">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="#f59e0b"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <span>{{ dealRating(deal) }}</span>
+              <span v-if="distanceLabel(deal)">{{ distanceLabel(deal) }}</span>
             </div>
           </div>
-        </div>
+        </router-link>
+      </div>
+      <div v-else class="flash-scroll">
+        <div v-for="i in 4" :key="i" class="flash-skeleton"></div>
       </div>
     </section>
 
-    <!-- Recommendations Section -->
-    <section class="section recommendations-section">
-      <div class="container">
-        <div class="recommendations-header">
-          <div>
-            <h2 class="section-title">Gợi ý cho bạn</h2>
-            <p class="section-subtitle">Deal gần bạn nhất, phù hợp với sở thích của bạn</p>
+    <section class="rec-section">
+      <div class="rec-header">
+        <h2 class="section-title">Recommended for you</h2>
+        <router-link to="/explore" class="section-link">View All</router-link>
+      </div>
+      <div v-if="recommendedDeals.length === 0" class="rec-grid">
+        <div v-for="i in 4" :key="i" class="rec-skeleton"></div>
+      </div>
+      <div v-else class="rec-grid">
+        <router-link v-for="deal in recommendedDeals" :key="deal.id" :to="'/deals/' + deal.id" class="rec-card">
+          <div class="rec-card-img">
+            <img :src="deal.images?.[0] || FOOD_IMGS[0]" :alt="deal.title" loading="lazy" />
+            <span v-if="discountPercent(deal) > 0" class="rec-discount-badge">-{{ discountPercent(deal) }}%</span>
+            <span v-if="deal.verified" class="rec-verified-badge">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </span>
           </div>
-          <router-link to="/explore" class="view-all-link">
-            Xem tất cả
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </router-link>
-        </div>
-
-        <div v-if="recommendationsLoading" class="recommendations-loading">
-          <div v-for="i in 4" :key="i" class="rec-skeleton"></div>
-        </div>
-
-        <div v-else-if="recommendedDeals.length === 0" class="recommendations-empty">
-          <p>Chưa có gợi ý nào. Hãy khám phá bản đồ để tìm deal gần bạn!</p>
-          <router-link to="/explore" class="btn btn-primary">Khám phá ngay</router-link>
-        </div>
-
-        <div v-else class="recommendations-grid">
-          <router-link
-            v-for="deal in recommendedDeals"
-            :key="deal.id"
-            :to="`/deals/${deal.id}`"
-            class="rec-card"
-          >
-            <div class="rec-card-img">
-              <img :src="deal.images?.[0] || FOOD_IMGS[0]" :alt="deal.title" loading="lazy" />
-              <span v-if="deal.verified" class="rec-badge verified-badge">Đã xác thực</span>
-              <span v-if="distanceLabel(deal)" class="rec-badge distance-badge">{{ distanceLabel(deal) }}</span>
+          <div class="rec-card-body">
+            <div class="rec-store">{{ deal.store?.name || 'Store' }}</div>
+            <h3 class="rec-title">{{ deal.title }}</h3>
+            <div class="rec-rating-row">
+              <div class="rec-stars">
+                <svg v-for="n in 5" :key="n" width="10" height="10" viewBox="0 0 24 24" :fill="n <= Math.round(dealRating(deal)) ? '#f59e0b' : '#d1d5db'"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+              <span class="rec-rating-text">{{ dealRating(deal) }}</span>
+              <span v-if="distanceLabel(deal)" class="rec-dot"></span>
+              <span v-if="distanceLabel(deal)" class="rec-distance">{{ distanceLabel(deal) }}</span>
             </div>
-            <div class="rec-card-body">
-              <h3 class="rec-title">{{ deal.title }}</h3>
-              <div class="rec-price-row">
-                <span class="rec-price">{{ formatVND(deal.discountPrice) }}</span>
-                <span v-if="deal.originalPrice > deal.discountPrice" class="rec-original-price">{{ formatVND(deal.originalPrice) }}</span>
-                <span v-if="deal.originalPrice > deal.discountPrice" class="rec-discount-pct">-{{ Math.round((1 - deal.discountPrice / deal.originalPrice) * 100) }}%</span>
-              </div>
-              <div class="rec-meta">
-                <span v-if="deal.address" class="rec-meta-item">{{ deal.address }}</span>
-                <span class="rec-meta-item">{{ deal.remainingQuantity }} còn lại</span>
-              </div>
-              <div class="rec-tags">
-                <span v-for="tag in (deal.tags || []).slice(0, 3)" :key="tag" class="rec-tag">{{ tag }}</span>
-              </div>
+            <div class="rec-price-row">
+              <span class="rec-price">{{ formatVND(deal.discountPrice) }}</span>
+              <span v-if="deal.originalPrice > deal.discountPrice" class="rec-original">{{ formatVND(deal.originalPrice) }}</span>
             </div>
-          </router-link>
-        </div>
+          </div>
+        </router-link>
       </div>
     </section>
-
-    <!-- CTA Section -->
-    <section class="section cta-section">
-      <div class="container">
-        <div class="cta-card">
-          <div class="cta-bg" aria-hidden="true"></div>
-          <h2 class="cta-title">Ready to Start Saving?</h2>
-          <p class="cta-text">Join thousands of community members reducing food waste and saving money.</p>
-          <router-link to="/register" class="cta-btn">
-            Get Started Free
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </router-link>
-        </div>
-      </div>
-    </section>
+    <div class="bottom-spacer"></div>
   </div>
 </template>
 
 <style scoped>
-.home-page {
-  animation: fade-in 0.5s ease;
-}
+.home-page { max-width: 1200px; margin: 0 auto; padding: 0 20px 80px; }
 
-.hero-section {
-  padding: 120px 0 80px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-}
+/* ── Top bar ────────────────────────────────────────── */
+.top-bar { padding: 16px 0 8px; display: flex; flex-direction: column; gap: 12px; }
+.location-row { display: flex; align-items: center; }
+.location-btn { display: flex; align-items: center; gap: 6px; color: var(--color-text); text-decoration: none; font-size: 0.8125rem; font-weight: 600; padding: 4px 0; }
+.location-text { color: var(--color-text-tertiary); font-weight: 400; }
+.location-addr { font-weight: 600; }
+.search-bar { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-radius: var(--radius-lg); background: var(--color-bg-secondary); border: 1.5px solid var(--color-border); cursor: pointer; transition: all var(--transition-fast); }
+.search-bar:hover { border-color: var(--color-accent); box-shadow: 0 0 0 4px rgba(238,77,45,0.06); }
+.search-bar svg { flex-shrink: 0; color: var(--color-text-tertiary); }
+.search-placeholder { color: var(--color-text-tertiary); font-size: 0.875rem; }
 
-.hero-bg {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 600px 400px at 30% 40%, rgba(16, 185, 129, 0.08), transparent 60%),
-    radial-gradient(ellipse 500px 300px at 70% 60%, rgba(99, 102, 241, 0.06), transparent 50%);
-  pointer-events: none;
-}
+/* ── Banner ─────────────────────────────────────────── */
+.banner-section { padding: 16px 0 4px; }
+.banner-carousel { position: relative; border-radius: var(--radius-lg); overflow: hidden; height: 150px; }
+.banner-slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; opacity: 0; transition: opacity 0.5s ease; pointer-events: none; }
+.banner-slide.active { opacity: 1; pointer-events: all; }
+.banner-content { flex: 1; color: white; z-index: 1; }
+.banner-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 4px; line-height: 1.2; letter-spacing: -0.02em; }
+.banner-subtitle { font-size: 0.8125rem; opacity: 0.9; margin-bottom: 12px; }
+.banner-cta { display: inline-flex; padding: 6px 18px; background: rgba(255,255,255,0.2); color: white; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 600; text-decoration: none; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); transition: all var(--transition-fast); }
+.banner-cta:hover { background: rgba(255,255,255,0.35); transform: translateY(-1px); }
+.banner-image-wrapper { width: 110px; height: 110px; border-radius: 50%; overflow: hidden; flex-shrink: 0; border: 3px solid rgba(255,255,255,0.3); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+.banner-image { width: 100%; height: 100%; object-fit: cover; }
+.banner-dots { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
+.banner-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-banner-indicator); border: none; cursor: pointer; padding: 0; transition: all var(--transition-fast); }
+.banner-dot.active { width: 24px; border-radius: 4px; background: var(--color-accent); }
 
-.hero-content {
-  position: relative;
-  max-width: 720px;
-  margin: 0 auto;
-}
+/* ── Categories ─────────────────────────────────────── */
+.category-section { padding: 16px 0 4px; }
+.cat-scroll { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.cat-scroll::-webkit-scrollbar { display: none; }
+.cat-item { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: none; cursor: pointer; padding: 4px 0; flex-shrink: 0; transition: all var(--transition-fast); }
+.cat-icon { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: all var(--transition-fast); }
+.cat-item:hover .cat-icon { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,0.1); }
+.cat-item:active .cat-icon { transform: scale(0.92); }
+.cat-emoji { font-size: 1.5rem; }
+.cat-name { font-size: 0.75rem; font-weight: 500; color: var(--color-text-secondary); white-space: nowrap; }
 
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 16px;
-  background: var(--color-accent-light);
-  color: var(--color-accent);
-  border-radius: var(--radius-full);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  margin-bottom: 24px;
-}
+/* ── Flash Sale ─────────────────────────────────────── */
+.flash-section { padding: 12px 0; }
+.flash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.flash-header-left { display: flex; align-items: center; gap: 10px; }
+.flash-title { font-size: 1.1rem; font-weight: 700; color: var(--color-accent); }
+.flash-end-label { font-size: 0.75rem; color: var(--color-text-tertiary); font-weight: 500; }
+.flash-countdown { display: flex; align-items: center; gap: 3px; }
+.cd-num { font-size: 0.875rem; font-weight: 700; color: white; background: var(--color-countdown-bg); padding: 4px 7px; border-radius: 6px; font-family: 'Inter', monospace; min-width: 26px; text-align: center; letter-spacing: 0.02em; }
+.cd-sep { font-size: 0.875rem; font-weight: 700; color: var(--color-text); }
+.flash-view-all { font-size: 0.8125rem; font-weight: 600; color: var(--color-accent); text-decoration: none; display: flex; align-items: center; gap: 4px; }
+.flash-view-all:hover { text-decoration: underline; }
+.flash-scroll { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.flash-scroll::-webkit-scrollbar { display: none; }
+.flash-card { flex-shrink: 0; width: 155px; background: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden; text-decoration: none; box-shadow: var(--shadow-sm); transition: all var(--transition-base); }
+.flash-card:hover { box-shadow: var(--shadow-card-hover); transform: translateY(-3px); }
+.flash-card:active { transform: scale(0.96); }
+.flash-card-img { position: relative; height: 140px; overflow: hidden; background: var(--color-bg-tertiary); }
+.flash-card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
+.flash-card:hover .flash-card-img img { transform: scale(1.05); }
+.flash-discount-badge { position: absolute; top: 8px; left: 8px; padding: 4px 10px; background: var(--color-accent); color: white; font-size: 0.8125rem; font-weight: 700; border-radius: 6px; box-shadow: 0 2px 8px rgba(238,77,45,0.3); }
+.flash-card-body { padding: 12px; }
+.flash-card-title { font-size: 0.875rem; color: var(--color-text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+.flash-card-store { font-size: 0.7rem; color: var(--color-text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 6px; }
+.flash-card-price-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.flash-card-price { font-size: 0.9375rem; font-weight: 700; color: var(--color-accent); }
+.flash-card-original { font-size: 0.7rem; color: var(--color-text-tertiary); text-decoration: line-through; }
+.flash-card-rating { display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: var(--color-text-tertiary); font-weight: 500; }
+.flash-skeleton { flex-shrink: 0; width: 155px; height: 230px; border-radius: 12px; background: var(--color-bg-tertiary); animation: pulse 1.5s ease-in-out infinite; }
 
-.live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-accent);
-  animation: pulse-glow 2s ease infinite;
-}
+/* ── Recommended ────────────────────────────────────── */
+.rec-section { padding: 20px 0 0; }
+.rec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.rec-header .section-title { font-size: 1.1rem; font-weight: 700; color: var(--color-text); }
+.rec-header .section-link { font-size: 0.8125rem; font-weight: 600; color: var(--color-accent); text-decoration: none; display: flex; align-items: center; gap: 4px; }
+.rec-header .section-link:hover { text-decoration: underline; }
+.rec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.rec-skeleton { height: 290px; border-radius: 14px; background: var(--color-bg-tertiary); animation: pulse 1.5s ease-in-out infinite; }
+.rec-card { display: flex; flex-direction: column; background: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 14px; overflow: hidden; text-decoration: none; box-shadow: var(--shadow-card); transition: all var(--transition-base); }
+.rec-card:hover { box-shadow: var(--shadow-card-hover); transform: translateY(-4px); }
+.rec-card:active { transform: scale(0.97); }
+.rec-card-img { position: relative; height: 160px; overflow: hidden; background: var(--color-bg-tertiary); }
+.rec-card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
+.rec-card:hover .rec-card-img img { transform: scale(1.06); }
+.rec-discount-badge { position: absolute; top: 10px; left: 10px; padding: 4px 12px; background: var(--color-accent); color: white; font-size: 0.8125rem; font-weight: 700; border-radius: 6px; box-shadow: 0 2px 8px rgba(238,77,45,0.3); }
+.rec-verified-badge { position: absolute; top: 10px; right: 10px; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; background: var(--color-success); color: white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.rec-card-body { padding: 14px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.rec-store { font-size: 0.7rem; color: var(--color-text-tertiary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+.rec-title { font-size: 0.9375rem; font-weight: 600; color: var(--color-text); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rec-rating-row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.rec-stars { display: flex; gap: 1px; }
+.rec-rating-text { font-size: 0.75rem; font-weight: 600; color: var(--color-rating); }
+.rec-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--color-text-tertiary); }
+.rec-distance { font-size: 0.75rem; color: var(--color-text-tertiary); }
+.rec-price-row { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 8px; }
+.rec-price { font-size: 1.125rem; font-weight: 700; color: var(--color-accent); letter-spacing: -0.02em; }
+.rec-original { font-size: 0.75rem; color: var(--color-text-tertiary); text-decoration: line-through; }
 
-.hero-title {
-  font-size: 3.75rem;
-  font-weight: 800;
-  line-height: 1.05;
-  letter-spacing: -0.04em;
-  margin-bottom: 20px;
-  color: var(--color-text);
-}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-.hero-highlight {
-  display: block;
-  background: linear-gradient(135deg, var(--color-accent), #6366f1);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.hero-description {
-  font-size: 1.125rem;
-  color: var(--color-text-secondary);
-  line-height: 1.7;
-  margin-bottom: 36px;
-  max-width: 560px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.hero-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-bottom: 56px;
-}
-
-.hero-stats {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 40px;
-}
-
-.stat {
-  text-align: center;
-}
-
-.stat-value {
-  display: block;
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: 4px;
-  letter-spacing: -0.02em;
-}
-
-.stat-label {
-  font-size: 0.875rem;
-  color: var(--color-text-tertiary);
-  font-weight: 500;
-}
-
-.stat-divider {
-  width: 1px;
-  height: 44px;
-  background: var(--color-border);
-}
-
-.images-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-}
-
-.image-card {
-  animation: fade-in-up 0.6s ease both;
-}
-
-.image-wrapper {
-  position: relative;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  aspect-ratio: 4/3;
-  background: var(--color-bg-tertiary);
-  box-shadow: var(--shadow-sm);
-}
-
-.image-wrapper img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.image-card:hover .image-wrapper img {
-  transform: scale(1.08);
-}
-
-.image-overlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 24px;
-  background: linear-gradient(transparent 0%, rgba(0,0,0,0.7) 100%);
-}
-
-.image-label {
-  color: white;
-  font-weight: 600;
-  font-size: 1.125rem;
-  letter-spacing: -0.01em;
-}
-
-.intro-content {
-  text-align: center;
-  margin-bottom: 48px;
-}
-
-.steps-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  margin-top: 48px;
-  text-align: left;
-}
-
-.step-card {
-  padding: 28px 24px;
-  background: var(--color-card-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  transition: all var(--transition-base);
-}
-
-.step-card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-4px);
-  border-color: var(--color-accent-light);
-}
-
-.step-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-sm);
-  background: var(--color-accent-light);
-  color: var(--color-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 16px;
-  transition: all var(--transition-base);
-}
-
-.step-card:hover .step-icon {
-  background: var(--color-accent);
-  color: white;
-}
-
-.step-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: var(--color-text);
-}
-
-.step-desc {
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-  line-height: 1.7;
-}
-
-.cta-section {
-  padding-bottom: 80px;
-}
-
-.cta-card {
-  position: relative;
-  text-align: center;
-  padding: 72px 48px;
-  background: linear-gradient(135deg, #059669 0%, #10b981 40%, #6366f1 100%);
-  border-radius: var(--radius-xl);
-  color: white;
-  overflow: hidden;
-}
-
-.cta-bg {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.1), transparent 50%);
-  pointer-events: none;
-}
-
-.cta-title {
-  position: relative;
-  font-size: 2.25rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin-bottom: 12px;
-}
-
-.cta-text {
-  position: relative;
-  font-size: 1.125rem;
-  opacity: 0.9;
-  margin-bottom: 32px;
-}
-
-.cta-btn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 32px;
-  background: white;
-  color: #059669;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  font-size: 1rem;
-  text-decoration: none;
-  transition: all var(--transition-fast);
-}
-
-.cta-btn:hover {
-  background: #f0fdf4;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  color: #047857;
-}
-
-.recommendations-section {
-  padding: 48px 0;
-}
-
-.recommendations-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  margin-bottom: 32px;
-}
-
-.view-all-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--color-accent);
-  text-decoration: none;
-  white-space: nowrap;
-  transition: gap var(--transition-fast);
-}
-.view-all-link:hover { gap: 10px; }
-
-.recommendations-loading {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-}
-
-.rec-skeleton {
-  height: 280px;
-  border-radius: var(--radius-md);
-  background: var(--color-skeleton);
-  animation: shimmer 1.5s ease infinite;
-}
-
-.recommendations-empty {
-  text-align: center;
-  padding: 48px 24px;
-  color: var(--color-text-secondary);
-}
-.recommendations-empty p { margin-bottom: 16px; }
-
-.recommendations-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-}
-
-.rec-card {
-  display: flex;
-  flex-direction: column;
-  background: var(--color-card-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  text-decoration: none;
-  transition: all var(--transition-base);
-  animation: fade-in-up 0.5s ease both;
-}
-.rec-card:nth-child(1) { animation-delay: 0.0s; }
-.rec-card:nth-child(2) { animation-delay: 0.08s; }
-.rec-card:nth-child(3) { animation-delay: 0.16s; }
-.rec-card:nth-child(4) { animation-delay: 0.24s; }
-.rec-card:nth-child(5) { animation-delay: 0.32s; }
-.rec-card:nth-child(6) { animation-delay: 0.40s; }
-.rec-card:nth-child(7) { animation-delay: 0.48s; }
-.rec-card:nth-child(8) { animation-delay: 0.56s; }
-
-.rec-card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-4px);
-  border-color: var(--color-accent-light);
-}
-
-.rec-card-img {
-  position: relative;
-  height: 120px;
-  overflow: hidden;
-  background: var(--color-bg-tertiary);
-}
-.rec-card-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.4s ease;
-}
-.rec-card:hover .rec-card-img img { transform: scale(1.08); }
-
-.rec-badge {
-  position: absolute;
-  top: 8px;
-  padding: 2px 8px;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  border-radius: var(--radius-full);
-  letter-spacing: 0.02em;
-}
-.verified-badge {
-  left: 8px;
-  background: #10b981;
-  color: white;
-}
-.distance-badge {
-  right: 8px;
-  background: rgba(0,0,0,0.65);
-  color: white;
-  backdrop-filter: blur(4px);
-}
-
-.rec-card-body {
-  padding: 14px 16px 16px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.rec-title {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: 8px;
-  line-height: 1.3;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.rec-price-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
-}
-
-.rec-price {
-  font-size: 1.0625rem;
-  font-weight: 700;
-  color: var(--color-accent);
-}
-
-.rec-original-price {
-  font-size: 0.75rem;
-  color: var(--color-text-tertiary);
-  text-decoration: line-through;
-}
-
-.rec-discount-pct {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  color: #ef4444;
-  background: #fef2f2;
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
-}
-
-.rec-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: 8px;
-  font-size: 0.75rem;
-  color: var(--color-text-tertiary);
-}
-
-.rec-tags {
-  display: flex;
-  gap: 6px;
-  margin-top: auto;
-  flex-wrap: wrap;
-}
-
-.rec-tag {
-  font-size: 0.6875rem;
-  padding: 2px 8px;
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-tertiary);
-  border-radius: var(--radius-full);
-}
-
-@media (max-width: 768px) {
-  .hero-section { padding: 100px 0 60px; }
-  .hero-title { font-size: 2.5rem; }
-  .hero-actions { flex-direction: column; align-items: center; }
-  .hero-stats { flex-wrap: wrap; gap: 16px; }
-  .stat-divider { display: none; }
-  .images-grid { grid-template-columns: 1fr; }
-  .steps-grid { grid-template-columns: 1fr; }
-  .cta-card { padding: 48px 24px; }
-  .cta-title { font-size: 1.75rem; }
-  .recommendations-grid,
-  .recommendations-loading { grid-template-columns: 1fr; }
-  .recommendations-header { flex-direction: column; align-items: flex-start; gap: 8px; }
-}
-
-@media (min-width: 769px) and (max-width: 1024px) {
-  .steps-grid { grid-template-columns: 1fr 1fr; }
-  .recommendations-grid,
-  .recommendations-loading { grid-template-columns: 1fr 1fr; }
+@media (min-width: 768px) {
+  .home-page { padding: 0 32px 48px; }
+  .banner-carousel { height: 200px; border-radius: var(--radius-xl); }
+  .banner-image-wrapper { width: 140px; height: 140px; }
+  .cat-scroll { justify-content: center; }
+  .rec-grid { grid-template-columns: repeat(4, 1fr); }
 }
 </style>

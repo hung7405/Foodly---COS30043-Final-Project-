@@ -61,7 +61,7 @@ async function deleteDeal(id: string) {
 
       <div v-else class="deals-list">
         <article v-for="deal in deals" :key="deal.id" class="deal-row">
-          <img :src="deal.images?.[0] || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&q=80'" :alt="deal.title" />
+          <img :src="deal.images?.[0] || 'https://images.unsplash.com/photo-1586999768265-24af89630739?w=300&q=80'" :alt="deal.title" />
           <div class="deal-row-info">
             <h3>{{ deal.title }}</h3>
             <div class="deal-row-meta">

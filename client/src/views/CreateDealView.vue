@@ -26,7 +26,7 @@ const form = ref({
   longitude: 106.6297,
   expiresIn: 2,
   tags: 'food, rescue',
-  imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=900&q=80',
+  imageUrl: 'https://images.unsplash.com/photo-1586999768265-24af89630739?w=900&q=80',
 })
 
 onMounted(async () => {
