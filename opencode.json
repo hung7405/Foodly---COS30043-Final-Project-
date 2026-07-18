@@ -9,6 +9,11 @@
       "headers": {
         "X-Goog-Api-Key": "${STITCH_API_KEY}"
       }
+    },
+    "supabase": {
+      "type": "remote",
+      "url": "https://mcp.supabase.com/mcp?project_ref=ppizktncazcseajpwgbh",
+      "enabled": true
     }
   }
 }

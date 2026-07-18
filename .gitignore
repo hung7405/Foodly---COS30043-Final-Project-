@@ -6,3 +6,8 @@ dist/
 coverage/
 .DS_Store
 *.log
+server/*.txt
+_bmad/
+_bmad-output/
+.opencode/
+skills-lock.json
