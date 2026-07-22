@@ -28,7 +28,7 @@ export class RecommendationService {
 
     const { data: deals, error } = await this.supabase
       .from('deals')
-      .select('*, user:user_id(*), store:stores(*)')
+      .select('*, user:user_id(id,email,username,first_name,last_name,role,avatar_url,trust_score,reputation_points,is_active,created_at,updated_at,last_login), store:stores(*)')
       .eq('status', DealStatus.ACTIVE)
 
     if (error) throw error

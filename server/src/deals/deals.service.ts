@@ -31,7 +31,7 @@ export class DealsService {
 
     let supabaseQuery = this.supabase
       .from('deals')
-      .select('*, user:user_id(*), store:stores(*)')
+      .select('*, user:user_id(id,email,username,first_name,last_name,role,avatar_url,trust_score,reputation_points,is_active,created_at,updated_at,last_login), store:stores(*)')
 
     if (query.status) supabaseQuery = supabaseQuery.eq('status', query.status)
     if (query.verified !== undefined) supabaseQuery = supabaseQuery.eq('verified', query.verified === 'true')
@@ -78,7 +78,7 @@ export class DealsService {
   async findMapDeals(swLat: number, swLng: number, neLat: number, neLng: number, status?: string) {
     let query = this.supabase
       .from('deals')
-      .select('*, user:user_id(*), store:stores(*)')
+      .select('*, user:user_id(id,email,username,first_name,last_name,role,avatar_url,trust_score,reputation_points,is_active,created_at,updated_at,last_login), store:stores(*)')
       .eq('status', status || DealStatus.ACTIVE)
 
     if ([swLat, swLng, neLat, neLng].every(Number.isFinite)) {
@@ -99,7 +99,7 @@ export class DealsService {
   async findById(id: string) {
     const { data: deal, error } = await this.supabase
       .from('deals')
-      .select('*, user:user_id(*), store:stores(*), comments:comments(*, user:user_id(*))')
+      .select('*, user:user_id(id,email,username,first_name,last_name,role,avatar_url,trust_score,reputation_points,is_active,created_at,updated_at,last_login), store:stores(*), comments:comments(*, user:user_id(id,email,username,first_name,last_name,role,avatar_url,trust_score,reputation_points,is_active,created_at,updated_at,last_login))')
       .eq('id', id)
       .maybeSingle()
 
@@ -140,7 +140,7 @@ export class DealsService {
     const { data: saved, error } = await this.supabase
       .from('deals')
       .insert(payload)
-      .select('*, user:user_id(*), store:stores(*)')
+      .select('*, user:user_id(id,email,username,first_name,last_name,role,avatar_url,trust_score,reputation_points,is_active,created_at,updated_at,last_login), store:stores(*)')
       .single()
 
     if (error) throw error
@@ -176,7 +176,7 @@ export class DealsService {
       .from('deals')
       .update(updates)
       .eq('id', id)
-      .select('*, user:user_id(*), store:stores(*)')
+      .select('*, user:user_id(id,email,username,first_name,last_name,role,avatar_url,trust_score,reputation_points,is_active,created_at,updated_at,last_login), store:stores(*)')
       .single()
 
     if (updateError) throw updateError
@@ -202,7 +202,7 @@ export class DealsService {
       .from('deals')
       .update({ status: DealStatus.REMOVED })
       .eq('id', id)
-      .select('*, user:user_id(*), store:stores(*)')
+      .select('*, user:user_id(id,email,username,first_name,last_name,role,avatar_url,trust_score,reputation_points,is_active,created_at,updated_at,last_login), store:stores(*)')
       .single()
 
     if (updateError) throw updateError
@@ -227,7 +227,7 @@ export class DealsService {
         verified_by_id: moderatorId,
       })
       .eq('id', id)
-      .select('*, user:user_id(*), store:stores(*)')
+      .select('*, user:user_id(id,email,username,first_name,last_name,role,avatar_url,trust_score,reputation_points,is_active,created_at,updated_at,last_login), store:stores(*)')
       .single()
 
     if (updateError) throw updateError

@@ -208,7 +208,7 @@ export class PaymentService {
   async findById(id: string) {
     const { data, error } = await this.supabase.client
       .from('payments')
-      .select('*, reservation:reservation_id(*, deal:deal_id(*)), user:user_id(*)')
+      .select('*, reservation:reservation_id(*, deal:deal_id(*)), user:user_id(id,email,username,first_name,last_name,role,avatar_url,trust_score,reputation_points,is_active,created_at,updated_at,last_login)')
       .eq('id', id)
       .single()
 

@@ -14,7 +14,7 @@ export class CommentsService {
   async findByDeal(dealId: string) {
     const { data: comments, error } = await this.supabaseService.client
       .from('comments')
-      .select('*, user:user_id(*), replies:comments!parent_id(*, user:user_id(*)))')
+      .select('*, user:user_id(id,email,username,first_name,last_name,role,avatar_url,trust_score,reputation_points,is_active,created_at,updated_at,last_login), replies:comments!parent_id(*, user:user_id(id,email,username,first_name,last_name,role,avatar_url,trust_score,reputation_points,is_active,created_at,updated_at,last_login)))')
       .eq('deal_id', dealId)
       .eq('status', 'active')
       .order('created_at', { ascending: false })
@@ -36,7 +36,7 @@ export class CommentsService {
     const { data: saved, error: insertError } = await this.supabaseService.client
       .from('comments')
       .insert({ deal_id: dealId, user_id: userId, content: content.trim(), parent_id: parentId || null })
-      .select('*, user:user_id(*)')
+      .select('*, user:user_id(id,email,username,first_name,last_name,role,avatar_url,trust_score,reputation_points,is_active,created_at,updated_at,last_login)')
       .single()
     if (insertError) throw insertError
 
