@@ -33,11 +33,11 @@ const banners = [
 
 const FOOD_IMGS = [
   'https://images.unsplash.com/photo-1586999768265-24af89630739?w=400&q=80',
-  'https://images.unsplash.com/photo-1578916171728-46686eacb58c?w=400&q=80',
-  'https://images.unsplash.com/photo-1598392065795-5fc3b0de9c0d?w=400&q=80',
+  'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80',
+  'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&q=80',
   'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&q=80',
   'https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=400&q=80',
-  'https://images.unsplash.com/photo-1583258292688-dba3d89166d7?w=400&q=80',
+  'https://images.unsplash.com/photo-1505253716362-afaea1d3d1af?w=400&q=80',
 ]
 
 const flashCountdown = computed(() => {

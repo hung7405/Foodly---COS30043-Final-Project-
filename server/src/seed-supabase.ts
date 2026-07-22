@@ -228,7 +228,18 @@ async function seed() {
   const binhId = emailToId.get('binh@foodly.app')
   const verifiedById = adminId || binhId
 
-  const dealInserts = dealRecords.map(d => {
+  const dealImages = [
+    'https://images.unsplash.com/photo-1586999768265-24af89630739?w=600&q=80',
+    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80',
+    'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=600&q=80',
+    'https://images.unsplash.com/photo-1505253716362-afaea1d3d1af?w=600&q=80',
+    'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=600&q=80',
+    'https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=600&q=80',
+    'https://images.unsplash.com/photo-1588964895597-cfccd6e2dbf9?w=600&q=80',
+    'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&q=80',
+  ]
+
+  const dealInserts = dealRecords.map((d, idx) => {
     const storeId = storeNameToId.get(d.store_name)
     return {
       user_id: adminId,
@@ -242,6 +253,7 @@ async function seed() {
       latitude: d.latitude,
       longitude: d.longitude,
       address: d.address,
+      images: [dealImages[idx % dealImages.length]],
       tags: d.tags,
       status: 'active',
       like_count: Math.floor(Math.random() * 15),

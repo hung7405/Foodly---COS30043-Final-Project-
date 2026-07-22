@@ -28,7 +28,7 @@ const newsData = [
   {
     id: 5, title: 'How Real-Time Technology is Fighting Food Waste',
     content: 'Real-time technology platforms like Foodly are transforming how communities tackle food waste...',
-    category: 'Sustainability',     imageUrl: 'https://images.unsplash.com/photo-1583258292688-dba3d89166d7?w=800&q=80',
+    category: 'Sustainability',     imageUrl: 'https://images.unsplash.com/photo-1505253716362-afaea1d3d1af?w=800&q=80',
     publishedDate: '2026-05-15',
   },
 ]
