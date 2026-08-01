@@ -14,6 +14,83 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: { persistSession: false },
 })
 
+const IMG = (id: string) => `https://images.unsplash.com/${id}?w=600&q=80`
+
+function stripVnDiacritics(s: string): string {
+  return s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+}
+
+const DEAL_IMAGES: { re: RegExp; urls: string[] }[] = [
+  { re: /banh mi|sandwich|baguette/i, urls: [IMG('photo-1550507992-eb63ffee0847'), IMG('photo-1553909489-cd47e0907980'), IMG('photo-1509440159596-0249088772ff')] },
+  { re: /ramen|tonkotsu|udon/i, urls: [IMG('photo-1569718212165-3a8278d5f624')] },
+  { re: /mi |mi xao|mi ly|my y|spaghetti|pasta|stir|noodle/i, urls: [IMG('photo-1585032226651-759b368d7246'), IMG('photo-1612929633738-8fe44f7ec841')] },
+  { re: /bento|onigiri|com ga|com chien|com tron|bibimbap|kimbap|kim bap/i, urls: [IMG('photo-1578205519332-cf30375f2678'), IMG('photo-1546069901-ba9599a7e63c')] },
+  { re: /tra sua|milk tea|matcha|khoai mon/i, urls: [IMG('photo-1572490122747-3968b75cc699'), IMG('photo-1558961363-fa8fdf82db35')] },
+  { re: /ca phe|coffee/i, urls: [IMG('photo-1541167760496-1628856ab772')] },
+  { re: /pizza/i, urls: [IMG('photo-1565299624946-b28f40a0ae38'), IMG('photo-1513104890138-7c749659a591')] },
+  { re: /kem/i, urls: [IMG('photo-1497034825429-c343d7c6a68f'), IMG('photo-1560008581-09826d1de69e')] },
+  { re: /bia |bia$/i, urls: [IMG('photo-1535958636474-b021ee887b13')] },
+  { re: /tokbokki|kim chi|banh gao|hang han|han quoc/i, urls: [IMG('photo-1498654896293-37aacf113fd9'), IMG('photo-1590301157890-4810ed352733')] },
+  { re: /takoyaki|taiyaki|mochi|dimsum|ha cao/i, urls: [IMG('photo-1553621042-f6e147245754')] },
+  { re: /salad|rau |rau$/i, urls: [IMG('photo-1512621776951-a57141f2eefd'), IMG('photo-1542838132-92c53300491e')] },
+  { re: /tom |ca hoi|ca thu|ca chien|hai san|seafood|ca ngu/i, urls: [IMG('photo-1504674900247-0877df9cc836')] },
+  { re: /thit bo|bo bit|bit tet|bap bo|steak/i, urls: [IMG('photo-1607623814075-e51df1bdc82f')] },
+  { re: /suon|thit|heo|ba chi|cha gio/i, urls: [IMG('photo-1544025162-d76694265947'), IMG('photo-1602470520998-f4a52199a3d6')] },
+  { re: /ga chien|karaage|ga ran|ga xao|chicken/i, urls: [IMG('photo-1626082927389-6cd097cdc6ec'), IMG('photo-1562967914-608f82629710')] },
+  { re: /dua hau|trai cay|fruit/i, urls: [IMG('photo-1582979512210-99b6a53386f9'), IMG('photo-1528825871115-3581a5387919')] },
+  { re: /sua chua|yogurt|sua tuoi|sua hat|trung|eggs/i, urls: [IMG('photo-1550583724-b2692b85b150'), IMG('photo-1570586437263-ab629fccc818'), IMG('photo-1506976785307-8732e854ad03')] },
+  { re: /banh flan|flan|cheesecake|banh ngot|banh bong lan|caramel|kem xop/i, urls: [IMG('photo-1524351199678-941a58a3df50'), IMG('photo-1578985545062-69928b1d9587')] },
+  { re: /curry|ca ri/i, urls: [IMG('photo-1455619452474-d2be8b1e70cd')] },
+  { re: /snack|khoai tay|pringles|chips|banh trang|hat huong duong|banh gao|khoai tay/i, urls: [IMG('photo-1566478989037-eec170784d0b'), IMG('photo-1621939514649-280e2ee25f60')] },
+  { re: /xuc xich|sausage/i, urls: [IMG('photo-1540497077202-7c8a3999166f')] },
+  { re: /bo kho|bo khu/i, urls: [IMG('photo-1568605117036-5fe5e7bab0b7')] },
+  { re: /cha gio|spring roll/i, urls: [IMG('photo-1563245372-f21724e3856d')] },
+  { re: /banh trang tron|tra dao|peach tea/i, urls: [IMG('photo-1556679343-c7306c1976bc')] },
+  { re: /nuoc ngot|coca|soda|cola|tang luc|energy/i, urls: [IMG('photo-1622483767028-3f66f32aef97')] },
+  { re: /nuoc suoi|aquafina|water/i, urls: [IMG('photo-1548839140-29a749e1cf4d')] },
+  { re: /tra |tra$/i, urls: [IMG('photo-1556679343-c7306c1976bc')] },
+  { re: /yen sao|nuoc ep|sua hat|sua tuoi/i, urls: [IMG('photo-1488477181946-6428a0291777')] },
+  { re: /chan ga/i, urls: [IMG('photo-1544025162-d76694265947')] },
+  { re: /ca chien|cha ca/i, urls: [IMG('photo-1504674900247-0877df9cc836')] },
+  { re: /ruou|vang|wine/i, urls: [IMG('photo-1510812431401-41d2bd2722f3')] },
+  { re: /gao |gao$/i, urls: [IMG('photo-1586201375761-83865001e31c')] },
+  { re: /dau olive|olive oil/i, urls: [IMG('photo-1474979266404-7eaacbcd87c5')] },
+  { re: /pho mai|cheese/i, urls: [IMG('photo-1486297678162-eb2a19b0a32d')] },
+]
+
+const FALLBACK_IMAGES = [
+  IMG('photo-1546069901-ba9599a7e63c'),
+  IMG('photo-1567620905732-2d1ec7ab7445'),
+  IMG('photo-1504674900247-0877df9cc836'),
+]
+
+function pickImages(title: string, tags: string[]): string[] {
+  const haystack = stripVnDiacritics(`${title} ${tags.join(' ')}`).toLowerCase()
+  for (const rule of DEAL_IMAGES) {
+    if (rule.re.test(haystack)) {
+      return [rule.urls[0]]
+    }
+  }
+  return [FALLBACK_IMAGES[Math.floor(Math.random() * FALLBACK_IMAGES.length)]]
+}
+
+async function resetDatabase() {
+  console.log('Resetting existing data...')
+  const tables = [
+    'analytics_snapshots', 'activity_events', 'user_interactions',
+    'payments', 'comments', 'reservations', 'verification_events',
+    'bookmarks', 'likes', 'deals', 'stores', 'users',
+  ]
+  for (const t of tables) {
+    await supabase.from(t).delete().neq('id', '00000000-0000-0000-0000-000000000000')
+  }
+  console.log('  Cleared existing rows.\n')
+}
+
 async function seed() {
   console.log('Starting Supabase seed...\n')
 
@@ -24,6 +101,8 @@ async function seed() {
   }
 
   console.log('Connected to Supabase successfully.\n')
+
+  await resetDatabase()
 
   // ── Users ──
   console.log('Seeding users...')
@@ -228,17 +307,6 @@ async function seed() {
   const binhId = emailToId.get('binh@foodly.app')
   const verifiedById = adminId || binhId
 
-  const dealImages = [
-    'https://images.unsplash.com/photo-1586999768265-24af89630739?w=600&q=80',
-    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80',
-    'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=600&q=80',
-    'https://images.unsplash.com/photo-1505253716362-afaea1d3d1af?w=600&q=80',
-    'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=600&q=80',
-    'https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=600&q=80',
-    'https://images.unsplash.com/photo-1588964895597-cfccd6e2dbf9?w=600&q=80',
-    'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&q=80',
-  ]
-
   const dealInserts = dealRecords.map((d, idx) => {
     const storeId = storeNameToId.get(d.store_name)
     return {
@@ -253,7 +321,7 @@ async function seed() {
       latitude: d.latitude,
       longitude: d.longitude,
       address: d.address,
-      images: [dealImages[idx % dealImages.length]],
+      images: pickImages(d.title, d.tags),
       tags: d.tags,
       status: 'active',
       like_count: Math.floor(Math.random() * 15),
