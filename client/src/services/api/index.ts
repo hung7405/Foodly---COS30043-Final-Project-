@@ -216,3 +216,30 @@ export const paymentsService = {
     return data
   },
 }
+
+export const merchantService = {
+  async getProfile() {
+    const { data } = await api.get('/merchant/profile')
+    return data
+  },
+  async getDashboard() {
+    const { data } = await api.get('/merchant/dashboard')
+    return data
+  },
+  async getOrders(status?: string) {
+    const { data } = await api.get('/merchant/orders', { params: status ? { status } : {} })
+    return data
+  },
+  async confirmOrder(id: string) {
+    const { data } = await api.put(`/merchant/orders/${id}/confirm`)
+    return data
+  },
+  async getDeals() {
+    const { data } = await api.get('/merchant/deals')
+    return data
+  },
+  async setDealActive(id: string, active: boolean) {
+    const { data } = await api.put(`/merchant/deals/${id}/status`, { active })
+    return data
+  },
+}

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { reservationsService, http } from '../services/api'
 import { formatVND } from '../utils/currency'
@@ -45,15 +45,21 @@ async function loadReservation(id: string) {
 }
 
 function startCountdown() {
+  if (countdownTimer) window.clearInterval(countdownTimer)
   countdown.value = 300
   countdownTimer = window.setInterval(() => {
     countdown.value--
     if (countdown.value <= 0) {
-      window.clearInterval(countdownTimer)
+      if (countdownTimer) window.clearInterval(countdownTimer)
+      countdownTimer = undefined
       error.value = 'Payment time expired. Your reservation has been released.'
     }
   }, 1000)
 }
+
+onUnmounted(() => {
+  if (countdownTimer) window.clearInterval(countdownTimer)
+})
 
 async function initiatePayment() {
   if (!reservation.value) return
@@ -76,6 +82,7 @@ async function completeMockPayment() {
   isPaying.value = true
   try {
     const { data } = await http.put(`/payments/${payment.value.id}/complete-mock`)
+    payment.value = data
     success.value = 'Payment successful! Your pickup QR code is ready.'
     window.clearInterval(countdownTimer)
     setTimeout(() => router.push('/profile/reservations'), 2000)
@@ -87,6 +94,8 @@ async function completeMockPayment() {
 }
 
 function retry() {
+  if (countdownTimer) window.clearInterval(countdownTimer)
+  countdownTimer = undefined
   payment.value = null
   error.value = ''
   success.value = ''
@@ -158,7 +167,10 @@ function formatCountdown(seconds: number) {
           </div>
 
           <div class="countdown-bar">
-            <span>⏱ Complete payment within</span>
+            <span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 6px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Complete payment within
+            </span>
             <span class="countdown-timer" :class="{ urgent: countdown <= 60 }">{{ formatCountdown(countdown) }}</span>
           </div>
 
@@ -182,8 +194,9 @@ function formatCountdown(seconds: number) {
 
           <div v-if="paymentMethod === 'mock'" class="mock-pay-section">
             <p class="mock-hint">Mock payment: click to simulate successful payment</p>
-            <button class="btn btn-primary btn-lg" :disabled="isPaying || success" @click="completeMockPayment">
-              {{ isPaying ? 'Processing...' : '✅ Confirm payment (Demo)' }}
+            <button class="btn btn-primary btn-lg" :disabled="isPaying || !!success" @click="completeMockPayment">
+              <svg v-if="!isPaying" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              {{ isPaying ? 'Processing...' : 'Confirm payment (Demo)' }}
             </button>
           </div>
 

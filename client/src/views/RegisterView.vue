@@ -7,14 +7,37 @@ const router = useRouter()
 const auth = useAuthStore()
 
 const form = ref({ email: '', username: '', password: '', confirmPassword: '', firstName: '', lastName: '' })
+const fieldErrors = ref<Record<string, string>>({})
 const error = ref('')
 const isSubmitting = ref(false)
 
-async function handleSubmit() {
-  if (form.value.password !== form.value.confirmPassword) {
-    error.value = 'Passwords do not match'
-    return
+function validate(): boolean {
+  const errors: Record<string, string> = {}
+  if (!form.value.firstName.trim()) errors.firstName = 'First name is required'
+  if (!form.value.lastName.trim()) errors.lastName = 'Last name is required'
+  if (!form.value.email.trim()) errors.email = 'Email is required'
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email.trim())) errors.email = 'Enter a valid email address'
+  if (!form.value.username.trim()) errors.username = 'Username is required'
+  else if (form.value.username.trim().length < 3) errors.username = 'Username must be at least 3 characters'
+  else if (/\s/.test(form.value.username)) errors.username = 'Username cannot contain spaces'
+  if (!form.value.password) errors.password = 'Password is required'
+  else if (form.value.password.length < 8) errors.password = 'Password must be at least 8 characters'
+  if (!form.value.confirmPassword) errors.confirmPassword = 'Please repeat your password'
+  else if (form.value.confirmPassword !== form.value.password) errors.confirmPassword = 'Passwords do not match'
+  fieldErrors.value = errors
+  return Object.keys(errors).length === 0
+}
+
+function clearFieldError(name: string) {
+  if (fieldErrors.value[name]) {
+    const next = { ...fieldErrors.value }
+    delete next[name]
+    fieldErrors.value = next
   }
+}
+
+async function handleSubmit() {
+  if (!validate()) return
   isSubmitting.value = true
   error.value = ''
   try {
@@ -42,32 +65,38 @@ async function handleSubmit() {
         <div class="field-row">
           <div class="field">
             <label for="firstName">First Name</label>
-            <input id="firstName" v-model="form.firstName" type="text" placeholder="John" />
+            <input id="firstName" v-model="form.firstName" type="text" placeholder="John" :class="{ invalid: fieldErrors.firstName }" @input="clearFieldError('firstName')" />
+            <span v-if="fieldErrors.firstName" class="field-error">{{ fieldErrors.firstName }}</span>
           </div>
           <div class="field">
             <label for="lastName">Last Name</label>
-            <input id="lastName" v-model="form.lastName" type="text" placeholder="Smith" />
+            <input id="lastName" v-model="form.lastName" type="text" placeholder="Smith" :class="{ invalid: fieldErrors.lastName }" @input="clearFieldError('lastName')" />
+            <span v-if="fieldErrors.lastName" class="field-error">{{ fieldErrors.lastName }}</span>
           </div>
         </div>
 
         <div class="field">
           <label for="email">Email</label>
-          <input id="email" v-model="form.email" type="email" placeholder="you@example.com" required />
+          <input id="email" v-model="form.email" type="email" placeholder="you@example.com" required :class="{ invalid: fieldErrors.email }" @input="clearFieldError('email')" />
+          <span v-if="fieldErrors.email" class="field-error">{{ fieldErrors.email }}</span>
         </div>
 
         <div class="field">
           <label for="username">Username</label>
-          <input id="username" v-model="form.username" type="text" placeholder="yourusername" required />
+          <input id="username" v-model="form.username" type="text" placeholder="yourusername" required :class="{ invalid: fieldErrors.username }" @input="clearFieldError('username')" />
+          <span v-if="fieldErrors.username" class="field-error">{{ fieldErrors.username }}</span>
         </div>
 
         <div class="field-row">
           <div class="field">
             <label for="password">Password</label>
-            <input id="password" v-model="form.password" type="password" placeholder="Min 8 characters" required minlength="8" />
+            <input id="password" v-model="form.password" type="password" placeholder="Min 8 characters" required minlength="8" :class="{ invalid: fieldErrors.password }" @input="clearFieldError('password'); clearFieldError('confirmPassword')" />
+            <span v-if="fieldErrors.password" class="field-error">{{ fieldErrors.password }}</span>
           </div>
           <div class="field">
             <label for="confirmPassword">Confirm</label>
-            <input id="confirmPassword" v-model="form.confirmPassword" type="password" placeholder="Repeat password" required />
+            <input id="confirmPassword" v-model="form.confirmPassword" type="password" placeholder="Repeat password" required :class="{ invalid: fieldErrors.confirmPassword }" @input="clearFieldError('confirmPassword')" />
+            <span v-if="fieldErrors.confirmPassword" class="field-error">{{ fieldErrors.confirmPassword }}</span>
           </div>
         </div>
 
@@ -123,6 +152,9 @@ async function handleSubmit() {
   box-sizing: border-box;
 }
 .field input:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.field input.invalid { border-color: var(--color-error); }
+.field input.invalid:focus { box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }
+.field-error { display: block; margin-top: 4px; font-size: 0.75rem; color: var(--color-error); }
 .auth-submit { width: 100%; margin-top: 8px; }
 .auth-alt { text-align: center; margin-top: 24px; font-size: 0.875rem; color: var(--color-text-secondary); }
 .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; }

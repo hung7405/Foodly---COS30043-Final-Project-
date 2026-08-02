@@ -13,16 +13,18 @@ const currentBanner = ref(0)
 let bannerTimer: number | undefined
 const flashSaleEnd = ref(0)
 let flashTimer: number | undefined
+const loading = ref(true)
+const loadError = ref('')
 
 const categories = [
-  { id: 'food', name: 'Food', icon: '🍔', color: '#fff3e0' },
-  { id: 'drinks', name: 'Drinks', icon: '🥤', color: '#e3f2fd' },
-  { id: 'bakery', name: 'Bakery', icon: '🥐', color: '#fff8e1' },
-  { id: 'grocery', name: 'Grocery', icon: '🛒', color: '#e8f5e9' },
-  { id: 'asian', name: 'Asian', icon: '🍜', color: '#fce4ec' },
-  { id: 'western', name: 'Western', icon: '🍕', color: '#fff3e0' },
-  { id: 'dessert', name: 'Dessert', icon: '🍰', color: '#f3e5f5' },
-  { id: 'healthy', name: 'Healthy', icon: '🥗', color: '#e8f5e9' },
+  { id: 'food', name: 'Food', color: '#fff3e0', icon: '<path d="M8 1v8a4 4 0 0 1-8 0V1h2v8h1V1h2v8h1V1h2z"/><path d="M6 13v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-8h3z"/>' },
+  { id: 'drinks', name: 'Drinks', color: '#e3f2fd', icon: '<path d="M8 2v5l-3 8v3a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-3L13 7V2"/><path d="M4 2h8"/><path d="M8 8v8"/>' },
+  { id: 'bakery', name: 'Bakery', color: '#fff8e1', icon: '<path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M12 6V3"/><path d="M8 6a4 4 0 0 1 8 0"/>' },
+  { id: 'grocery', name: 'Grocery', color: '#e8f5e9', icon: '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>' },
+  { id: 'asian', name: 'Asian', color: '#fce4ec', icon: '<path d="M12 3v9"/><path d="M12 12a5 5 0 0 1-5 5c0-3 2-5 5-5z"/><path d="M12 12a5 5 0 0 0 5 5c0-3-2-5-5-5z"/><path d="M5 21h14"/>' },
+  { id: 'western', name: 'Western', color: '#fff3e0', icon: '<path d="M12 3c-2 0-3.5 1.5-3.5 3.5S10 10 12 10s3.5-1.5 3.5-3.5S14 3 12 3z"/><path d="M12 10v11"/><path d="M8 21h8"/><path d="M12 10a3 3 0 0 1-3 3"/><path d="M12 10a3 3 0 0 0 3 3"/>' },
+  { id: 'dessert', name: 'Dessert', color: '#f3e5f5', icon: '<path d="M12 2v4"/><path d="M4 6h16"/><path d="M6 6l2 16h8l2-16"/><path d="M9 10l3 3 3-3"/>' },
+  { id: 'healthy', name: 'Healthy', color: '#e8f5e9', icon: '<path d="M12 3a4 4 0 0 0-4 4c0 2 1 3 2 4v10h4V11c1-1 2-2 2-4a4 4 0 0 0-4-4z"/><path d="M12 3c2 0 3 1 3 3"/>' },
 ]
 
 const banners = [
@@ -59,6 +61,7 @@ onUnmounted(() => {
 })
 
 async function loadDeals() {
+  loading.value = true; loadError.value = ''
   try {
     const [recs, all, flash] = await Promise.all([
       recommendationsService.getRecommendations({ limit: 8 }),
@@ -75,7 +78,8 @@ async function loadDeals() {
     flashSaleEnd.value = Math.max(0, Math.floor((endTime - Date.now()) / 1000))
   } catch {
     recommendedDeals.value = []; flashDeals.value = []; flashSaleEnd.value = 0
-  }
+    loadError.value = 'Could not load deals. Please try again.'
+  } finally { loading.value = false }
 }
 
 function selectCategory(id: string) { router.push('/explore?category=' + id) }
@@ -94,6 +98,10 @@ function dealRating(deal: any) {
 
 <template>
   <div class="home-page">
+    <div v-if="loadError" class="home-error-bar">
+      <span>{{ loadError }}</span>
+      <button @click="loadDeals">Retry</button>
+    </div>
     <div class="top-bar">
       <div class="location-row">
         <router-link to="/explore" class="location-btn">
@@ -123,14 +131,16 @@ function dealRating(deal: any) {
         </div>
       </div>
       <div class="banner-dots">
-        <button v-for="(_, i) in banners" :key="i" class="banner-dot" :class="{ active: currentBanner === i }" @click="currentBanner = i" />
+        <button v-for="(_, i) in banners" :key="i" class="banner-dot" :class="{ active: currentBanner === i }" :aria-label="'Go to slide ' + (i + 1)" :aria-current="currentBanner === i ? 'true' : undefined" @click="currentBanner = i" />
       </div>
     </section>
 
     <section class="category-section">
       <div class="cat-scroll">
         <button v-for="cat in categories" :key="cat.id" class="cat-item" @click="selectCategory(cat.id)">
-          <div class="cat-icon" :style="{ background: cat.color }"><span class="cat-emoji">{{ cat.icon }}</span></div>
+          <div class="cat-icon" :style="{ background: cat.color }">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" v-html="cat.icon"></svg>
+          </div>
           <span class="cat-name">{{ cat.name }}</span>
         </button>
       </div>
@@ -150,7 +160,10 @@ function dealRating(deal: any) {
         </div>
         <router-link to="/explore?sort=discount" class="flash-view-all">View All</router-link>
       </div>
-      <div v-if="flashDeals.length" class="flash-scroll">
+      <div v-if="loading" class="flash-scroll">
+        <div v-for="i in 4" :key="i" class="flash-skeleton"></div>
+      </div>
+      <div v-else-if="flashDeals.length" class="flash-scroll">
         <router-link v-for="deal in flashDeals" :key="deal.id" :to="'/deals/' + deal.id" class="flash-card">
           <div class="flash-card-img">
             <img :src="deal.images?.[0] || FOOD_IMGS[0]" :alt="deal.title" loading="lazy" />
@@ -171,8 +184,14 @@ function dealRating(deal: any) {
           </div>
         </router-link>
       </div>
-      <div v-else class="flash-scroll">
-        <div v-for="i in 4" :key="i" class="flash-skeleton"></div>
+      <div v-else class="flash-scroll flash-empty">
+        <div v-for="i in 4" :key="i" class="flash-card flash-card--placeholder">
+          <div class="flash-card-img placeholder-img"></div>
+          <div class="flash-card-body">
+            <div class="ph-line" style="width: 80%;"></div>
+            <div class="ph-line" style="width: 50%;"></div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -181,8 +200,18 @@ function dealRating(deal: any) {
         <h2 class="section-title">Recommended for you</h2>
         <router-link to="/explore" class="section-link">View All</router-link>
       </div>
-      <div v-if="recommendedDeals.length === 0" class="rec-grid">
+      <div v-if="loading" class="rec-grid">
         <div v-for="i in 4" :key="i" class="rec-skeleton"></div>
+      </div>
+      <div v-else-if="recommendedDeals.length === 0" class="rec-grid">
+        <div v-for="i in 4" :key="i" class="rec-card rec-card--placeholder">
+          <div class="rec-card-img placeholder-img"></div>
+          <div class="rec-card-body">
+            <div class="ph-line" style="width: 40%;"></div>
+            <div class="ph-line" style="width: 90%;"></div>
+            <div class="ph-line" style="width: 60%;"></div>
+          </div>
+        </div>
       </div>
       <div v-else class="rec-grid">
         <router-link v-for="deal in recommendedDeals" :key="deal.id" :to="'/deals/' + deal.id" class="rec-card">
@@ -219,6 +248,14 @@ function dealRating(deal: any) {
 <style scoped>
 .home-page { max-width: 1200px; margin: 0 auto; padding: 0 20px 80px; }
 
+.home-error-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; margin: 12px 0 0; border-radius: 10px; background: #fffbeb; color: #92400e; border: 1px solid #fde68a; font-size: 0.875rem; }
+.home-error-bar button { background: var(--color-accent); color: white; border: none; border-radius: 6px; padding: 5px 14px; font-size: 0.8125rem; font-weight: 600; cursor: pointer; flex-shrink: 0; }
+
+.placeholder-img { background: var(--color-bg-tertiary); }
+.ph-line { height: 12px; border-radius: 6px; background: var(--color-bg-tertiary); }
+.flash-card--placeholder, .rec-card--placeholder { pointer-events: none; }
+.rec-card--placeholder .rec-card-body { gap: 10px; }
+
 /* ── Top bar ────────────────────────────────────────── */
 .top-bar { padding: 16px 0 8px; display: flex; flex-direction: column; gap: 12px; }
 .location-row { display: flex; align-items: center; }
@@ -254,7 +291,6 @@ function dealRating(deal: any) {
 .cat-icon { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: all var(--transition-fast); }
 .cat-item:hover .cat-icon { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,0.1); }
 .cat-item:active .cat-icon { transform: scale(0.92); }
-.cat-emoji { font-size: 1.5rem; }
 .cat-name { font-size: 0.75rem; font-weight: 500; color: var(--color-text-secondary); white-space: nowrap; }
 
 /* ── Flash Sale ─────────────────────────────────────── */

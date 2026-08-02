@@ -7,7 +7,13 @@ import { useAuthStore } from '../stores/auth.store'
 import { useUiStore } from '../stores/ui.store'
 import type { Comment, Deal, Reservation } from '../types'
 import RoutesPanel from '../components/map/RoutesPanel.vue'
+import RealtimeOrderTimeline from '../components/common/RealtimeOrderTimeline.vue'
 import { formatVND } from '../utils/currency'
+
+const RESERVATION_STEPS = [
+  { key: 'active', label: 'Hold Active', hint: 'Item reserved for you' },
+  { key: 'confirmed', label: 'Confirmed & Ready', hint: 'Store is holding your item' },
+]
 
 const route = useRoute()
 const router = useRouter()
@@ -56,6 +62,11 @@ onMounted(async () => {
   socket.on('comment:added', (incoming: Comment) => {
     if (incoming.dealId === route.params.id) comments.value.unshift(incoming)
   })
+  socket.on('reservation:confirmed', (payload: { id: string }) => {
+    if (reservation.value && payload.id === reservation.value.id) {
+      reservation.value.status = 'confirmed'
+    }
+  })
 })
 
 onUnmounted(() => {
@@ -65,6 +76,7 @@ onUnmounted(() => {
   socket.off('deal:updated')
   socket.off('deal:quantity')
   socket.off('comment:added')
+  socket.off('reservation:confirmed')
 })
 
 async function loadDeal() {
@@ -130,10 +142,11 @@ async function handleReserve() {
   error.value = ''
   success.value = ''
   try {
-    reservation.value = await reservationsService.reserve(String(route.params.id))
+    const reserved = await reservationsService.reserve(String(route.params.id))
+    reservation.value = reserved
     if (deal.value) deal.value.remainingQuantity = Math.max(deal.value.remainingQuantity - 1, 0)
     success.value = 'Item reserved! Redirecting to payment...'
-    setTimeout(() => router.push(`/payments/${reservation.value.id}`), 1000)
+    setTimeout(() => router.push(`/payments/${reserved.id}`), 1000)
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Could not reserve this item.'
   } finally {
@@ -172,28 +185,48 @@ async function toggleLike() {
   if (!auth.isAuthenticated) { router.push({ path: '/login', query: { redirect: route.fullPath } }); return }
   if (!deal.value || togglingLike.value) return
   togglingLike.value = true
+  const prevLiked = liked.value
+  const prevCount = deal.value.likeCount
+  liked.value = !prevLiked
+  deal.value.likeCount = Math.max(0, prevCount + (liked.value ? 1 : -1))
   try {
     const res = await dealsService.toggleLike(deal.value.id)
-    liked.value = res.liked
-    deal.value.likeCount += res.liked ? 1 : -1
-    if (res.liked) interactionsService.record(deal.value.id, 'like').catch(() => {})
-    else interactionsService.record(deal.value.id, 'unlike').catch(() => {})
-  } catch { /* ignore */ }
-  togglingLike.value = false
+    if (res.liked !== liked.value) {
+      liked.value = res.liked
+      deal.value.likeCount = Math.max(0, prevCount + (res.liked ? 1 : -1))
+    }
+    interactionsService.record(deal.value.id, res.liked ? 'like' : 'unlike').catch(() => {})
+  } catch {
+    liked.value = prevLiked
+    deal.value.likeCount = prevCount
+    uiStore.addToast('Could not update like. Please try again.', 'error')
+  } finally {
+    togglingLike.value = false
+  }
 }
 
 async function toggleBookmark() {
   if (!auth.isAuthenticated) { router.push({ path: '/login', query: { redirect: route.fullPath } }); return }
   if (!deal.value || togglingBookmark.value) return
   togglingBookmark.value = true
+  const prevBookmarked = bookmarked.value
+  const prevCount = deal.value.bookmarkCount
+  bookmarked.value = !prevBookmarked
+  deal.value.bookmarkCount = Math.max(0, prevCount + (bookmarked.value ? 1 : -1))
   try {
     const res = await dealsService.toggleBookmark(deal.value.id)
-    bookmarked.value = res.bookmarked
-    deal.value.bookmarkCount += res.bookmarked ? 1 : -1
-    if (res.bookmarked) interactionsService.record(deal.value.id, 'bookmark').catch(() => {})
-    else interactionsService.record(deal.value.id, 'unbookmark').catch(() => {})
-  } catch { /* ignore */ }
-  togglingBookmark.value = false
+    if (res.bookmarked !== bookmarked.value) {
+      bookmarked.value = res.bookmarked
+      deal.value.bookmarkCount = Math.max(0, prevCount + (res.bookmarked ? 1 : -1))
+    }
+    interactionsService.record(deal.value.id, res.bookmarked ? 'bookmark' : 'unbookmark').catch(() => {})
+  } catch {
+    bookmarked.value = prevBookmarked
+    deal.value.bookmarkCount = prevCount
+    uiStore.addToast('Could not update bookmark. Please try again.', 'error')
+  } finally {
+    togglingBookmark.value = false
+  }
 }
 </script>
 
@@ -246,11 +279,20 @@ async function toggleBookmark() {
                 <h4>Reserved successfully</h4>
                 <p>Pickup code <strong>{{ reservation.reservationCode }}</strong></p>
                 <p>Hold expires in <strong>{{ formatCountdown(countdown) }}</strong></p>
+                <RealtimeOrderTimeline
+                  :steps="RESERVATION_STEPS"
+                  :current-index="reservation.status === 'confirmed' ? 2 : 0"
+                  :state="reservation.status === 'confirmed' ? 'active' : 'active'"
+                  :expires-at="reservation.expiresAt"
+                  :show-countdown="reservation.status === 'active'"
+                  style="margin-top: 14px"
+                />
                 <button
                   class="btn btn-outline directions-btn"
                   @click="showDirections = !showDirections"
                 >
-                  🗺️ {{ showDirections ? 'Hide Directions' : 'Get Directions' }}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 20l-5.447-2.724A1 1 0 0 1 3 16.382V5.618a1 1 0 0 1 1.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0 0 21 18.382V7.618a1 1 0 0 0-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                  {{ showDirections ? 'Hide Directions' : 'Get Directions' }}
                 </button>
               </div>
 

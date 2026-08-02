@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { getAnalyticsSocket } from '../services/socket/socket'
 import type { LiveMetrics } from '../types'
 
@@ -13,6 +13,21 @@ const history = ref<LiveMetrics[]>([])
 const labels = ref<string[]>([])
 const reservationData = ref<number[]>([])
 const dealData = ref<number[]>([])
+
+function trendPct(key: 'activeUsers' | 'reservationsPerMinute' | 'dealsPerMinute'): number {
+  const h = history.value
+  if (h.length < 2) return 0
+  const current = Number(h[h.length - 1][key] || 0)
+  const prev = Number(h[h.length - 2][key] || 0)
+  if (prev === 0) return current > 0 ? 100 : 0
+  return Math.round(((current - prev) / prev) * 100)
+}
+
+const trends = computed(() => ({
+  activeUsers: trendPct('activeUsers'),
+  reservationsPerMinute: trendPct('reservationsPerMinute'),
+  dealsPerMinute: trendPct('dealsPerMinute'),
+}))
 
 onMounted(() => {
   const socket = getAnalyticsSocket()
@@ -53,22 +68,22 @@ onUnmounted(() => {
         <div class="metric-card">
           <div class="metric-value">{{ metrics.activeUsers }}</div>
           <div class="metric-label">Active Users</div>
-          <div class="metric-trend up">+12%</div>
+          <div class="metric-trend" :class="trends.activeUsers > 0 ? 'up' : trends.activeUsers < 0 ? 'down' : 'neutral'">{{ trends.activeUsers > 0 ? '+' : '' }}{{ trends.activeUsers }}%</div>
         </div>
         <div class="metric-card">
           <div class="metric-value">{{ metrics.reservationsPerMinute }}</div>
           <div class="metric-label">Reservations/min</div>
-          <div class="metric-trend up">+8%</div>
+          <div class="metric-trend" :class="trends.reservationsPerMinute > 0 ? 'up' : trends.reservationsPerMinute < 0 ? 'down' : 'neutral'">{{ trends.reservationsPerMinute > 0 ? '+' : '' }}{{ trends.reservationsPerMinute }}%</div>
         </div>
         <div class="metric-card">
           <div class="metric-value">{{ metrics.dealsPerMinute }}</div>
           <div class="metric-label">Deals/min</div>
-          <div class="metric-trend up">+5%</div>
+          <div class="metric-trend" :class="trends.dealsPerMinute > 0 ? 'up' : trends.dealsPerMinute < 0 ? 'down' : 'neutral'">{{ trends.dealsPerMinute > 0 ? '+' : '' }}{{ trends.dealsPerMinute }}%</div>
         </div>
         <div class="metric-card">
           <div class="metric-value">{{ metrics.verificationsTotal }}</div>
           <div class="metric-label">Verifications</div>
-          <div class="metric-trend neutral">0%</div>
+          <div class="metric-trend neutral">total</div>
         </div>
       </div>
 
@@ -115,6 +130,7 @@ onUnmounted(() => {
 .metric-label { font-size: 0.875rem; color: var(--color-text-secondary); margin-bottom: 8px; }
 .metric-trend { font-size: 0.8125rem; font-weight: 600; }
 .metric-trend.up { color: var(--color-success); }
+.metric-trend.down { color: var(--color-error); }
 .metric-trend.neutral { color: var(--color-text-tertiary); }
 .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
 .chart-card { padding: 24px; background: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); }

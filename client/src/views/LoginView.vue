@@ -43,7 +43,7 @@ async function handleSubmit() {
 
         <div class="field">
           <label for="email">Email</label>
-          <input id="email" v-model="email" type="email" placeholder="you@example.com" required autocomplete="email" />
+          <input id="email" v-model="email" type="email" placeholder="you@example.com" required autocomplete="email" v-focus />
         </div>
 
         <div class="field">

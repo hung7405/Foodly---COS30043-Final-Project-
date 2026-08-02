@@ -13,6 +13,7 @@ const isSubmitting = ref(false)
 const isLocating = ref(false)
 const message = ref('')
 const errors = ref<string[]>([])
+const fieldErrors = ref<Record<string, string>>({})
 
 const form = ref({
   storeId: '',
@@ -79,14 +80,29 @@ async function useMyLocation() {
   }
 }
 
+function clearFieldError(name: string) {
+  if (fieldErrors.value[name]) {
+    const next = { ...fieldErrors.value }
+    delete next[name]
+    fieldErrors.value = next
+  }
+}
+
 async function handleSubmit() {
   errors.value = []
   message.value = ''
-  if (!form.value.title.trim()) errors.value.push('Title is required')
-  if (form.value.discountPrice <= 0) errors.value.push('Discount price must be greater than 0')
-  if (form.value.originalPrice < form.value.discountPrice) errors.value.push('Original price must be greater than or equal to discounted price')
-  if (!form.value.address.trim()) errors.value.push('Address is required for pickup')
-  if (errors.value.length) return
+  const fe: Record<string, string> = {}
+  if (!form.value.title.trim()) fe.title = 'Title is required'
+  if (!Number.isFinite(form.value.discountPrice) || form.value.discountPrice <= 0) fe.discountPrice = 'Discount price must be greater than 0'
+  if (!Number.isFinite(form.value.originalPrice) || form.value.originalPrice <= 0) fe.originalPrice = 'Original price is required'
+  else if (form.value.originalPrice < form.value.discountPrice) fe.originalPrice = 'Original price must be greater than or equal to discounted price'
+  if (!Number.isFinite(form.value.remainingQuantity) || form.value.remainingQuantity < 1) fe.remainingQuantity = 'Quantity must be at least 1'
+  if (!form.value.address.trim()) fe.address = 'Address is required for pickup'
+  if (!Number.isFinite(form.value.latitude) || form.value.latitude < -90 || form.value.latitude > 90) fe.latitude = 'Latitude must be between -90 and 90'
+  if (!Number.isFinite(form.value.longitude) || form.value.longitude < -180 || form.value.longitude > 180) fe.longitude = 'Longitude must be between -180 and 180'
+  if (!Number.isFinite(form.value.expiresIn) || form.value.expiresIn < 1 || form.value.expiresIn > 24) fe.expiresIn = 'Expiry must be between 1 and 24 hours'
+  fieldErrors.value = fe
+  if (Object.keys(fe).length) return
 
   const payload = {
     storeId: form.value.storeId || undefined,
@@ -143,13 +159,15 @@ async function handleSubmit() {
           </div>
           <div class="form-group">
             <label for="expires">Expires in (hours)</label>
-            <input id="expires" v-model.number="form.expiresIn" type="number" min="1" max="24" />
+            <input id="expires" v-model.number="form.expiresIn" type="number" min="1" max="24" :class="{ invalid: fieldErrors.expiresIn }" @input="clearFieldError('expiresIn')" />
+            <span v-if="fieldErrors.expiresIn" class="field-error">{{ fieldErrors.expiresIn }}</span>
           </div>
         </div>
 
         <div class="form-group">
           <label for="title">Title</label>
-          <input id="title" v-model="form.title" type="text" placeholder="e.g. Rescue Veggie Box" required />
+          <input id="title" v-model="form.title" type="text" placeholder="e.g. Rescue Veggie Box" required :class="{ invalid: fieldErrors.title }" @input="clearFieldError('title')" />
+          <span v-if="fieldErrors.title" class="field-error">{{ fieldErrors.title }}</span>
         </div>
 
         <div class="form-group">
@@ -160,31 +178,37 @@ async function handleSubmit() {
         <div class="form-row three-col">
           <div class="form-group">
             <label for="origPrice">Original Price</label>
-            <input id="origPrice" v-model.number="form.originalPrice" type="number" step="0.01" min="0" />
+            <input id="origPrice" v-model.number="form.originalPrice" type="number" step="0.01" min="0" :class="{ invalid: fieldErrors.originalPrice }" @input="clearFieldError('originalPrice')" />
+            <span v-if="fieldErrors.originalPrice" class="field-error">{{ fieldErrors.originalPrice }}</span>
           </div>
           <div class="form-group">
             <label for="discPrice">Discounted Price</label>
-            <input id="discPrice" v-model.number="form.discountPrice" type="number" step="0.01" min="0" />
+            <input id="discPrice" v-model.number="form.discountPrice" type="number" step="0.01" min="0" :class="{ invalid: fieldErrors.discountPrice }" @input="clearFieldError('discountPrice')" />
+            <span v-if="fieldErrors.discountPrice" class="field-error">{{ fieldErrors.discountPrice }}</span>
           </div>
           <div class="form-group">
             <label for="qty">Quantity</label>
-            <input id="qty" v-model.number="form.remainingQuantity" type="number" min="1" />
+            <input id="qty" v-model.number="form.remainingQuantity" type="number" min="1" :class="{ invalid: fieldErrors.remainingQuantity }" @input="clearFieldError('remainingQuantity')" />
+            <span v-if="fieldErrors.remainingQuantity" class="field-error">{{ fieldErrors.remainingQuantity }}</span>
           </div>
         </div>
 
         <div class="form-group">
           <label for="address">Pickup Address</label>
-          <input id="address" v-model="form.address" type="text" placeholder="123 Collins St, Melbourne" />
+          <input id="address" v-model="form.address" type="text" placeholder="123 Collins St, Melbourne" :class="{ invalid: fieldErrors.address }" @input="clearFieldError('address')" />
+          <span v-if="fieldErrors.address" class="field-error">{{ fieldErrors.address }}</span>
         </div>
 
         <div class="form-row three-col">
           <div class="form-group">
             <label for="lat">Latitude</label>
-            <input id="lat" v-model.number="form.latitude" type="number" step="0.000001" />
+            <input id="lat" v-model.number="form.latitude" type="number" step="0.000001" :class="{ invalid: fieldErrors.latitude }" @input="clearFieldError('latitude')" />
+            <span v-if="fieldErrors.latitude" class="field-error">{{ fieldErrors.latitude }}</span>
           </div>
           <div class="form-group">
             <label for="lng">Longitude</label>
-            <input id="lng" v-model.number="form.longitude" type="number" step="0.000001" />
+            <input id="lng" v-model.number="form.longitude" type="number" step="0.000001" :class="{ invalid: fieldErrors.longitude }" @input="clearFieldError('longitude')" />
+            <span v-if="fieldErrors.longitude" class="field-error">{{ fieldErrors.longitude }}</span>
           </div>
           <div class="form-group locate-group">
             <label>&nbsp;</label>
@@ -227,6 +251,9 @@ async function handleSubmit() {
 .form-group label { display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 6px; color: var(--color-text); }
 .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px 16px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); font-family: var(--font-family); font-size: 0.9375rem; background: var(--color-bg); color: var(--color-text); }
 .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(22,163,74,0.12); }
+.form-group input.invalid { border-color: var(--color-error); }
+.form-group input.invalid:focus { box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }
+.field-error { display: block; margin-top: 4px; font-size: 0.75rem; color: var(--color-error); }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .three-col { grid-template-columns: repeat(3, 1fr); }
 .locate-group { display: flex; flex-direction: column; }

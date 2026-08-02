@@ -53,7 +53,10 @@ function formatDuration(seconds: number): string {
   <transition name="slide-up">
     <div v-if="visible" class="routes-panel" role="dialog" aria-label="Directions">
       <div class="routes-header">
-        <h3>📍 Directions to {{ destinationName }}</h3>
+        <h3>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Directions to {{ destinationName }}
+        </h3>
         <button class="close-btn" @click="emit('close')" aria-label="Close directions">&times;</button>
       </div>
 

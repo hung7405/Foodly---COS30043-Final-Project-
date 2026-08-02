@@ -1,13 +1,59 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { reservationsService } from '../services/api'
+import { getSocket } from '../services/socket/socket'
+import RealtimeOrderTimeline from '../components/common/RealtimeOrderTimeline.vue'
 import type { Reservation } from '../types'
 
 const reservations = ref<Reservation[]>([])
 const isLoading = ref(true)
 const error = ref('')
 
-onMounted(loadReservations)
+const TIMELINE_STEPS = [
+  { key: 'active', label: 'Hold Active', hint: 'Item reserved for you' },
+  { key: 'confirmed', label: 'Confirmed & Ready', hint: 'Store is holding your item' },
+]
+
+let socket: any = null
+
+onMounted(() => {
+  loadReservations()
+  socket = getSocket()
+  socket.on('reservation:confirmed', onReservationConfirmed)
+  socket.on('reservation:expired', onReservationExpired)
+})
+
+onUnmounted(() => {
+  if (socket) {
+    socket.off('reservation:confirmed', onReservationConfirmed)
+    socket.off('reservation:expired', onReservationExpired)
+  }
+})
+
+function timelineFor(res: Reservation) {
+  switch (res.status) {
+    case 'active':
+      return { currentIndex: 0, state: 'active' as const }
+    case 'confirmed':
+      return { currentIndex: 2, state: 'active' as const }
+    case 'cancelled':
+      return { currentIndex: 1, state: 'cancelled' as const }
+    case 'expired':
+      return { currentIndex: 1, state: 'expired' as const }
+    default:
+      return { currentIndex: 0, state: 'active' as const }
+  }
+}
+
+function onReservationConfirmed(payload: { id: string }) {
+  const res = reservations.value.find((r) => r.id === payload.id)
+  if (res) res.status = 'confirmed'
+}
+
+function onReservationExpired(payload: { id: string }) {
+  const res = reservations.value.find((r) => r.id === payload.id)
+  if (res) res.status = 'expired'
+}
 
 async function loadReservations() {
   isLoading.value = true
@@ -38,11 +84,6 @@ async function confirm(id: string) {
     error.value = err.response?.data?.message || 'Could not confirm pickup.'
   }
 }
-
-function minutesRemaining(expiresAt?: string) {
-  if (!expiresAt) return 0
-  return Math.max(Math.floor((new Date(expiresAt).getTime() - Date.now()) / 60000), 0)
-}
 </script>
 
 <template>
@@ -70,6 +111,14 @@ function minutesRemaining(expiresAt?: string) {
             </div>
             <span :class="['status-badge', res.status]">{{ res.status }}</span>
           </div>
+          <RealtimeOrderTimeline
+            class="res-timeline"
+            :steps="TIMELINE_STEPS"
+            :current-index="timelineFor(res).currentIndex"
+            :state="timelineFor(res).state"
+            :expires-at="res.expiresAt"
+            :show-countdown="res.status === 'active'"
+          />
           <div class="res-body">
             <div class="res-detail">
               <span class="res-label">Pickup Code</span>
@@ -78,10 +127,6 @@ function minutesRemaining(expiresAt?: string) {
             <div class="res-detail">
               <span class="res-label">Quantity</span>
               <span class="res-value">{{ res.quantityReserved }}</span>
-            </div>
-            <div v-if="res.status === 'active'" class="res-detail">
-              <span class="res-label">Hold Time</span>
-              <span class="res-value">{{ minutesRemaining(res.expiresAt) }}m remaining</span>
             </div>
           </div>
           <div class="res-actions">
@@ -110,6 +155,7 @@ function minutesRemaining(expiresAt?: string) {
 .status-badge.confirmed { background: #dcfce7; color: #166534; }
 .status-badge.cancelled, .status-badge.expired { background: #f1f5f9; color: #64748b; }
 .res-body { display: flex; gap: 32px; flex-wrap: wrap; }
+.res-timeline { margin: 4px 0 20px; padding: 12px 16px; background: var(--color-bg-tertiary); border-radius: var(--radius-sm); }
 .res-detail { display: flex; flex-direction: column; gap: 4px; }
 .res-label { font-size: 0.78rem; color: var(--color-text-tertiary); }
 .res-value { font-size: 0.95rem; font-weight: 700; }
