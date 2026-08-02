@@ -1,0 +1,40 @@
+version: 1
+name: foodly
+description: Foodly — Real-Time Food Discovery Platform (COS30043 Interface Design & Development)
+
+# Foodly deploy config for the school Mercury platform.
+# Frontend (Vue SPA) is served as static assets; the NestJS API + Socket.IO
+# run as a single Node process exposing ports 3000 (REST) and 3001 (analytics WS).
+
+services:
+  - name: frontend
+    type: static
+    directory: client
+    build: npm install && npm run build
+    output: client/dist
+    routes:
+      - "/* -> /index.html" # SPA history-mode fallback (see client/nginx.conf / vercel.json)
+
+  - name: api
+    type: node
+    directory: server
+    build: npm install && npm run build
+    start: node dist/main.js
+    port: 3000
+    memory: 512MB
+    env:
+      NODE_ENV: production
+      PORT: "3000"
+      ANALYTICS_PORT: "3001"
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+
+databases:
+  - name: foodly-db
+    type: postgres
+    version: 15
+    extensions:
+      - postgis
+      - vector

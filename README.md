@@ -5,7 +5,6 @@
 [![NestJS](https://img.shields.io/badge/NestJS-11-E0234E)](https://nestjs.com)
 [![Socket.IO](https://img.shields.io/badge/Socket.IO-4-010101)](https://socket.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6)](https://www.typescriptlang.org)
-[![Mapbox](https://img.shields.io/badge/Mapbox-GL-000000)](https://www.mapbox.com)
 
 **COS30043 — Interface Design and Development | High Distinction Project**
 
@@ -39,10 +38,12 @@
 Foodly is a **real-time geospatial platform** that connects communities with discounted and near-expiry food products. By combining live community intelligence, interactive map exploration, and transaction-safe reservation mechanics, the platform reduces food waste while helping users save money — all delivered through a premium, accessible interface.
 
 **Current Status: ✅ Fully Operational**
-- Server: `http://localhost:3000` (NestJS)
-- Client: `http://localhost:5173` (Vue 3 + Vite)
-- Database: SQLite (dev) / PostgreSQL 16 (Docker)
-- Seed Data: **69 deals** · **27 stores** · **10 users** · **4 reservations**
+- Server: `http://localhost:3000` (NestJS 11)
+- Client: `http://localhost:5173` (Vue 3 + Vite) — **PWA installable**
+- Database: **Supabase (PostgreSQL 16)** via REST client
+- Seed Data: **109 deals** · **33 stores** · **11 users** · **~40 reservations**
+- Realtime: Socket.IO order timeline, live map, analytics, merchant pickup queue
+- AI: OpenAI-compatible vision search + pgvector hybrid recommendations
 
 ---
 
@@ -105,8 +106,12 @@ Foodly is a **real-time geospatial platform** that connects communities with dis
 - **Interactive Map** — Leaflet with marker clustering, viewport culling
 - **Socket.IO Real-Time** — Live deal updates, reservation events, activity feed
 - **Reservation Engine** — Optimistic locking with version column, 15-min hold, auto-expiry
+- **Realtime Order Timeline** — Step-by-step pickup progress with live 15-min countdown, shared across user/merchant views
 - **Live Analytics Dashboard** — Real-time metrics updated every 5 seconds
-- **AI Image Search** — Upload food photo → AI identifies category → matching deals
+- **AI Image Search** — Upload food photo → Gemini/OpenAI vision → matching deals (keyword fallback without API key)
+- **AI Vector Recommendations** — pgvector embeddings + heuristic hybrid scoring for personalized results
+- **Merchant Hub** — Dashboard KPIs, 7-day revenue chart, pickup queue with live confirm, deal pause/activate
+- **PWA (Installable)** — Service worker, offline cache, home-screen install prompt
 - **Dark Mode** — Theme toggle with persisted preference
 - **Trust Scoring** — Community reputation system
 
@@ -125,30 +130,29 @@ Foodly is a **real-time geospatial platform** that connects communities with dis
 | Bootstrap 5 | UI components & grid |
 | Leaflet + MarkerCluster | Interactive map |
 | Socket.IO Client | Real-time WebSocket communication |
-| Chart.js + vue-chartjs | Analytics visualisation |
 | Axios | HTTP client |
-| vue-virtual-scroller | Virtualised deal lists |
-| Sass | CSS preprocessing |
 
 ### Backend (server/)
 | Technology | Purpose |
 |------------|---------|
 | NestJS 11 | Node.js framework (controllers, services, modules) |
 | TypeScript 6 | Type safety |
-| TypeORM | ORM with SQLite (dev) / PostgreSQL (prod) |
+| @supabase/supabase-js | Supabase REST client (no ORM) |
 | Passport + JWT | Authentication strategy |
 | Socket.IO 4 | Real-time WebSocket gateway |
 | bcrypt | Password hashing |
 | class-validator + class-transformer | DTO validation |
 | Helmet | Security headers |
 | @nestjs/throttler | Rate limiting (100 req/min) |
-| better-sqlite3 | Dev database driver |
+| @nestjs/schedule | Cron (embedding backfill, reservation expiry) |
+| OpenAI-compatible model API | AI vision search (env-gated) |
+| pgvector | Embeddings + hybrid recommendation |
 
 ### Infrastructure
 | Technology | Purpose |
 |------------|---------|
 | Docker + docker-compose | Container orchestration |
-| PostgreSQL 16 | Production database |
+| Supabase (PostgreSQL 16) | Hosted database + REST API |
 | Nginx | Client static file serving (Docker) |
 
 ---
@@ -156,11 +160,11 @@ Foodly is a **real-time geospatial platform** that connects communities with dis
 ## Architecture
 
 ```
-┌──────────────┐     HTTP/REST     ┌──────────────────┐      SQL       ┌──────────┐
-│   Vue 3      │ ◄──────────────►  │   NestJS Server  │ ◄───────────►  │ SQLite / │
-│   (Vite)     │                   │   Port 3000      │               │ Postgres │
-│   Port 5173  │                   │                  │               └──────────┘
-│              │    Socket.IO      │  ┌────────────┐  │
+┌──────────────┐     HTTP/REST     ┌──────────────────┐   REST/PostgREST   ┌──────────────┐
+│   Vue 3      │ ◄──────────────►  │   NestJS Server  │ ◄───────────────►  │  Supabase    │
+│   (Vite)     │                   │   Port 3000      │                    │  (Postgres)  │
+│   Port 5173  │                   │                  │                    └──────────────┘
+│  (+PWA/SW)   │    Socket.IO      │  ┌────────────┐  │
 │              │ ◄──────────────►  │  │ Socket     │  │
 │              │                   │  │ Gateway    │  │
 └──────────────┘                   │  └────────────┘  │
@@ -168,31 +172,38 @@ Foodly is a **real-time geospatial platform** that connects communities with dis
                                    │  ┌────────────┐  │
                                    │  │ Analytics  │  │
                                    │  │ Gateway    │  │
-                                   │  └────────────┘  │
                                    └──────────────────┘
 ```
 
 ### Module Dependency
 ```
 app.module.ts
+├── SupabaseModule            # REST client provider (SUPABASE_URL/SECRET_KEY)
 ├── AuthModule (JWT, Passport)
 ├── UsersModule
-├── DealsModule ─────────────┐
-├── ReservationsModule ──────┤
-├── CommentsModule ──────────┤
-├── StoresModule             │
-├── AnalyticsModule ─────────┤
-├── SocketModule ────────────┤
-├── AISearchModule           │
-├── AdminModule              │
-├── NewsModule               │
-├── HealthModule             │
-├── ThrottlerModule (global) │
-└── RecommendationModule     │
-    ┌────────────────────────┘
+├── DealsModule ─────────────────┐
+├── ReservationsModule ──────────┤
+├── CommentsModule ──────────────┤
+├── StoresModule                 │
+├── AnalyticsModule ─────────────┤
+├── SocketModule ────────────────┤
+├── AiModule (vision search)     │
+├── EmbeddingModule (pgvector)   │
+├── PaymentModule                │
+├── GeoModule (IP geolocation)   │
+├── InteractionsModule           │
+├── MerchantModule               │
+├── AdminModule                  │
+├── NewsModule                   │
+├── HealthModule                 │
+├── RecommendationModule         │
+├── ThrottlerModule (global)     │
+└── ScheduleModule (cron)        │
+    ┌────────────────────────────┘
     ▼
-SocketGateway (injected into Deals, Reservations, Comments services)
+SocketGateway (injected into Deals, Reservations, Merchant, Comments services)
 AnalyticsService (records ActivityEvent + computeLiveMetrics)
+EmbeddingService (cron backfill 10-min + on-demand)
 ```
 
 ---
@@ -206,7 +217,8 @@ server/
 │   ├── main.ts                 # Entry point, dotenv, global filter, CORS, Helmet
 │   ├── app.module.ts           # Root module imports all feature modules
 │   ├── config.ts               # Central env config with required() validation
-│   ├── seed.ts                 # Database seed (69 deals, 27 stores, 10 users)
+│   ├── seed-supabase.ts        # Seed DB via Supabase REST (11 users, 33 stores, 109 deals)
+│   ├── supabase/               # SupabaseModule — REST client provider
 │   ├── auth/                   # JWT authentication, RegisterDto, LoginDto
 │   ├── users/                  # User CRUD, role management
 │   ├── deals/                  # Deal CRUD, DTOs, verify, like, bookmark
@@ -215,18 +227,20 @@ server/
 │   ├── stores/                 # Store listing
 │   ├── analytics/              # Live analytics service + gateway (5s tick)
 │   ├── socket/                 # Socket.IO gateway + event emission
-│   ├── ai/                     # AI image search endpoint
+│   ├── ai/                     # AI vision search (Gemini/OpenAI, env-gated)
+│   ├── embedding/              # pgvector embeddings + match_deals backfill
+│   ├── payment/                # Mock payment flow + confirmation
+│   ├── geo/                    # IP geolocation (free)
+│   ├── interactions/           # Like/bookmark persistence
+│   ├── merchant/               # Merchant dashboard, pickup queue, deal mgmt
 │   ├── news/                   # News articles CRUD
 │   ├── admin/                  # Admin user/deal management
 │   ├── health/                 # GET /api/health endpoint
-│   ├── recommendation/         # Deal recommendation engine
+│   ├── recommendation/         # Hybrid recommendation (heuristic + vector)
 │   ├── common/                 # GlobalExceptionFilter, shared utilities
-│   └── database/               # Database configuration
 ├── test/
 │   └── app.e2e-spec.ts         # 6 E2E integration tests
-├── data/
-│   └── foodly.db              # SQLite database (dev)
-├── Dockerfile                  # Multi-stage build (node:20-alpine + tini)
+├── Dockerfile                  # Multi-stage build (node:22-alpine + tini)
 ├── .env                        # Environment variables
 └── .env.example                # Template for .env
 ```
@@ -235,32 +249,34 @@ server/
 ```
 client/
 ├── src/
-│   ├── main.ts                 # Vue app bootstrap
-│   ├── App.vue                 # Root component (toast container, router-view)
-│   ├── router/index.ts         # Route definitions (public, protected, admin)
+│   ├── main.ts                 # Vue app bootstrap (+ registerSW for PWA)
+│   ├── App.vue                 # Root component (toast container, router-view, install prompt)
+│   ├── router/index.ts         # Route definitions (public, protected, merchant, admin)
 │   ├── stores/                 # Pinia stores
-│   │   ├── auth.store.ts       # Authentication state
+│   │   ├── auth.store.ts       # Authentication state (+ isMerchant)
 │   │   ├── deals.store.ts      # Deals state
 │   │   ├── map.store.ts        # Map viewport state
 │   │   ├── ui.store.ts         # UI state (toasts, theme, modals)
 │   │   └── analytics.store.ts  # Analytics state
 │   ├── services/
-│   │   ├── api/                # Axios services (auth, deals, analytics, etc.)
+│   │   ├── api/                # Axios services (auth, deals, merchant, analytics, etc.)
 │   │   └── socket/             # Socket.IO client connections
 │   ├── components/
-│   │   ├── common/             # NavBar, Footer, ErrorBoundary, Toast, Modal, Skeleton
+│   │   ├── common/             # NavBar, Footer, ErrorBoundary, Toast, Modal, Timeline
 │   │   ├── map/                # MapContainer, DealMarker, MarkerCluster
 │   │   ├── deals/              # DealCard, DealList, DealForm, DealFilters
 │   │   ├── reservation/        # ReservationButton, ReservationStatus
 │   │   ├── comments/           # CommentSection, CommentItem, CommentForm
 │   │   ├── dashboard/          # LiveEventChart, StatCard, MetricCard
+│   │   ├── merchant/           # MerchantNavBar
 │   │   └── admin/              # UserTable, DealModeration
-│   ├── views/                  # HomeView, ExploreView, DealDetailView, etc.
+│   ├── views/                  # HomeView, ExploreView, DealDetailView, merchant/*, etc.
 │   ├── composables/            # useSocket, useCountdown, useDarkMode, etc.
 │   ├── types/                  # TypeScript interfaces
 │   └── assets/                 # Styles, images, icons
+├── public/pwa/                 # PWA icons (192, 512, maskable)
 ├── Dockerfile                  # Multi-stage build (nginx:alpine)
-├── vite.config.ts              # Vite config
+├── vite.config.ts              # Vite config (+ vite-plugin-pwa)
 └── .env                        # VITE_API_URL, VITE_SOCKET_URL
 ```
 
@@ -268,31 +284,32 @@ client/
 
 ## User Roles & Permissions
 
-| Feature | Guest | User | Moderator | Admin |
-|---------|-------|------|-----------|-------|
-| Browse deals (map/list) | ✅ | ✅ | ✅ | ✅ |
-| View deal details | ✅ | ✅ | ✅ | ✅ |
-| Register / Login | ✅ | ❌ | ❌ | ❌ |
-| Reserve deal | ❌ | ✅ | ✅ | ✅ |
-| Create / Edit own deal | ❌ | ✅ | ✅ | ✅ |
-| Delete own deal | ❌ | ✅ | ✅ | ✅ |
-| Like / Bookmark / Comment | ❌ | ✅ | ✅ | ✅ |
-| Verify deal (approve) | ❌ | ❌ | ✅ | ✅ |
-| Delete any deal | ❌ | ❌ | ✅ | ✅ |
-| Admin Dashboard | ❌ | ❌ | ❌ | ✅ |
-| User management (role/ban) | ❌ | ❌ | ❌ | ✅ |
-| System settings | ❌ | ❌ | ❌ | ✅ |
+| Feature | Guest | User | Merchant | Moderator | Admin |
+|---------|-------|------|----------|-----------|-------|
+| Browse deals (map/list) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| View deal details | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Register / Login | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Reserve deal | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Like / Bookmark / Comment | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Create / Edit own deal | ❌ | ✅ | ❌ | ✅ | ✅ |
+| Verify deal (approve) | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Delete any deal | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Merchant Dashboard (KPI, pickup queue, pause deals) | ❌ | ❌ | ✅ | ❌ | ✅ |
+| Admin Dashboard | ❌ | ❌ | ❌ | ❌ | ✅ |
+| User management (role/ban) | ❌ | ❌ | ❌ | ❌ | ✅ |
+| System settings | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ### Demo Accounts
 
-| Email | Role | Password | Trust Score |
-|-------|------|----------|-------------|
-| `admin@foodly.app` | **admin** | `password123` | 5.0 |
-| `moderator@foodly.app` | **moderator** | `password123` | 4.8 |
-| `demo@foodly.app` | **user** | `password123` | 4.6 |
-| `lan@foodly.app` | user | `password123` | 4.3 |
-| `huy@foodly.app` | user | `password123` | 4.7 |
-| `mai@foodly.app` | user | `password123` | 4.0 |
+| Email | Role | Password | Notes |
+|-------|------|----------|-------|
+| `admin@foodly.app` | **admin** | `Admin@123` | Full admin access |
+| `binh@foodly.app` | **moderator** | `Password123!` | Deal verification |
+| `merchant@foodly.app` | **merchant** | `Password123!` | Dashboard, 5 stores (e.g. Circle K Nguyễn Huệ) |
+| `demo@foodly.app` | user | `Password123!` | Regular user |
+| `lan@foodly.app` | user | `Password123!` | Regular user |
+| `huy@foodly.app` | user | `Password123!` | Regular user |
+| `mai@foodly.app` | user | `Password123!` | Regular user |
 
 ---
 
@@ -316,18 +333,25 @@ users ──┐
    │    ├── activity_events (generates)
    │    └── verification_events (performs)
    │
-stores ── deals (lists)
+   ├── stores (owns, merchant) ── deals (lists)
+   │                                  └── deal_embeddings (1:1, pgvector)
+   │
+   └── reservations ── payments (has)
 ```
 
 ### Key Tables
-- **user** — id, email, username, role (guest/user/moderator/admin), trustScore, reputationPoints
+- **user** — id, email, username, role (guest/user/merchant/moderator/admin), trustScore, reputationPoints
+- **store** — id, name, address, lat/lng, avgTrustScore, userId (merchant owner)
 - **deal** — id, title, description, originalPrice, discountPrice, remainingQuantity, expiresAt, status, verified, location (lat/lng), version (optimistic locking)
+- **deal_embedding** — id, dealId, embedding vector(384), model, updatedAt (HNSW index, `match_deals()` RPC)
 - **reservation** — id, dealId, userId, status (active/confirmed/cancelled/expired), expiresAt (15-min hold), reservationCode
+- **payment** — id, reservationId, userId, amount, status, paymentMethod, paidAt
 - **comment** — id, dealId, userId, content, parentId (replies), status
 - **activity_event** — id, userId, dealId, eventType, metadata
 - **analytics_snapshot** — id, activeUsers, reservationsPerMinute, dealsPerMinute
-- **store** — id, name, address, lat/lng, avgTrustScore
 - **verification_event** — id, dealId, moderatorId, action, notes
+
+> Schema is managed via `server/src/supabase-migration.sql` — apply the full file (base + incremental sections) in the Supabase SQL Editor for a fresh database.
 
 ---
 
@@ -342,6 +366,7 @@ stores ── deals (lists)
 | GET | `/api/deals/map?bounds=...` | Deals within viewport |
 | GET | `/api/stores` | List stores |
 | GET | `/api/news` | News articles (paginated) |
+| GET | `/api/geo` | IP geolocation (free) |
 | POST | `/api/auth/login` | Login |
 | POST | `/api/auth/register` | Register |
 
@@ -355,8 +380,22 @@ stores ── deals (lists)
 | POST | `/api/deals/:id/comments` | Add comment |
 | POST | `/api/deals/:id/like` | Toggle like |
 | POST | `/api/deals/:id/bookmark` | Toggle bookmark |
+| GET | `/api/auth/me` | Current user profile |
 | GET | `/api/reservations` | My reservations |
-| POST | `/api/auth/me` | Current user profile |
+| POST | `/api/ai/search` | AI vision search (multipart image, env-gated) |
+| GET | `/api/recommendations?q=` | Hybrid recommendations (heuristic + vector) |
+| POST | `/api/payments/reservations/:id/pay` | Create payment |
+| PUT | `/api/payments/:id/complete-mock` | Complete mock payment |
+| PUT | `/api/payments/:id/confirm` | Confirm payment |
+
+### Merchant Endpoints
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/merchant/dashboard` | Dashboard KPI, 7-day revenue trend, top products, low stock |
+| GET | `/api/merchant/orders?status=` | Pickup queue (filterable) |
+| PUT | `/api/merchant/orders/:id/confirm` | Confirm pickup (emits `reservation:confirmed`) |
+| GET | `/api/merchant/deals` | Deals of owned stores |
+| PUT | `/api/merchant/deals/:id/status` | Pause/activate deal |
 
 ### Moderator+ Endpoints
 | Method | Endpoint | Description |
@@ -371,6 +410,8 @@ stores ── deals (lists)
 | PUT | `/api/admin/users/:id/ban` | Ban user |
 | GET | `/api/admin/deals` | List all deals |
 | GET | `/api/analytics/live` | Live metrics |
+| GET | `/api/ai/embeddings/status` | Embedding status (Mod/Admin) |
+| POST | `/api/ai/embeddings/backfill` | Backfill embeddings (Admin) |
 
 ### Full query parameters for `GET /api/deals`:
 ```
@@ -387,20 +428,18 @@ Socket.IO is used for real-time bidirectional communication.
 
 ### Server → Client Events
 
-| Event | Description |
-|-------|-------------|
-| `deal:created` | New deal posted (to map/feed rooms) |
-| `deal:updated` | Deal changes (quantity, price, etc.) |
-| `deal:expired` | Deal has expired |
-| `deal:verified` | Deal verified by moderator |
-| `deal:quantity` | Live quantity remaining update |
-| `reservation:created` | New reservation on deal |
-| `reservation:cancelled` | Reservation cancelled |
-| `reservation:confirmed` | Pickup confirmed |
-| `reservation:expired` | 15-min hold expired |
-| `comment:added` | New comment on deal |
-| `analytics:tick` | Live metrics snapshot (every 5s) |
-| `feed:activity` | Community activity event |
+| Event | Scope | Description |
+|-------|-------|-------------|
+| `deal:created` | map/feed rooms | New deal posted |
+| `deal:updated` | deal room | Deal changes (price, description, etc.) |
+| `deal:quantity` | deal room | Live quantity remaining update |
+| `deal:verified` | deal room | Deal verified by moderator |
+| `reservation:created` | deal room | New reservation on deal |
+| `reservation:confirmed` | global | Pickup confirmed by merchant |
+| `reservation:expired` | deal room | 15-min hold expired |
+| `comment:added` | deal room | New comment on deal |
+| `analytics:tick` | dashboard room | Live metrics snapshot (every 5s) |
+| `feed:activity` | feed room | Community activity event |
 
 ### Client → Server Events
 
@@ -428,26 +467,40 @@ cd ../client && npm install
 
 ### 2. Configure Environment
 ```bash
-# server/.env (already configured for dev)
+# server/.env (create from .env.example)
 NODE_ENV=development
 PORT=3000
-DATABASE_PATH=./data/foodly.db
-TYPEORM_SYNC=true
+SUPABASE_URL=https://<project>.supabase.co
+SUPABASE_SECRET_KEY=<service_role_key>
 JWT_SECRET=foodly-dev-secret-key-2026
 CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+# Optional — AI vision search + embeddings (falls back to keyword/heuristic if unset)
+MODEL_ID=gpt-5.4-nano
+MODEL_BASE_URL=https://api.openai.com/v1
+MODEL_API_KEY=...
+OPENAI_API_KEY=...
 
 # client/.env (already configured)
 VITE_API_URL=http://localhost:3000/api
 VITE_SOCKET_URL=http://localhost:3000
 ```
 
-### 3. Seed Database
-```bash
-cd server && npm run seed
-```
-Creates 69 deals, 27 stores, 10 users with sample data.
+### 3. Prepare Database (Supabase)
+1. Paste `server/src/supabase-migration.sql` (base + incremental sections) into the **Supabase SQL Editor** and run.
+2. Copy your Project URL and `service_role` key into `server/.env`.
 
-### 4. Start Development Servers
+### 4. Seed Database
+```bash
+cd server && npx ts-node src/seed-supabase.ts
+```
+Creates **11 users, 33 stores, 109 deals, ~40 reservations** + assigns 5 stores to the merchant account.
+
+> **Existing DB (seeded before the merchant platform)?** Run only the "Merchant Platform" section at the
+> end of `supabase-migration.sql` in the Supabase SQL Editor, then run `npx ts-node src/seed-merchant.ts`
+> to add `merchant@foodly.app` + orders. Do **not** re-run `seed-supabase.ts` on a populated DB — it uses
+> plain `.insert()` (not idempotent).
+
+### 5. Start Development Servers
 ```bash
 # Terminal 1 — Backend
 cd server && npm run start:dev
@@ -456,7 +509,7 @@ cd server && npm run start:dev
 cd client && npm run dev
 ```
 
-### 5. Open in Browser
+### 6. Open in Browser
 - **Client:** http://localhost:5173
 - **API Health:** http://localhost:3000/api/health
 
@@ -465,20 +518,21 @@ cd client && npm run dev
 ## Docker Deployment
 
 ```bash
-# Build and start all services
+# Create root .env with SUPABASE_URL, SUPABASE_SECRET_KEY, JWT_SECRET, AI keys
 docker compose up --build
 
 # Services:
-# - PostgreSQL 16 (port 5432)
 # - NestJS Server (port 3000)
 # - Vue Client via Nginx (port 80)
 ```
 
 ### Environment Variables for Docker
-Edit `docker-compose.yml` or pass via `.env`:
+Edit `docker-compose.yml` or pass via root `.env`:
+- `SUPABASE_URL` — Supabase project URL (required)
+- `SUPABASE_SECRET_KEY` — Service role key (required)
 - `JWT_SECRET` — Your production secret
-- `DATABASE_URL` — PostgreSQL connection string
 - `CORS_ORIGINS` — Allowed origins (comma-separated)
+- `MODEL_ID` / `MODEL_BASE_URL` / `MODEL_API_KEY` — Optional, enables AI vision + embeddings
 
 ---
 
@@ -496,9 +550,22 @@ Tests cover:
 5. Reserve deal (concurrent-safe)
 6. List deals returns paginated results
 
-### Unit Tests
+### Unit Tests (16 tests)
 ```bash
 cd server && npm test
+```
+Unit tests cover the recommendation scoring engine — deal freshness, popularity,
+history matching, and haversine distance calculations.
+
+### Concurrency Stress Test
+Proves the optimistic-lock reservation guard: firing N simultaneous reservations
+at a deal with stock Q results in at most Q successes and no oversell.
+
+```bash
+cd server
+API_BASE=http://localhost:3000/api QTY=5 PARALLEL=20 CLEANUP=1 \
+  npx ts-node scripts/stress-reserve.ts
+# Expected: Success <= 5, remaining stock >= 0, no negative stock
 ```
 
 ---
@@ -508,11 +575,7 @@ cd server && npm test
 Detailed project documentation is available:
 - **Project Proposal:** `FOODLY_PROJECT_PROPOSAL.md` — Full HD proposal with user stories, use cases, wireframes, ERD, API design, component hierarchy
 - **Design Docs:** `docs/design/` — Product vision, problem statement, user personas
-- **Technical Architecture:** `docs/architecture/`, `docs/database/`, `docs/websocket/`, `docs/websocket/`
-- **Accessibility:** `docs/accessibility/`
-- **Security:** `docs/security/`
-- **Deployment:** `docs/deployment/`
-- **Testing:** `docs/testing/`
+- **User Flows:** `FOODLY_USER_FLOW.md`, `FOODLY_USER_FLOW_DIAGRAM.md`
 - **Word Documents:**
   - `Foodly_Proposal_HD.docx` — HD proposal (Word format)
   - `Foodly_Proposal_HD_v2.docx` — Updated HD proposal
@@ -530,7 +593,7 @@ Detailed project documentation is available:
 - ✅ Graceful shutdown (SIGTERM/SIGINT handlers)
 - ✅ Input validation via class-validator DTOs
 - ✅ Password hashing via bcrypt
-- ✅ SQL injection protection via TypeORM parameterised queries
+- ✅ Parameterised queries via Supabase PostgREST client
 - ✅ No secrets in code — all via `.env`
 
 ---
