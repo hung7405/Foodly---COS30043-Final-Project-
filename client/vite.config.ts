@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: process.env.VITE_BASE_URL || '/',
   plugins: [
     vue(),
     VitePWA({
@@ -17,16 +18,16 @@ export default defineConfig({
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
+        start_url: process.env.VITE_BASE_URL || '/',
         icons: [
-          { src: '/pwa/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/pwa/icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/pwa/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'pwa/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'pwa/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,json}'],
-        navigateFallback: '/index.html',
+        navigateFallback: `${process.env.VITE_BASE_URL || '/'}index.html`,
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/api/deals'),

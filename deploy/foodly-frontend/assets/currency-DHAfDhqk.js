@@ -1,0 +1,1 @@
+function e(e){return Number.isFinite(e)?new Intl.NumberFormat(`vi-VN`,{style:`currency`,currency:`VND`,minimumFractionDigits:0,maximumFractionDigits:0}).format(e).replace(`₫`,`₫`):`0₫`}export{e as t};
