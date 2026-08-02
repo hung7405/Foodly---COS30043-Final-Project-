@@ -34,6 +34,7 @@ export class DealsService {
       .select('*, user:user_id(id,email,username,first_name,last_name,role,avatar_url,trust_score,reputation_points,is_active,created_at,updated_at,last_login), store:stores(*)')
 
     if (query.status) supabaseQuery = supabaseQuery.eq('status', query.status)
+    else supabaseQuery = supabaseQuery.neq('status', DealStatus.REMOVED).neq('status', DealStatus.EXPIRED)
     if (query.verified !== undefined) supabaseQuery = supabaseQuery.eq('verified', query.verified === 'true')
     if (query.userId) supabaseQuery = supabaseQuery.eq('user_id', query.userId)
 
@@ -125,14 +126,17 @@ export class DealsService {
 
     const remainingQuantity = Math.max(Number(data.remainingQuantity) || 1, 1)
     const payload = {
-      ...data,
       user_id: userId,
       title: data.title.trim(),
+      description: data.description ?? null,
       original_price: Number(data.originalPrice),
       discount_price: Number(data.discountPrice),
       remaining_quantity: remainingQuantity,
       original_quantity: remainingQuantity,
       expires_at: data.expiresAt ? new Date(data.expiresAt).toISOString() : new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+      latitude: Number(data.latitude),
+      longitude: Number(data.longitude),
+      address: data.address ?? null,
       images: Array.isArray(data.images) ? data.images : [],
       tags: Array.isArray(data.tags) ? data.tags : [],
     }
@@ -164,11 +168,28 @@ export class DealsService {
       throw new ForbiddenException('You can only edit your own deals')
     }
 
-    const allowedFields = ['title', 'description', 'original_price', 'discount_price', 'remaining_quantity', 'images', 'tags', 'address', 'latitude', 'longitude', 'expires_at']
+    const allowedFields: Record<string, string> = {
+      title: 'title',
+      description: 'description',
+      originalPrice: 'original_price',
+      discountPrice: 'discount_price',
+      remainingQuantity: 'remaining_quantity',
+      images: 'images',
+      tags: 'tags',
+      address: 'address',
+      latitude: 'latitude',
+      longitude: 'longitude',
+      expiresAt: 'expires_at',
+    }
     const updates: any = {}
-    for (const field of allowedFields) {
-      if ((data as any)[field] !== undefined) {
-        updates[field] = (data as any)[field]
+    for (const [camel, snake] of Object.entries(allowedFields)) {
+      if ((data as any)[camel] !== undefined) {
+        const value = (data as any)[camel]
+        updates[snake] =
+          camel === 'expiresAt' ? new Date(value).toISOString() :
+          camel === 'remainingQuantity' ? Math.max(Number(value) || 0, 0) :
+          (typeof value === 'number' || !Number.isNaN(Number(value))) && ['originalPrice', 'discountPrice', 'latitude', 'longitude'].includes(camel) ? Number(value) :
+          value
       }
     }
 
@@ -181,7 +202,7 @@ export class DealsService {
 
     if (updateError) throw updateError
 
-    this.socketGateway.emitDealUpdated(id, data)
+    this.socketGateway.emitDealUpdated(id, updates)
     return this.sanitizeDeal(saved)
   }
 

@@ -99,13 +99,17 @@ export class ReservationsService {
       .single()
     if (fetchError || !reservation) throw new NotFoundException('Reservation not found')
 
+    // Only an ACTIVE reservation can be confirmed (atomic guard against
+    // double-confirm / confirm-after-expiry races).
     const { data, error } = await this.supabase.client
       .from('reservations')
       .update({ status: ReservationStatus.CONFIRMED, confirmed_at: new Date().toISOString() })
       .eq('id', id)
+      .eq('status', ReservationStatus.ACTIVE)
       .select()
       .single()
     if (error) throw error
+    if (!data) throw new BadRequestException('Reservation is not active')
     return data
   }
 
@@ -118,11 +122,17 @@ export class ReservationsService {
       .single()
     if (fetchError || !reservation) throw new NotFoundException('Reservation not found')
 
-    const { error: updateError } = await this.supabase.client
+    // Atomic ACTIVE -> CANCELLED transition. Only the first caller succeeds;
+    // repeat cancels or cancel-after-expiry no longer double-restore stock.
+    const { data: cancelled, error: updateError } = await this.supabase.client
       .from('reservations')
       .update({ status: ReservationStatus.CANCELLED })
       .eq('id', id)
+      .eq('status', ReservationStatus.ACTIVE)
+      .select()
+      .single()
     if (updateError) throw updateError
+    if (!cancelled) throw new BadRequestException('Reservation is not active')
 
     const { data: deal } = await this.supabase.client
       .from('deals')
@@ -143,7 +153,7 @@ export class ReservationsService {
       .eq('id', reservation.deal_id)
       .single()
     this.socketGateway.emitDealQuantity(reservation.deal_id, updatedDeal?.remaining_quantity ?? 0)
-    return reservation
+    return cancelled
   }
 
   async expireReservations() {
@@ -173,11 +183,18 @@ export class ReservationsService {
   }
 
   private async expireReservation(reservation: any) {
-    const { error: updateError } = await this.supabase.client
+    // Atomic ACTIVE -> EXPIRED transition; if a user cancelled the same
+    // reservation concurrently, this update affects 0 rows and we skip
+    // the stock restore (no double-increment).
+    const { data: expired, error: updateError } = await this.supabase.client
       .from('reservations')
       .update({ status: ReservationStatus.EXPIRED })
       .eq('id', reservation.id)
+      .eq('status', ReservationStatus.ACTIVE)
+      .select()
+      .single()
     if (updateError) throw updateError
+    if (!expired) return
 
     const { data: deal } = await this.supabase.client
       .from('deals')

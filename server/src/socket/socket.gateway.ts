@@ -8,7 +8,14 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets'
 import { Server, Socket } from 'socket.io'
+import * as jwt from 'jsonwebtoken'
 import { config } from '../config'
+
+interface SocketUser {
+  id: string
+  email: string
+  role: string
+}
 
 @WebSocketGateway({
   cors: { origin: config.corsOrigins, credentials: true },
@@ -23,17 +30,36 @@ export class SocketGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   }
 
   handleConnection(client: Socket) {
-    this.logger.log(`Client connected: ${client.id}`)
-
-    // Verify token
     const token = client.handshake.auth?.token
-    if (!token) {
+    const user = this.verifyToken(token)
+    if (token && !user) {
+      // A token was supplied but is invalid/expired — do not trust it.
       client.emit('error', { message: 'Authentication required' })
+      client.disconnect(true)
+      return
+    }
+    client.data.user = user
+    if (user) {
+      client.join(`user:${user.id}`)
+      this.logger.log(`Client connected: ${client.id} (${user.email}, ${user.role})`)
+    } else {
+      this.logger.log(`Client connected (anonymous): ${client.id}`)
     }
   }
 
   handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`)
+  }
+
+  private verifyToken(token: unknown): SocketUser | null {
+    if (typeof token !== 'string' || !token) return null
+    try {
+      const payload = jwt.verify(token, config.jwtSecret) as SocketUser
+      if (!payload?.id) return null
+      return payload
+    } catch {
+      return null
+    }
   }
 
   @SubscribeMessage('deal:join')
@@ -74,6 +100,10 @@ export class SocketGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
   @SubscribeMessage('dashboard:join')
   handleDashboardJoin(client: Socket) {
+    if (client.data.user?.role !== 'admin') {
+      client.emit('error', { message: 'Forbidden' })
+      return
+    }
     client.join('dashboard:admin')
   }
 
@@ -101,12 +131,19 @@ export class SocketGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
   emitReservationCreated(reservation: any) {
     const dealId = reservation.deal_id || reservation.dealId
-    this.server.to(`deal:${dealId}`).emit('reservation:created', reservation)
+    // Never broadcast the reservation code to other users in the room.
+    const publicReservation = { ...reservation }
+    delete publicReservation.reservation_code
+    this.server.to(`deal:${dealId}`).emit('reservation:created', publicReservation)
     this.server.to(`feed:global`).emit('feed:activity', {
       type: 'reservation',
       message: 'New reservation made',
       dealId: dealId,
     })
+    // The owner of the reservation still needs their code.
+    if (reservation.user_id) {
+      this.server.to(`user:${reservation.user_id}`).emit('reservation:created:own', reservation)
+    }
   }
 
   emitReservationConfirmed(reservationId: string) {

@@ -1,6 +1,8 @@
 import { Controller, Get, Post, Put, Body, Param, UseGuards } from '@nestjs/common'
 import { AuthGuard } from '@nestjs/passport'
 import { StoresService } from './stores.service'
+import { RolesGuard } from '../common/guards/roles.guard'
+import { Roles } from '../common/decorators/roles.decorator'
 
 @Controller('stores')
 export class StoresController {
@@ -16,13 +18,15 @@ export class StoresController {
     return this.storesService.findById(id)
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin')
   @Post()
   create(@Body() data: any) {
     return this.storesService.create(data)
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('admin')
   @Put(':id')
   update(@Param('id') id: string, @Body() data: any) {
     return this.storesService.update(id, data)

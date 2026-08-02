@@ -25,7 +25,7 @@ export class PaymentController {
   async confirmPayment(@Param('id') id: string, @Body('providerResponse') providerResponse: any, @CurrentUser() user: User) {
     const payment = await this.paymentService.findById(id)
     if (!payment) throw new NotFoundException('Payment not found')
-    if (payment.userId !== user.id && user.role !== 'admin') throw new UnauthorizedException()
+    if (payment.user_id !== user.id && user.role !== 'admin') throw new UnauthorizedException()
     return this.paymentService.confirmPayment(id, providerResponse)
   }
 
@@ -34,7 +34,7 @@ export class PaymentController {
   async failPayment(@Param('id') id: string, @Body('reason') reason: string, @CurrentUser() user: User) {
     const payment = await this.paymentService.findById(id)
     if (!payment) throw new NotFoundException('Payment not found')
-    if (payment.userId !== user.id && user.role !== 'admin') throw new UnauthorizedException()
+    if (payment.user_id !== user.id && user.role !== 'admin') throw new UnauthorizedException()
     return this.paymentService.failPayment(id, reason)
   }
 
@@ -53,8 +53,11 @@ export class PaymentController {
 
   @UseGuards(AuthGuard('jwt'))
   @Get(':id')
-  getPayment(@Param('id') id: string) {
-    return this.paymentService.findById(id)
+  async getPayment(@Param('id') id: string, @CurrentUser() user: User) {
+    const payment = await this.paymentService.findById(id)
+    if (!payment) throw new NotFoundException('Payment not found')
+    if (payment.user_id !== user.id && user.role !== 'admin') throw new UnauthorizedException()
+    return payment
   }
 
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -69,7 +72,7 @@ export class PaymentController {
   async completeMockPayment(@Param('id') id: string, @CurrentUser() user: User) {
     const payment = await this.paymentService.findById(id)
     if (!payment) throw new NotFoundException('Payment not found')
-    if (payment.userId !== user.id && user.role !== 'admin') throw new UnauthorizedException()
+    if (payment.user_id !== user.id && user.role !== 'admin') throw new UnauthorizedException()
     return this.paymentService.confirmPayment(id, { mock: true, completedAt: new Date().toISOString() })
   }
 }

@@ -5,13 +5,20 @@ import { SupabaseService } from '../supabase/supabase.service'
 export class UsersService {
   constructor(private supabase: SupabaseService) {}
 
-  async findById(id: string) {
+  async findById(id: string, requesterId?: string, requesterRole?: string) {
     const { data: user, error } = await this.supabase.client
       .from('users')
       .select('*')
       .eq('id', id)
       .single()
     if (!user || error) throw new NotFoundException('User not found')
+
+    const isOwner = requesterId === id
+    const isStaff = requesterRole === 'admin' || requesterRole === 'moderator'
+    if (!isOwner && !isStaff) {
+      const { password_hash, email, is_active, last_login, ...publicUser } = user
+      return publicUser
+    }
     return this.sanitizeUser(user)
   }
 
