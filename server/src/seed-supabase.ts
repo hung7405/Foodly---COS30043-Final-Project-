@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import { createClient } from '@supabase/supabase-js'
 import * as bcrypt from 'bcrypt'
+import * as crypto from 'crypto'
 
 const supabaseUrl = process.env.SUPABASE_URL
 const supabaseKey = process.env.SUPABASE_SECRET_KEY
@@ -78,6 +79,18 @@ function pickImages(title: string, tags: string[]): string[] {
   return [FALLBACK_IMAGES[Math.floor(Math.random() * FALLBACK_IMAGES.length)]]
 }
 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
+const ALLOW_DESTRUCTIVE = process.env.SEED_ALLOW_DESTRUCTIVE === 'true'
+
+if (IS_PRODUCTION && !ALLOW_DESTRUCTIVE) {
+  console.error(
+    'Refusing to run destructive seed in production.\n' +
+    'This script wipes ALL rows before inserting demo data.\n' +
+    'If you are certain, re-run with SEED_ALLOW_DESTRUCTIVE=true.',
+  )
+  process.exit(1)
+}
+
 async function resetDatabase() {
   console.log('Resetting existing data...')
   const tables = [
@@ -112,6 +125,7 @@ async function seed() {
 
   const userRecords = [
     { username: 'admin', email: 'admin@foodly.app', password_hash: adminHash, first_name: 'Admin', role: 'admin', trust_score: 5.0, is_active: true, reputation_points: 0 },
+    { username: 'merchant', email: 'merchant@foodly.app', password_hash: userHash, first_name: 'Minh', last_name: 'Doanh', role: 'merchant', trust_score: 4.6, is_active: true, reputation_points: 30 },
     { username: 'lan_nguyen', email: 'lan@foodly.app', password_hash: userHash, first_name: 'Lan', last_name: 'Nguyen', role: 'user', trust_score: 4.2, is_active: true, reputation_points: 8 },
     { username: 'huy_tran', email: 'huy@foodly.app', password_hash: userHash, first_name: 'Huy', last_name: 'Tran', role: 'user', trust_score: 3.8, is_active: true, reputation_points: 12 },
     { username: 'mai_le', email: 'mai@foodly.app', password_hash: userHash, first_name: 'Mai', last_name: 'Le', role: 'user', trust_score: 4.5, is_active: true, reputation_points: 5 },
@@ -187,6 +201,21 @@ async function seed() {
   for (const s of stores) {
     storeNameToId.set(s.name, s.id)
   }
+
+  // Assign a set of stores to the demo merchant so the merchant dashboard has data.
+  const merchantId = emailToId.get('merchant@foodly.app')
+  const merchantStoreNames = [
+    'Circle K Nguyễn Huệ',
+    'Family Mart Lê Lợi',
+    '7-Eleven Mạc Đĩnh Chi',
+    'Ministop Nguyễn Thị Minh Khai',
+    'GS25 Hai Bà Trưng',
+  ]
+  for (const name of merchantStoreNames) {
+    const id = storeNameToId.get(name)
+    if (id) await supabase.from('stores').update({ user_id: merchantId }).eq('id', id)
+  }
+  console.log(`  Assigned ${merchantStoreNames.length} stores to merchant@foodly.app`)
 
   // ── Deals ──
   console.log('\nSeeding deals...')
@@ -385,6 +414,50 @@ async function seed() {
     const { error: commentErr } = await supabase.from('comments').insert(commentRecords)
     if (commentErr) { console.error('Failed to seed comments:', commentErr.message) }
     else console.log(`  Created ${commentRecords.length} comments`)
+  }
+
+  // ── Reservations (orders) for merchant stores ──
+  console.log('\nSeeding reservations...')
+  const merchantStoreIds = merchantStoreNames.map(n => storeNameToId.get(n)).filter(Boolean)
+  const merchantDeals = deals.filter(d => merchantStoreIds.includes(d.store_id))
+  const customerUsers = users.filter(u => u.role === 'user')
+
+  if (merchantDeals.length > 0 && customerUsers.length > 0) {
+    const statusPool = ['confirmed', 'confirmed', 'active', 'confirmed', 'cancelled', 'expired']
+    const reservationRecords: any[] = []
+    const usedCodes = new Set<string>()
+    const makeCode = () => {
+      let code = ''
+      do { code = crypto.randomBytes(4).toString('hex').toUpperCase() } while (usedCodes.has(code))
+      usedCodes.add(code)
+      return code
+    }
+
+    merchantDeals.slice(0, 40).forEach((deal, idx) => {
+      const count = 1 + (idx % 3)
+      for (let i = 0; i < count; i++) {
+        const status = statusPool[(idx * 3 + i) % statusPool.length]
+        const reservedAt = new Date(Date.now() - (idx % 7) * 24 * 60 * 60 * 1000 - i * 3600 * 1000)
+        const expiresAt = new Date(reservedAt.getTime() + 15 * 60 * 1000)
+        const customer = customerUsers[Math.floor(Math.random() * customerUsers.length)]
+        reservationRecords.push({
+          deal_id: deal.id,
+          user_id: customer.id,
+          status,
+          reserved_at: reservedAt.toISOString(),
+          expires_at: expiresAt.toISOString(),
+          confirmed_at: status === 'confirmed'
+            ? new Date(reservedAt.getTime() + (10 + idx % 20) * 60 * 1000).toISOString()
+            : null,
+          reservation_code: makeCode(),
+          quantity_reserved: 1,
+        })
+      }
+    })
+
+    const { error: resErr } = await supabase.from('reservations').insert(reservationRecords)
+    if (resErr) { console.error('Failed to seed reservations:', resErr.message) }
+    else console.log(`  Created ${reservationRecords.length} reservations`)
   }
 
   // ── Summary ──
