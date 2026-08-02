@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useUiStore } from '../../stores/ui.store'
 
 const toCamel = (str: string) => str.replace(/_([a-z])/g, (_, c) => c.toUpperCase())
 
@@ -41,9 +42,7 @@ api.interceptors.response.use(
       window.location.href = '/login'
     }
     const message = error.response?.data?.message || error.message || 'Request failed'
-    import('../../stores/ui.store').then(({ useUiStore }) => {
-      useUiStore().addToast(typeof message === 'string' ? message : message[0] || 'Request failed')
-    })
+    useUiStore().addToast(typeof message === 'string' ? message : message[0] || 'Request failed')
     return Promise.reject(error)
   },
 )

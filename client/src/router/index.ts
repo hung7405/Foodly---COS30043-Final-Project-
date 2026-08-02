@@ -73,6 +73,24 @@ const routes = [
     component: () => import('../views/AdminView.vue'),
     meta: { requiresAuth: true, role: 'admin' },
   },
+  {
+    path: '/merchant',
+    name: 'MerchantDashboard',
+    component: () => import('../views/merchant/MerchantDashboardView.vue'),
+    meta: { requiresAuth: true, role: ['merchant', 'admin'] },
+  },
+  {
+    path: '/merchant/orders',
+    name: 'MerchantOrders',
+    component: () => import('../views/merchant/MerchantOrdersView.vue'),
+    meta: { requiresAuth: true, role: ['merchant', 'admin'] },
+  },
+  {
+    path: '/merchant/deals',
+    name: 'MerchantDeals',
+    component: () => import('../views/merchant/MerchantDealsView.vue'),
+    meta: { requiresAuth: true, role: ['merchant', 'admin'] },
+  },
 ]
 
 const router = createRouter({
@@ -93,8 +111,13 @@ router.beforeEach(async (to, _from, next) => {
     return
   }
 
-  if (to.meta.role && auth.user?.role !== to.meta.role) {
-    next({ path: '/', query: { error: 'unauthorized' } })
+  if (to.meta.role) {
+    const allowed = Array.isArray(to.meta.role) ? to.meta.role : [to.meta.role]
+    if (auth.user?.role && allowed.includes(auth.user.role)) {
+      next()
+    } else {
+      next({ path: '/', query: { error: 'unauthorized' } })
+    }
     return
   }
 

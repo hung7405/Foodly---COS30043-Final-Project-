@@ -5,6 +5,7 @@ import AppNavBar from './components/common/AppNavBar.vue'
 import AppFooter from './components/common/AppFooter.vue'
 import BottomTabBar from './components/common/BottomTabBar.vue'
 import ErrorBoundary from './components/common/ErrorBoundary.vue'
+import PwaInstallPrompt from './components/common/PwaInstallPrompt.vue'
 import { useUiStore } from './stores/ui.store'
 import { useAuthStore } from './stores/auth.store'
 
@@ -36,6 +37,7 @@ const showBottomTab = computed(() => {
     </main>
     <AppFooter />
     <BottomTabBar />
+    <PwaInstallPrompt />
 
     <div class="toast-container">
       <transition-group name="toast">

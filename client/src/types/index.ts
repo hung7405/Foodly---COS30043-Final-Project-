@@ -4,7 +4,7 @@ export interface User {
   username: string
   firstName?: string
   lastName?: string
-  role: 'guest' | 'user' | 'moderator' | 'admin'
+  role: 'guest' | 'user' | 'moderator' | 'admin' | 'merchant'
   trustScore: number
   reputationPoints: number
   avatarUrl?: string
