@@ -13,5 +13,4 @@ export class AiController {
   async search(@UploadedFile() file: any) {
     if (!file) return { error: 'No image provided' }
     return this.aiService.searchByImage(file.buffer, file.originalname)
-  }
-}
+  }}

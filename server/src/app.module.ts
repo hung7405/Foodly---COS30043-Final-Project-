@@ -19,6 +19,8 @@ import { RecommendationModule } from './recommendation/recommendation.module'
 import { PaymentModule } from './payment/payment.module'
 import { GeoModule } from './geo/geo.module'
 import { InteractionsModule } from './interactions/interactions.module'
+import { EmbeddingModule } from './embedding/embedding.module'
+import { MerchantModule } from './merchant/merchant.module'
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { InteractionsModule } from './interactions/interactions.module'
     PaymentModule,
     GeoModule,
     InteractionsModule,
+    EmbeddingModule,
+    MerchantModule,
     HealthModule,
   ],
   providers: [

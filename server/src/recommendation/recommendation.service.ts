@@ -2,16 +2,20 @@ import { Injectable } from '@nestjs/common'
 import { SupabaseService } from '../supabase/supabase.service'
 import { Deal, DealStatus } from '../deals/entities/deal.entity'
 import { InteractionAction } from '../interactions/entities/interaction.entity'
+import { EmbeddingService } from '../embedding/embedding.service'
 
 const DISTANCE_WEIGHT = 0.40
 const HISTORY_WEIGHT = 0.30
 const POPULARITY_WEIGHT = 0.15
 const INTERACTION_WEIGHT = 0.15
 
+const VECTOR_BOOST_WEIGHT = 0.30
+
 @Injectable()
 export class RecommendationService {
   constructor(
     private supabaseService: SupabaseService,
+    private embeddingService: EmbeddingService,
   ) {}
 
   private get supabase() {
@@ -23,6 +27,7 @@ export class RecommendationService {
     lat?: number
     lng?: number
     limit?: number
+    q?: string
   }) {
     const limit = Math.min(Math.max(options.limit || 20, 1), 50)
 
@@ -36,7 +41,52 @@ export class RecommendationService {
 
     const userTagProfile = await this.buildUserTagProfile(options.userId)
 
-    return this.scoreAndRank(deals, userTagProfile, options.lat, options.lng, limit)
+    const scored = this.scoreAndRank(deals, userTagProfile, options.lat, options.lng, limit)
+
+    const vectorSimilarity = await this.buildVectorSimilarity(options, userTagProfile)
+
+    let usedAi = false
+    let vectorBoosted = false
+    if (vectorSimilarity && Object.keys(vectorSimilarity).length > 0) {
+      usedAi = true
+      vectorBoosted = true
+      for (const item of scored.recommendations as any[]) {
+        const similarity = vectorSimilarity[item.id] ?? 0
+        item.relevanceScore = Math.round(
+          (item.relevanceScore * (1 - VECTOR_BOOST_WEIGHT) + similarity * 100 * VECTOR_BOOST_WEIGHT) * 100,
+        ) / 100
+      }
+      scored.recommendations.sort((a: any, b: any) => b.relevanceScore - a.relevanceScore)
+    }
+
+    return {
+      ...scored,
+      usedAi,
+      vectorBoosted,
+    }
+  }
+
+  private async buildVectorSimilarity(
+    options: { q?: string; userId?: string },
+    userTagProfile: Map<string, number>,
+  ): Promise<Record<string, number> | null> {
+    if (!this.embeddingService.isEnabled) return null
+
+    const parts: string[] = []
+    if (options.q?.trim()) parts.push(options.q.trim())
+    const topTags = [...userTagProfile.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([tag]) => tag)
+    if (topTags.length > 0) parts.push(`preferences: ${topTags.join(', ')}`)
+
+    const queryText = parts.join(' | ')
+    if (!queryText.trim()) return null
+
+    const embedding = await this.embeddingService.generateEmbedding(queryText)
+    if (!embedding) return null
+
+    return this.embeddingService.searchVector(embedding, 30)
   }
 
   private async buildUserTagProfile(userId?: string): Promise<Map<string, number>> {

@@ -253,3 +253,63 @@ CREATE TABLE analytics_snapshots (
   captured_at              TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_analytics_snapshots_captured_at ON analytics_snapshots (captured_at);
+
+-- ==========================================================================
+-- AI / Vector Search (pgvector) — RAG-lite layer
+-- Requires the pgvector extension (enabled by default on Supabase free tier).
+-- The recommendation engine uses these only when OPENAI_API_KEY is configured;
+-- otherwise it falls back to the weighted heuristic scorer.
+-- ==========================================================================
+
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE IF NOT EXISTS deal_embeddings (
+  deal_id    UUID PRIMARY KEY REFERENCES deals(id) ON DELETE CASCADE,
+  content    TEXT NOT NULL,
+  model      TEXT NOT NULL DEFAULT 'text-embedding-3-small',
+  embedding  vector(1536) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS deal_embeddings_hnsw_idx
+  ON deal_embeddings USING hnsw (embedding vector_cosine_ops);
+
+-- Semantic similarity search over deals (cosine distance).
+CREATE OR REPLACE FUNCTION match_deals(
+  query_embedding vector(1536),
+  match_count int DEFAULT 20
+)
+RETURNS TABLE (deal_id uuid, similarity real)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+    SELECT de.deal_id, 1 - (de.embedding <=> query_embedding)::real AS similarity
+    FROM deal_embeddings de
+    ORDER BY de.embedding <=> query_embedding
+    LIMIT match_count;
+END;
+$$;
+
+-- ─────────────────────────────────────────────────────────────
+-- Merchant Platform (incremental additions — run AFTER the base
+-- script if it was applied before this section existed)
+-- ─────────────────────────────────────────────────────────────
+
+-- New user role for store owners. Supabase runs Postgres 15+, which
+-- supports ALTER TYPE ... ADD VALUE IF NOT EXISTS.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+    CREATE TYPE user_role AS ENUM ('guest', 'user', 'moderator', 'admin');
+  ELSE
+    ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'merchant';
+  END IF;
+END $$;
+
+-- Link stores to their owner (merchant). Deals already reference
+-- stores via store_id, so merchant orders can be derived through
+-- reservations -> deals -> stores.user_id.
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id);
+CREATE INDEX IF NOT EXISTS idx_stores_user_id ON stores (user_id);

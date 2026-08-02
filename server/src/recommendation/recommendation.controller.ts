@@ -20,6 +20,7 @@ export class RecommendationController {
     @Query('lat') lat?: string,
     @Query('lng') lng?: string,
     @Query('limit') limit?: string,
+    @Query('q') q?: string,
     @Req() req?: any,
   ) {
     const userId = req.user?.id
@@ -28,6 +29,7 @@ export class RecommendationController {
       lat: lat ? Number(lat) : undefined,
       lng: lng ? Number(lng) : undefined,
       limit: limit ? Number(limit) : 20,
+      q,
     })
   }
 }
