@@ -504,3 +504,55 @@ img {
     font-size: 0.9375rem;
   }
 }
+
+/* ── Dark-mode overrides for view-scoped light surfaces ────────────── */
+/* Prefix with html[data-theme="dark"] to beat scoped [data-v-*] specificity. */
+
+html[data-theme="dark"] .error-box,
+html[data-theme="dark"] .state-banner.error,
+html[data-theme="dark"] .auth-error,
+html[data-theme="dark"] .ai-error,
+html[data-theme="dark"] .error-bar,
+html[data-theme="dark"] .live-badge {
+  background: #2d1a1a;
+  color: #fca5a5;
+  border-color: #7f1d1d;
+}
+
+html[data-theme="dark"] .state-banner.success,
+html[data-theme="dark"] .info-box,
+html[data-theme="dark"] .reserved-card,
+html[data-theme="dark"] .mock-pay-section {
+  background: #0f2e1e;
+  color: #86efac;
+  border-color: #14532d;
+}
+
+html[data-theme="dark"] .reserved-card h4,
+html[data-theme="dark"] .reserved-card p strong {
+  color: #86efac;
+}
+
+html[data-theme="dark"] .badge-verified,
+html[data-theme="dark"] .admin-badge,
+html[data-theme="dark"] .engine-badge.openai {
+  background: #14532d;
+  color: #86efac;
+}
+
+html[data-theme="dark"] .status-badge.active,
+html[data-theme="dark"] .status-badge.confirmed {
+  background: #14532d;
+  color: #bbf7d0;
+}
+
+html[data-theme="dark"] .status-badge.cancelled,
+html[data-theme="dark"] .status-badge.expired {
+  background: #26263b;
+  color: #a1a1aa;
+}
+
+html[data-theme="dark"] .deal-low {
+  background: #3b1d1d;
+  color: #fca5a5;
+}
