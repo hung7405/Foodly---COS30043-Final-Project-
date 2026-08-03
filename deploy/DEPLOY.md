@@ -32,22 +32,29 @@
 
 ### 1. Deploy frontend lên Mercury (bằng WinSCP)
 
+- **Trang web root của COS30043:** `https://mercury.swin.edu.au/cos30043/s104775470/`
+  (map tới thư mục server `/home/students/accounts/s104775470/cos30043/www/htdocs`)
+- **Foodly nằm trong subfolder `foodly`** để không đụng A1/A2:
+  `https://mercury.swin.edu.au/cos30043/s104775470/foodly/`
+
+Các bước:
+
 1. Kết nối **Cisco AnyConnect** vào Swinburne VPN.
 2. Mở **WinSCP** → đăng nhập host Mercury (SFTP port 22, theo thông tin trường cấp).
-3. Vào thư mục web (thường là `public_html` hoặc thư mục assignment, ví dụ
-   `cos10026/s104775470/assignment1/`).
-4. Upload **toàn bộ nội dung bên trong** `client/dist` (index.html, assets/,
-   sw.js, ...) vào thư mục đó.
-5. Mở URL Mercury → xem app.
+3. Vào thư mục `htdocs/foodly` (tạo folder `foodly` nếu chưa có).
+4. Upload **toàn bộ nội dung bên trong** `deploy/foodly-frontend` (index.html,
+   assets/, data/, pwa/, favicon.svg, icons.svg, manifest.webmanifest, sw.js,
+   workbox-bdb082da.js) vào `htdocs/foodly` — KHÔNG kéo cả folder `foodly-frontend`.
+5. Mở URL `.../cos30043/s104775470/foodly/` → xem app.
 
-> **Lưu ý:** trước khi build bản deploy, đổi `client/.env`:
+> **Lưu ý build:** chạy script một lệnh để build + đóng gói với base path Mercury:
 > ```
-> VITE_API_URL=https://BACKEND-URL/api
-> VITE_SOCKET_URL=https://BACKEND-URL
-> VITE_ANALYTICS_SOCKET_URL=https://BACKEND-URL:3001
+> powershell -ExecutionPolicy Bypass -File deploy/build-for-mercury.ps1 `
+>   -BackendUrl "https://BACKEND-URL" `
+>   -BasePath "/cos30043/s104775470/foodly/"
 > ```
-> rồi chạy `cd client && npm run build` để ghi URL backend vào bản build.
-> Sau khi nộp, đổi lại về localhost để quay video.
+> Script tự backup/khôi phục `client/.env` nên bản local (localhost) vẫn dùng được
+> để quay video. Bản build đã có sẵn nằm ở `deploy/foodly-frontend/` + zip.
 
 ### 2. Deploy backend + frontend lên Vercel (cho thầy VN)
 
