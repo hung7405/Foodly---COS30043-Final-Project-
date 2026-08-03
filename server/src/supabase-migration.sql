@@ -90,6 +90,7 @@ CREATE TABLE deals (
   images             JSONB NOT NULL DEFAULT '[]',
   expires_at         TIMESTAMPTZ NOT NULL,
   tags               JSONB NOT NULL DEFAULT '[]',
+  metadata           JSONB,
   version            INTEGER NOT NULL DEFAULT 1,
   like_count         INTEGER NOT NULL DEFAULT 0,
   bookmark_count     INTEGER NOT NULL DEFAULT 0,

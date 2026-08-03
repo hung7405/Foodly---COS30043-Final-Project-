@@ -3,10 +3,12 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { reservationsService, http } from '../services/api'
 import { formatVND } from '../utils/currency'
+import { useUiStore } from '../stores/ui.store'
 import type { Reservation, Payment } from '../types'
 
 const route = useRoute()
 const router = useRouter()
+const uiStore = useUiStore()
 const reservation = ref<Reservation | null>(null)
 const payment = ref<Payment | null>(null)
 const isLoading = ref(true)
@@ -84,6 +86,9 @@ async function completeMockPayment() {
     const { data } = await http.put(`/payments/${payment.value.id}/complete-mock`)
     payment.value = data
     success.value = 'Payment successful! Your pickup QR code is ready.'
+    const total = Number(reservation.value?.deal?.discountPrice) * (reservation.value?.quantityReserved || 1)
+    const xu = Math.max(1, Math.round(total / 1000))
+    uiStore.addToast(`You earned +${xu} xu for this rescue!`, 'success')
     window.clearInterval(countdownTimer)
     setTimeout(() => router.push('/profile/reservations'), 2000)
   } catch (err: any) {

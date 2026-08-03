@@ -15,6 +15,9 @@ const RESERVATION_STEPS = [
   { key: 'confirmed', label: 'Confirmed & Ready', hint: 'Store is holding your item' },
 ]
 
+const IMPACT_KG = 0.3
+const IMPACT_CO2 = 2.7
+
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
@@ -23,6 +26,7 @@ const uiStore = useUiStore()
 const deal = ref<Deal | null>(null)
 const comments = ref<Comment[]>([])
 const reservation = ref<Reservation | null>(null)
+const upsells = ref<Deal[]>([])
 const isLoading = ref(true)
 const isReserving = ref(false)
 const commentText = ref('')
@@ -34,7 +38,18 @@ const liked = ref(false)
 const bookmarked = ref(false)
 const togglingLike = ref(false)
 const togglingBookmark = ref(false)
+const priceDrop = ref(false)
+let priceDropTimer: number | undefined
 let countdownTimer: number | undefined
+
+const isSurprise = computed(() =>
+  !!deal.value && (deal.value.tags.includes('surprise') || deal.value.metadata?.surpriseBag === true || deal.value.metadata?.surprise_bag === true),
+)
+
+const discountPct = computed(() => {
+  if (!deal.value || !deal.value.originalPrice) return 0
+  return Math.round((1 - Number(deal.value.discountPrice) / Number(deal.value.originalPrice)) * 100)
+})
 
 const expiresInText = computed(() => {
   if (!deal.value) return ''
@@ -46,6 +61,7 @@ const expiresInText = computed(() => {
 
 onMounted(async () => {
   await Promise.all([loadDeal(), loadComments(), loadReservation()])
+  await loadUpsells()
   if (auth.isAuthenticated) {
     interactionsService.record(String(route.params.id), 'view').catch(() => {})
   } else {
@@ -54,7 +70,16 @@ onMounted(async () => {
   const socket = getSocket()
   socket.emit('deal:join', route.params.id)
   socket.on('deal:updated', (update: any) => {
-    if (deal.value && update.id === deal.value.id) Object.assign(deal.value, update.changes)
+    if (deal.value && update.id === deal.value.id) {
+      const hadPrice = Number(deal.value.discountPrice)
+      Object.assign(deal.value, update.changes)
+      if (update.changes?.priceDrop && Number(deal.value.discountPrice) < hadPrice) {
+        priceDrop.value = true
+        if (priceDropTimer) window.clearTimeout(priceDropTimer)
+        priceDropTimer = window.setTimeout(() => { priceDrop.value = false }, 4000)
+        uiStore.addToast('Price dropped! Grab it before it is gone.', 'success')
+      }
+    }
   })
   socket.on('deal:quantity', (payload: { id: string; remaining: number }) => {
     if (deal.value && payload.id === deal.value.id) deal.value.remainingQuantity = payload.remaining
@@ -71,6 +96,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (countdownTimer) window.clearInterval(countdownTimer)
+  if (priceDropTimer) window.clearTimeout(priceDropTimer)
   const socket = getSocket()
   socket.emit('deal:leave', route.params.id)
   socket.off('deal:updated')
@@ -78,6 +104,18 @@ onUnmounted(() => {
   socket.off('comment:added')
   socket.off('reservation:confirmed')
 })
+
+async function loadUpsells() {
+  try {
+    const all = await dealsService.findAll({ limit: 50 })
+    const list = (all.deals ?? all) as Deal[]
+    const others = list.filter((d) => d.id !== route.params.id && d.status === 'active')
+    const sameStore = others.filter((d) => d.storeId === deal.value?.storeId)
+    upsells.value = (sameStore.length ? sameStore : others).slice(0, 4)
+  } catch {
+    upsells.value = []
+  }
+}
 
 async function loadDeal() {
   isLoading.value = true
@@ -254,19 +292,33 @@ async function toggleBookmark() {
 
           <div class="deal-info">
             <div class="badge-row">
+              <span v-if="isSurprise" class="badge badge-surprise">Surprise Bag</span>
               <span v-if="deal.verified" class="badge badge-verified">Verified by moderator</span>
               <span class="badge badge-store">{{ deal.store?.name || 'Community store' }}</span>
             </div>
 
             <h1>{{ deal.title }}</h1>
 
-            <div class="deal-pricing">
+            <div class="deal-pricing" :class="{ 'price-flash': priceDrop }">
               <span class="price-big">{{ formatVND(Number(deal.discountPrice)) }}</span>
-              <span class="price-strike">{{ formatVND(Number(deal.originalPrice)) }}</span>
-              <span class="discount-badge">Save {{ Math.round((1 - Number(deal.discountPrice) / Number(deal.originalPrice)) * 100) }}%</span>
+              <span v-if="!isSurprise" class="price-strike">{{ formatVND(Number(deal.originalPrice)) }}</span>
+              <span v-if="!isSurprise" class="discount-badge">Save {{ discountPct }}%</span>
+              <span v-else class="discount-badge">up to {{ formatVND(Number(deal.originalPrice)) }} value</span>
+            </div>
+
+            <div v-if="priceDrop" class="price-drop-banner">Price just dropped! Reserve now before it is gone.</div>
+
+            <div v-if="isSurprise" class="surprise-note">
+              <strong>What is a Surprise Bag?</strong>
+              <p>You get a mystery selection of fresh food near its end-of-day, worth up to {{ formatVND(Number(deal.originalPrice)) }}. Open it at pickup — contents vary daily and are always delicious.</p>
             </div>
 
             <p class="deal-description">{{ deal.description }}</p>
+
+            <div class="impact-strip">
+              <span>🌱 saves ~{{ IMPACT_KG.toFixed(1) }} kg food</span>
+              <span>🌍 avoids ~{{ IMPACT_CO2.toFixed(1) }} kg CO₂e</span>
+            </div>
 
             <div class="deal-expiry">
               <span>Expires in <strong>{{ expiresInText }}</strong></span>
@@ -302,7 +354,7 @@ async function toggleBookmark() {
                 :disabled="isReserving"
                 @click="handleReserve"
               >
-                {{ isReserving ? 'Reserving...' : 'Reserve 15-Minute Hold' }}
+                {{ isReserving ? 'Reserving...' : isSurprise ? 'Reserve Surprise Bag' : 'Reserve 15-Minute Hold' }}
               </button>
 
               <div v-else class="sold-out">
@@ -364,6 +416,25 @@ async function toggleBookmark() {
             </div>
           </article>
         </div>
+
+        <div v-if="upsells.length" class="upsell-section">
+          <h3>You might also love</h3>
+          <div class="upsell-grid">
+            <router-link v-for="u in upsells" :key="u.id" :to="'/deals/' + u.id" class="upsell-card">
+              <div class="upsell-img">
+                <img :src="u.images?.[0] || 'https://images.unsplash.com/photo-1586999768265-24af89630739?w=300&q=80'" :alt="u.title" loading="lazy" />
+              </div>
+              <div class="upsell-body">
+                <div class="upsell-store">{{ u.store?.name || 'Store' }}</div>
+                <h4>{{ u.title }}</h4>
+                <div class="upsell-price">
+                  <strong>{{ formatVND(Number(u.discountPrice)) }}</strong>
+                  <s v-if="!u.tags.includes('surprise')">{{ formatVND(Number(u.originalPrice)) }}</s>
+                </div>
+              </div>
+            </router-link>
+          </div>
+        </div>
       </div>
 
       <div v-else class="empty-state">
@@ -388,12 +459,24 @@ async function toggleBookmark() {
 .badge { padding: 6px 14px; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.02em; }
 .badge-verified { background: #dcfce7; color: #166534; display: inline-flex; align-items: center; gap: 4px; }
 .badge-verified::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #166534; }
+.badge-surprise { background: #f3e8ff; color: #6d28d9; }
 .badge-store { background: var(--color-bg-tertiary); color: var(--color-text-secondary); }
 .deal-info h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 16px; color: var(--color-text); letter-spacing: -0.02em; line-height: 1.25; }
 .deal-pricing { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
 .price-big { font-size: 2.25rem; font-weight: 800; color: var(--color-accent); letter-spacing: -0.03em; }
 .price-strike { color: var(--color-text-tertiary); text-decoration: line-through; font-size: 1rem; }
 .discount-badge { padding: 6px 14px; border-radius: var(--radius-full); background: var(--color-accent-light); color: var(--color-accent); font-weight: 700; font-size: 0.8125rem; }
+.price-flash { animation: price-pulse 1s ease 2; }
+@keyframes price-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+.price-drop-banner { margin-bottom: 16px; padding: 12px 16px; border-radius: var(--radius-md); background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; font-weight: 600; font-size: 0.875rem; }
+.surprise-note { padding: 16px 18px; background: #faf5ff; border: 1px dashed #c4b5fd; border-radius: var(--radius-md); margin-bottom: 18px; }
+.surprise-note strong { color: #6d28d9; font-size: 0.875rem; }
+.surprise-note p { color: var(--color-text-secondary); font-size: 0.8125rem; line-height: 1.6; margin-top: 4px; }
+.impact-strip { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+.impact-strip span { font-size: 0.8125rem; font-weight: 600; color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 12px; border-radius: var(--radius-full); }
 .deal-description { color: var(--color-text-secondary); line-height: 1.75; margin-bottom: 24px; font-size: 0.9375rem; }
 .deal-expiry { display: grid; gap: 10px; padding: 18px 20px; background: var(--color-bg-secondary); border-radius: var(--radius-md); margin-bottom: 28px; color: var(--color-text-secondary); font-size: 0.875rem; }
 .deal-expiry strong { color: var(--color-text); font-weight: 600; }
@@ -414,6 +497,21 @@ async function toggleBookmark() {
 .stat-label { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-full); color: var(--color-text-tertiary); font-size: 0.8125rem; font-weight: 500; }
 .comments-section { margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--color-border); }
 .comments-section > h3 { margin-bottom: 20px; font-size: 1.1rem; font-weight: 700; }
+.upsell-section { margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--color-border); }
+.upsell-section > h3 { margin-bottom: 20px; font-size: 1.1rem; font-weight: 700; }
+.upsell-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.upsell-card { display: block; background: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; transition: transform var(--transition-fast), box-shadow var(--transition-fast); }
+.upsell-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+.upsell-img { aspect-ratio: 4 / 3; overflow: hidden; background: var(--color-bg-tertiary); }
+.upsell-img img { width: 100%; height: 100%; object-fit: cover; }
+.upsell-body { padding: 12px 14px; }
+.upsell-store { font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--color-text-tertiary); margin-bottom: 4px; }
+.upsell-body h4 { font-size: 0.875rem; font-weight: 600; color: var(--color-text); margin-bottom: 6px; line-height: 1.3; }
+.upsell-price { display: flex; align-items: baseline; gap: 8px; }
+.upsell-price strong { color: var(--color-accent); font-size: 0.9375rem; }
+.upsell-price s { color: var(--color-text-tertiary); font-size: 0.75rem; }
+@media (max-width: 900px) { .upsell-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { .upsell-grid { grid-template-columns: 1fr; } }
 .comment-form { display: grid; gap: 12px; margin-bottom: 32px; }
 .comment-form textarea { width: 100%; padding: 14px 16px; border: 1.5px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); color: var(--color-text); font-family: var(--font-family); font-size: 0.875rem; resize: vertical; transition: border-color var(--transition-fast); }
 .comment-form textarea:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(238, 77, 45, 0.08); }

@@ -28,6 +28,8 @@ const form = ref({
   expiresIn: 2,
   tags: 'food, rescue',
   imageUrl: 'https://images.unsplash.com/photo-1586999768265-24af89630739?w=900&q=80',
+  isSurprise: false,
+  isFlash: false,
 })
 
 onMounted(async () => {
@@ -60,6 +62,8 @@ function hydrateForm(deal: Deal) {
     expiresIn: Math.max(Math.round((new Date(deal.expiresAt).getTime() - Date.now()) / 3600000), 1),
     tags: deal.tags.join(', '),
     imageUrl: deal.images?.[0] || form.value.imageUrl,
+    isSurprise: deal.tags.includes('surprise') || deal.metadata?.surprise_bag === true || deal.metadata?.surpriseBag === true,
+    isFlash: deal.tags.includes('flash') || deal.metadata?.flash === true,
   }
 }
 
@@ -104,7 +108,11 @@ async function handleSubmit() {
   fieldErrors.value = fe
   if (Object.keys(fe).length) return
 
-  const payload = {
+  const tags = form.value.tags.split(',').map(tag => tag.trim()).filter(Boolean)
+  if (form.value.isSurprise && !tags.includes('surprise')) tags.push('surprise')
+  if (form.value.isFlash && !tags.includes('flash')) tags.push('flash')
+
+  const payload: Record<string, any> = {
     storeId: form.value.storeId || undefined,
     title: form.value.title.trim(),
     description: form.value.description.trim(),
@@ -115,7 +123,7 @@ async function handleSubmit() {
     latitude: form.value.latitude,
     longitude: form.value.longitude,
     expiresAt: new Date(Date.now() + form.value.expiresIn * 60 * 60 * 1000).toISOString(),
-    tags: form.value.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+    tags,
     images: form.value.imageUrl ? [form.value.imageUrl.trim()] : [],
   }
 
@@ -194,6 +202,26 @@ async function handleSubmit() {
         </div>
 
         <div class="form-group">
+          <label class="toggle-label">
+            <input type="checkbox" v-model="form.isSurprise" class="toggle-input" />
+            <span class="toggle-body">
+              <strong>Surprise Bag</strong>
+              <small>Giá thị trường không hiện trên thẻ. Người mua mở túi và nhận bất ngờ.</small>
+            </span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="toggle-label">
+            <input type="checkbox" v-model="form.isFlash" class="toggle-input" />
+            <span class="toggle-body">
+              <strong>Flash Deal (giá giảm theo thời gian)</strong>
+              <small>Giá tự động giảm dần mỗi vài phút khi càng gần hết giờ lấy.</small>
+            </span>
+          </label>
+        </div>
+
+        <div class="form-group">
           <label for="address">Pickup Address</label>
           <input id="address" v-model="form.address" type="text" placeholder="123 Collins St, Melbourne" :class="{ invalid: fieldErrors.address }" @input="clearFieldError('address')" />
           <span v-if="fieldErrors.address" class="field-error">{{ fieldErrors.address }}</span>
@@ -254,6 +282,12 @@ async function handleSubmit() {
 .form-group input.invalid { border-color: var(--color-error); }
 .form-group input.invalid:focus { box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }
 .field-error { display: block; margin-top: 4px; font-size: 0.75rem; color: var(--color-error); }
+.toggle-label { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; padding: 12px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); transition: border-color 0.2s ease, background 0.2s ease; }
+.toggle-label:hover { border-color: var(--color-accent); }
+.toggle-label:has(.toggle-input:checked) { border-color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 8%, transparent); }
+.toggle-input { margin-top: 3px; accent-color: var(--color-accent); width: 18px; height: 18px; }
+.toggle-body { display: flex; flex-direction: column; gap: 2px; }
+.toggle-body small { color: var(--color-text-secondary); font-size: 0.8125rem; font-weight: 400; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .three-col { grid-template-columns: repeat(3, 1fr); }
 .locate-group { display: flex; flex-direction: column; }

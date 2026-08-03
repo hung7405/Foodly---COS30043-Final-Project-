@@ -1,7 +1,25 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { useAuthStore } from '../stores/auth.store'
+import { rewardsService } from '../services/api'
 
 const auth = useAuthStore()
+
+const impact = ref<{ bags: number; foodKg: number; co2Kg: number; moneySaved: number } | null>(null)
+const balance = ref(0)
+
+onMounted(async () => {
+  try {
+    const [imp, bal] = await Promise.all([
+      rewardsService.getImpact(),
+      rewardsService.getBalance(),
+    ])
+    impact.value = imp
+    balance.value = bal.balance
+  } catch {
+    // rewards unavailable for this user
+  }
+})
 </script>
 
 <template>
@@ -20,6 +38,24 @@ const auth = useAuthStore()
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
             {{ auth.user?.role }}
           </span>
+        </div>
+      </div>
+
+      <div class="rewards-row">
+        <router-link to="/spin" class="reward-card coins-card">
+          <div class="reward-icon">🪙</div>
+          <div>
+            <strong class="reward-value">{{ balance }} <span class="reward-unit">xu</span></strong>
+            <small>Earn on every purchase · spin daily</small>
+          </div>
+          <span class="link-arrow">→</span>
+        </router-link>
+        <div v-if="impact" class="reward-card impact-card">
+          <div class="reward-icon">🍀</div>
+          <div>
+            <strong class="reward-value">{{ impact.foodKg }} kg</strong>
+            <small>food saved · {{ impact.co2Kg }} kg CO₂e</small>
+          </div>
         </div>
       </div>
 
@@ -70,6 +106,16 @@ const auth = useAuthStore()
 .profile-meta { display: flex; gap: 8px; justify-content: center; }
 .meta-badge { padding: 4px 12px; background: var(--color-bg-tertiary); border-radius: 100px; font-size: 0.8125rem; display: inline-flex; align-items: center; gap: 6px; }
 .profile-links { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+.rewards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.reward-card { display: flex; align-items: center; gap: 14px; padding: 18px; background: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); text-decoration: none; color: var(--color-text); transition: all var(--transition-fast); }
+a.reward-card:hover { border-color: var(--color-accent); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.reward-icon { font-size: 1.75rem; }
+.reward-card > div:nth-child(2) { flex: 1; display: flex; flex-direction: column; }
+.reward-value { font-size: 1.25rem; font-weight: 700; color: var(--color-accent); }
+.reward-unit { font-size: 0.8125rem; color: var(--color-text-secondary); font-weight: 600; }
+.reward-card small { color: var(--color-text-secondary); font-size: 0.8125rem; }
+.impact-card .reward-value { color: #166534; }
+@media (max-width: 640px) { .rewards-row { grid-template-columns: 1fr; } }
 .profile-link-card { display: flex; align-items: center; gap: 16px; padding: 20px; background: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); text-decoration: none; color: var(--color-text); transition: all var(--transition-fast); }
 .profile-link-card:hover { border-color: var(--color-accent); box-shadow: var(--shadow-md); transform: translateX(2px); }
 .link-icon { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; background: var(--color-accent-light); color: var(--color-accent); flex-shrink: 0; }

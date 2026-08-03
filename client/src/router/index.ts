@@ -44,6 +44,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/spin',
+    name: 'Spin',
+    component: () => import('../views/SpinView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/profile/deals',
     name: 'MyDeals',
     component: () => import('../views/MyDealsView.vue'),

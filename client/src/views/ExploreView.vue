@@ -47,6 +47,9 @@ const radiusOptions = [1, 3, 5, 10]
 function discountPct(d: any) {
   return d.originalPrice && d.discountPrice ? Math.round((1 - d.discountPrice / d.originalPrice) * 100) : 0
 }
+function isSurpriseDeal(d: any) {
+  return (d.tags || []).includes('surprise') || d.metadata?.surpriseBag === true || d.metadata?.surprise_bag === true
+}
 const dealRating = (d: Deal) => Math.round((d.store?.avgTrustScore ?? 0) / 20)
 
 const stores = computed(() => {
@@ -233,7 +236,7 @@ function createDealIcon(deal: Deal, selected = false) {
   const color = selected ? '#059669' : deal.verified ? '#10b981' : '#ee4d2d'
   return L.divIcon({
     html: '<div class="deal-marker" style="--mc:' + color + '">' +
-      '<span class="deal-marker-price">' + (pct > 0 ? '-' + pct + '%' : formatVND(Number(deal.discountPrice))) + '</span>' +
+      '<span class="deal-marker-price">' + (isSurpriseDeal(deal) ? 'Surprise' : (pct > 0 ? '-' + pct + '%' : formatVND(Number(deal.discountPrice)))) + '</span>' +
       '<span class="deal-marker-dot"></span></div>',
     className: '', iconSize: L.point(70, 34), iconAnchor: L.point(35, 34),
   })
@@ -457,7 +460,7 @@ function handleSkipLocation() {
               <div class="info-content">
                 <h4>{{ selectedDeal.title }}</h4>
                 <div class="info-store">{{ selectedDeal.store?.name || 'Store' }}</div>
-                <div class="info-price">{{ formatVND(selectedDeal.discountPrice) }} <s v-if="selectedDeal.originalPrice > selectedDeal.discountPrice">{{ formatVND(selectedDeal.originalPrice) }}</s></div>
+                <div class="info-price">{{ formatVND(selectedDeal.discountPrice) }} <s v-if="!isSurpriseDeal(selectedDeal) && selectedDeal.originalPrice > selectedDeal.discountPrice">{{ formatVND(selectedDeal.originalPrice) }}</s><span v-if="isSurpriseDeal(selectedDeal)" class="info-up-to">up to {{ formatVND(selectedDeal.originalPrice) }} value</span></div>
               </div>
             </div>
             <div class="info-meta">
@@ -488,7 +491,8 @@ function handleSkipLocation() {
             <router-link v-for="deal in filteredDeals" :key="deal.id" :to="'/deals/' + deal.id" class="deal-card">
               <div class="deal-card-img">
                 <img :src="deal.images?.[0] || 'https://images.unsplash.com/photo-1586999768265-24af89630739?w=200&q=80'" :alt="deal.title" loading="lazy" />
-                <span v-if="discountPct(deal) > 0" class="deal-discount">-{{ discountPct(deal) }}%</span>
+                <span v-if="isSurpriseDeal(deal)" class="deal-surprise">Surprise</span>
+                <span v-else-if="discountPct(deal) > 0" class="deal-discount">-{{ discountPct(deal) }}%</span>
                 <span v-if="deal.verified" class="deal-badge" title="Verified">V</span>
                 <span v-if="deal.remainingQuantity <= 3" class="deal-low-badge">Low</span>
               </div>
@@ -497,7 +501,8 @@ function handleSkipLocation() {
                 <h4 class="deal-title">{{ deal.title }}</h4>
                 <div class="deal-meta-row">
                   <span class="deal-price">{{ formatVND(deal.discountPrice) }}</span>
-                  <s v-if="deal.originalPrice > deal.discountPrice" class="deal-original">{{ formatVND(deal.originalPrice) }}</s>
+                  <s v-if="!isSurpriseDeal(deal) && deal.originalPrice > deal.discountPrice" class="deal-original">{{ formatVND(deal.originalPrice) }}</s>
+                  <span v-else-if="isSurpriseDeal(deal)" class="deal-up-to">up to {{ formatVND(deal.originalPrice) }} value</span>
                 </div>
                 <div class="deal-meta-bottom">
                   <span v-if="userLocation && deal.latitude" class="deal-distance">{{ formatDist(deal.distanceKm) }}</span>
@@ -773,6 +778,7 @@ function handleSkipLocation() {
 .info-store { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
 .info-price { font-weight: 700; color: var(--color-accent); margin-top: 4px; }
 .info-price s { font-weight: 400; color: var(--color-text-tertiary); margin-left: 6px; }
+.info-up-to { display: inline-block; font-size: 11px; font-weight: 600; color: #7c3aed; background: #f3e8ff; padding: 2px 8px; border-radius: var(--radius-full); margin-left: 8px; }
 .info-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; }
 .info-stock { color: var(--color-warning); font-weight: 600; }
 .info-dist { color: var(--color-text-tertiary); }
@@ -837,6 +843,17 @@ function handleSkipLocation() {
   font-weight: 700;
   border-radius: var(--radius-xs);
 }
+.deal-surprise {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 3px 8px;
+  background: linear-gradient(135deg, #9333ea, #6366f1);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: var(--radius-xs);
+}
 .deal-badge {
   position: absolute;
   top: 10px;
@@ -894,6 +911,7 @@ function handleSkipLocation() {
 .deal-meta-row { display: flex; align-items: baseline; gap: 8px; }
 .deal-price { font-size: 16px; font-weight: 700; color: var(--color-accent); }
 .deal-original { font-size: 12px; color: var(--color-text-tertiary); }
+.deal-up-to { font-size: 11px; font-weight: 600; color: #7c3aed; background: #f3e8ff; padding: 2px 8px; border-radius: var(--radius-full); white-space: nowrap; }
 .deal-meta-bottom { display: flex; justify-content: space-between; margin-top: auto; }
 .deal-distance { font-size: 12px; color: var(--color-text-tertiary); }
 

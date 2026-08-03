@@ -33,6 +33,7 @@ export interface Deal {
   images: string[]
   expiresAt: string
   tags: string[]
+  metadata?: Record<string, any>
   version: number
   likeCount: number
   bookmarkCount: number

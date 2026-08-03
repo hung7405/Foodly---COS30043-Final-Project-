@@ -153,8 +153,23 @@ export class PaymentService {
       .eq('id', paymentId)
       .single()
 
+    await this.awardLoyaltyPoints(payment.user_id, Number(payment.amount))
+
     this.socketGateway.emitReservationConfirmed(payment.reservation_id)
     return updatedPayment
+  }
+
+  private async awardLoyaltyPoints(userId: string, amount: number) {
+    if (!userId || !amount) return
+    const points = Math.max(1, Math.round(amount / 1000))
+    const { data: user } = await this.supabase.client
+      .from('users')
+      .select('reputation_points')
+      .eq('id', userId)
+      .single()
+    const next = (user?.reputation_points ?? 0) + points
+    await this.supabase.client.from('users').update({ reputation_points: next }).eq('id', userId)
+    this.socketGateway.server?.to(`user:${userId}`).emit('points:awarded', { points, balance: next, reason: 'purchase' })
   }
 
   async failPayment(paymentId: string, reason: string) {

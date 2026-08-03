@@ -44,4 +44,7 @@ export class CreateDealDto {
   @IsArray()
   @IsString({ each: true })
   images?: string[]
+
+  @IsOptional()
+  metadata?: Record<string, any>
 }

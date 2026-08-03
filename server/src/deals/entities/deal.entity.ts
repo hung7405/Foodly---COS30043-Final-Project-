@@ -79,6 +79,9 @@ export class Deal {
   @Column('simple-json', { default: '[]' })
   tags: string[]
 
+  @Column('simple-json', { nullable: true })
+  metadata?: Record<string, any>
+
   @Column({ default: 1 })
   version: number
 

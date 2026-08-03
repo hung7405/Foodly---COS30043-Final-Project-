@@ -10,6 +10,7 @@ const router = useRouter()
 
 const recommendedDeals = ref<Deal[]>([])
 const flashDeals = ref<Deal[]>([])
+const surpriseDeals = ref<Deal[]>([])
 const flashSaleEnd = ref(0)
 let flashTimer: number | undefined
 const loading = ref(true)
@@ -67,8 +68,17 @@ async function loadDeals() {
     }))
     const endTime = new Date(flash.data.endTime).getTime()
     flashSaleEnd.value = Math.max(0, Math.floor((endTime - Date.now()) / 1000))
+    surpriseDeals.value = (all.deals || [])
+      .filter((deal: any) => (deal.tags || []).includes('surprise') || deal.metadata?.surpriseBag === true || deal.metadata?.surprise_bag === true)
+      .slice(0, 4)
+    if (surpriseDeals.value.length === 0) {
+      const fallback = await dealsService.findAll({ limit: 50 })
+      surpriseDeals.value = ((fallback.deals || fallback) as Deal[])
+        .filter((deal: any) => (deal.tags || []).includes('surprise') || deal.metadata?.surpriseBag === true || deal.metadata?.surprise_bag === true)
+        .slice(0, 4)
+    }
   } catch {
-    recommendedDeals.value = []; flashDeals.value = []; flashSaleEnd.value = 0
+    recommendedDeals.value = []; flashDeals.value = []; surpriseDeals.value = []; flashSaleEnd.value = 0
     loadError.value = 'Could not load deals. Please try again.'
   } finally { loading.value = false }
 }
@@ -168,6 +178,46 @@ function dealRating(deal: any) {
           </div>
         </div>
       </div>
+    </section>
+
+    <section class="surprise-section">
+      <div class="surprise-header">
+        <div class="surprise-title-row">
+          <span class="surprise-emoji">🎁</span>
+          <h2 class="section-title">Surprise Bags</h2>
+          <span class="surprise-badge">New</span>
+        </div>
+        <router-link to="/explore?category=food" class="flash-view-all">View All</router-link>
+      </div>
+      <div v-if="surpriseDeals.length" class="rec-grid">
+        <router-link v-for="deal in surpriseDeals" :key="deal.id" :to="'/deals/' + deal.id" class="rec-card surprise-card">
+          <div class="rec-card-img">
+            <img :src="deal.images?.[0] || FOOD_IMGS[0]" :alt="deal.title" loading="lazy" />
+            <span class="rec-discount-badge surprise-badge-tag">Surprise</span>
+          </div>
+          <div class="rec-card-body">
+            <div class="rec-store">{{ deal.store?.name || 'Store' }}</div>
+            <h3 class="rec-title">{{ deal.title }}</h3>
+            <div class="rec-price-row">
+              <span class="rec-price">{{ formatVND(deal.discountPrice) }}</span>
+              <span class="surprise-value">up to {{ formatVND(deal.originalPrice) }} value</span>
+            </div>
+          </div>
+        </router-link>
+      </div>
+      <div v-else-if="!loading" class="surprise-empty">
+        <p>No surprise bags right now — check back later today.</p>
+        <router-link to="/explore" class="btn btn-outline btn-sm">Explore deals</router-link>
+      </div>
+    </section>
+
+    <section class="spin-strip">
+      <div class="spin-strip-icon">🎡</div>
+      <div class="spin-strip-text">
+        <strong>Daily Bonus Wheel</strong>
+        <span>Spin once a day and earn free xu on every rescue.</span>
+      </div>
+      <router-link to="/spin" class="btn btn-primary btn-sm spin-cta">Spin now</router-link>
     </section>
 
     <section class="rec-section">
@@ -280,6 +330,26 @@ function dealRating(deal: any) {
 .flash-card-original { font-size: 0.7rem; color: var(--color-text-tertiary); text-decoration: line-through; }
 .flash-card-rating { display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: var(--color-text-tertiary); font-weight: 500; }
 .flash-skeleton { flex-shrink: 0; width: 155px; height: 230px; border-radius: 12px; background: var(--color-bg-tertiary); animation: pulse 1.5s ease-in-out infinite; }
+
+/* ── Surprise Bags ─────────────────────────────────── */
+.surprise-section { padding: 20px 0 0; }
+.surprise-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.surprise-title-row { display: flex; align-items: center; gap: 10px; }
+.surprise-emoji { font-size: 1.2rem; }
+.surprise-section .section-title { font-size: 1.1rem; font-weight: 700; color: var(--color-text); }
+.surprise-badge { font-size: 0.6875rem; font-weight: 700; color: #6d28d9; background: #f3e8ff; padding: 3px 10px; border-radius: var(--radius-full); }
+.surprise-badge-tag { background: linear-gradient(135deg, #9333ea, #6366f1); }
+.surprise-card { border: 1.5px solid #ddd6fe; }
+.surprise-value { font-size: 0.7rem; font-weight: 600; color: #7c3aed; background: #f3e8ff; padding: 2px 8px; border-radius: var(--radius-full); }
+.surprise-empty { padding: 24px; text-align: center; background: var(--color-bg-secondary); border-radius: 14px; display: flex; flex-direction: column; gap: 12px; align-items: center; color: var(--color-text-secondary); font-size: 0.875rem; }
+
+/* ── Spin strip ────────────────────────────────────── */
+.spin-strip { margin-top: 20px; display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 14px; background: linear-gradient(135deg, #fdf4ff, #ede9fe); border: 1px solid #ddd6fe; }
+.spin-strip-icon { font-size: 1.6rem; }
+.spin-strip-text { flex: 1; display: flex; flex-direction: column; }
+.spin-strip-text strong { color: #6d28d9; font-size: 0.9375rem; }
+.spin-strip-text span { color: var(--color-text-secondary); font-size: 0.8125rem; }
+.spin-cta { flex-shrink: 0; }
 
 /* ── Recommended ────────────────────────────────────── */
 .rec-section { padding: 20px 0 0; }

@@ -243,3 +243,22 @@ export const merchantService = {
     return data
   },
 }
+
+export const rewardsService = {
+  async getImpact() {
+    const { data } = await api.get('/rewards/impact')
+    return data
+  },
+  async getBalance() {
+    const { data } = await api.get('/rewards/balance')
+    return data
+  },
+  async dailySpin() {
+    const { data } = await api.post('/rewards/daily-spin')
+    return data
+  },
+  async redeem(points: number) {
+    const { data } = await api.post('/rewards/redeem', { points })
+    return data
+  },
+}
