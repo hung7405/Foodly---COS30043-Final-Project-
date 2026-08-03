@@ -6,9 +6,19 @@ function required(name: string): string {
   return v || ''
 }
 
+const explicit = (process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean)
+const isProduction = process.env.NODE_ENV === 'production'
+
 export const config = {
   jwtSecret: required('JWT_SECRET') || 'test-secret-for-dev',
-  corsOrigins: (process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173').split(',').map(s => s.trim()).filter(Boolean),
-  isProduction: process.env.NODE_ENV === 'production',
+  // Strict allowlist when CORS_ORIGINS is set. When it is NOT set we leave the
+  // list empty and let main.ts reflect the request Origin for every origin
+  // (see enableCors). Safe because auth uses an Authorization header, never
+  // cookies, so a permissive CORS policy cannot steal a victim's token.
+  corsOrigins: explicit.length ? explicit : [],
+  isProduction,
 }
 

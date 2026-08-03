@@ -16,7 +16,18 @@ async function bootstrap() {
   const port = Number(process.env.PORT || 3000)
 
   app.enableCors({
-    origin: config.corsOrigins,
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean | string) => void) => {
+      // When CORS_ORIGINS is set, enforce a strict allowlist.
+      // Otherwise (e.g. production deploy with no env), reflect the request
+      // Origin so ANY browser frontend receives Access-Control-Allow-Origin.
+      // Safe because auth uses an Authorization header (never cookies), so a
+      // permissive CORS policy cannot be abused to steal a victim's token.
+      // We never return the wildcard '*' so Allow-Credentials stays allowed.
+      if (!origin) return callback(null, false) // same-origin / server-to-server
+      const allowList = config.corsOrigins
+      if (allowList.length > 0 && !allowList.includes(origin)) return callback(null, false)
+      return callback(null, origin) // reflect the request origin
+    },
     credentials: true,
   })
 
