@@ -99,7 +99,7 @@ export interface Payment {
   amount: number
   currency: string
   provider: 'mock' | 'momo' | 'vnpay'
-  status: 'pending' | 'processing' | 'success' | 'failed' | 'refunded' | 'expired'
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'refunded' | 'expired'
   providerTransactionId?: string
   paymentUrl?: string
   qrCodeUrl?: string

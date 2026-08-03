@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule'
 import { SupabaseService } from '../supabase/supabase.service'
 import { ReservationStatus } from './entities/reservation.entity'
 import { DealStatus } from '../deals/entities/deal.entity'
+import { PaymentStatus } from '../payment/entities/payment.entity'
 import { SocketGateway } from '../socket/socket.gateway'
 import { AnalyticsService } from '../analytics/analytics.service'
 import * as crypto from 'crypto'
@@ -98,6 +99,20 @@ export class ReservationsService {
       .eq('user_id', userId)
       .single()
     if (fetchError || !reservation) throw new NotFoundException('Reservation not found')
+
+    // A reservation can only be confirmed once its payment has succeeded.
+    // Prevents confirming pickup on an unpaid hold (which used to be possible
+    // by reserving, leaving the payment page, and confirming from My Reservations).
+    const { data: paidPayment, error: paymentError } = await this.supabase.client
+      .from('payments')
+      .select('id, status')
+      .eq('reservation_id', id)
+      .eq('status', PaymentStatus.SUCCESS)
+      .maybeSingle()
+    if (paymentError) throw paymentError
+    if (!paidPayment) {
+      throw new BadRequestException('Payment is required before you can confirm pickup')
+    }
 
     // Only an ACTIVE reservation can be confirmed (atomic guard against
     // double-confirm / confirm-after-expiry races).

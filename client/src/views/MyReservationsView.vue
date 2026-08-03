@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
-import { reservationsService } from '../services/api'
+import { reservationsService, paymentsService } from '../services/api'
 import { getSocket } from '../services/socket/socket'
 import RealtimeOrderTimeline from '../components/common/RealtimeOrderTimeline.vue'
-import type { Reservation } from '../types'
+import type { Reservation, Payment } from '../types'
 
 const reservations = ref<Reservation[]>([])
 const isLoading = ref(true)
 const error = ref('')
+const paidReservationIds = ref<Set<string>>(new Set())
 
 const TIMELINE_STEPS = [
   { key: 'active', label: 'Hold Active', hint: 'Item reserved for you' },
@@ -59,12 +60,25 @@ async function loadReservations() {
   isLoading.value = true
   error.value = ''
   try {
-    reservations.value = await reservationsService.myReservations()
+    const [resList, payList] = await Promise.all([
+      reservationsService.myReservations(),
+      paymentsService.myPayments().catch(() => []),
+    ])
+    reservations.value = resList
+    paidReservationIds.value = new Set(
+      (payList as Payment[])
+        .filter((p) => p.status === 'completed')
+        .map((p) => p.reservationId),
+    )
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Could not load reservations.'
   } finally {
     isLoading.value = false
   }
+}
+
+function isPaid(id: string) {
+  return paidReservationIds.value.has(id)
 }
 
 async function cancel(id: string) {
@@ -131,7 +145,8 @@ async function confirm(id: string) {
           </div>
           <div class="res-actions">
             <router-link v-if="res.dealId" :to="`/deals/${res.dealId}`" class="btn btn-outline">View Deal</router-link>
-            <button v-if="res.status === 'active'" class="btn btn-primary" @click="confirm(res.id)">Confirm Pickup</button>
+            <router-link v-if="res.status === 'active' && !isPaid(res.id)" :to="`/payments/${res.id}`" class="btn btn-primary">Pay now</router-link>
+            <button v-if="res.status === 'active' && isPaid(res.id)" class="btn btn-primary" @click="confirm(res.id)">Confirm Pickup</button>
             <button v-if="res.status === 'active'" class="btn btn-ghost danger" @click="cancel(res.id)">Cancel</button>
           </div>
         </article>
