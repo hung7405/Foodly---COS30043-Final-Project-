@@ -24,62 +24,115 @@ const isRouting = ref(false)
 const error = ref('')
 const searchQuery = ref('')
 const category = ref('All')
-const showMap = ref(true)
+const showMap = ref(false)
+const showFilters = ref(false)
 const routeMode = ref<'walking' | 'driving' | 'cycling'>('walking')
 const route = useRoute()
 const routeInfo = ref<{ distanceKm: number; durationMin: number } | null>(null)
 const userLocation = ref<{ lat: number; lng: number } | null>(null)
 const routeLine = shallowRef<any>(null)
 const showLocationPrompt = ref(true)
-let searchTimer: number | undefined
-let joinedDealIds = new Set<string>()
 
+const selectedStore = ref('')
+const selectedRating = ref(0)
+const verifiedOnly = ref(false)
+const minDiscount = ref(0)
+const radiusKm = ref(0)
+const sortBy = ref<'default' | 'discount' | 'price-asc' | 'price-desc'>('default')
+
+const ratingOptions = [5, 4, 3, 2, 1]
+const discountTiers = [10, 20, 30, 50]
+const radiusOptions = [1, 3, 5, 10]
+
+function discountPct(d: any) {
+  return d.originalPrice && d.discountPrice ? Math.round((1 - d.discountPrice / d.originalPrice) * 100) : 0
+}
+const dealRating = (d: Deal) => Math.round((d.store?.avgTrustScore ?? 0) / 20)
+
+const stores = computed(() => {
+  const s = new Set<string>()
+  deals.value.forEach((d) => d.store?.name && s.add(d.store.name))
+  return [...s].sort()
+})
+const categories = computed(() => {
+  const c = new Set<string>()
+  deals.value.forEach((d) => (d.tags || []).forEach((t) => c.add(t)))
+  return [...c].sort()
+})
+const activeFiltersCount = computed(
+  () =>
+    [selectedStore.value, selectedRating.value, minDiscount.value, radiusKm.value].filter(Boolean).length +
+    (verifiedOnly.value ? 1 : 0) +
+    (category.value !== 'All' ? 1 : 0) +
+    (searchQuery.value.trim() ? 1 : 0),
+)
+
+const filteredDeals = computed(() => {
+  const withDistance: Array<Deal & { distanceKm?: number }> = deals.value.map((d) => ({
+    ...d,
+    distanceKm: userLocation.value
+      ? calcDistance(userLocation.value.lat, userLocation.value.lng, Number(d.latitude), Number(d.longitude))
+      : undefined,
+  }))
+  let result = withDistance.filter((d) => {
+    if (selectedStore.value && d.store?.name !== selectedStore.value) return false
+    if (verifiedOnly.value && !d.verified) return false
+    if (minDiscount.value && discountPct(d) < minDiscount.value) return false
+    if (selectedRating.value && dealRating(d) < selectedRating.value) return false
+    if (radiusKm.value && d.distanceKm !== undefined && d.distanceKm > radiusKm.value) return false
+    return true
+  })
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.toLowerCase()
+    result = result.filter((d) => d.title.toLowerCase().includes(q) || d.store?.name?.toLowerCase().includes(q))
+  }
+  if (category.value && category.value !== 'All') {
+    result = result.filter((d) => (d.tags || []).includes(category.value))
+  }
+  switch (sortBy.value) {
+    case 'discount':
+      result.sort((a, b) => discountPct(b) - discountPct(a)); break
+    case 'price-asc':
+      result.sort((a, b) => (a.discountPrice || 0) - (b.discountPrice || 0)); break
+    case 'price-desc':
+      result.sort((a, b) => (b.discountPrice || 0) - (a.discountPrice || 0)); break
+    default:
+      if (userLocation.value) result.sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0))
+  }
+  return result
+})
+
+let joinedDealIds = new Set<string>()
 function joinDealRooms(list: Deal[]) {
   const socket = getSocket()
   const next = new Set<string>()
   list.forEach((d: any) => {
-    if (d?.id && !next.has(d.id)) {
-      next.add(d.id)
-      socket.emit('deal:join', d.id)
-    }
+    if (d?.id && !next.has(d.id)) { next.add(d.id); socket.emit('deal:join', d.id) }
   })
-  joinedDealIds.forEach((id) => {
-    if (!next.has(id)) socket.emit('deal:leave', id)
-  })
+  joinedDealIds.forEach((id) => { if (!next.has(id)) socket.emit('deal:leave', id) })
   joinedDealIds = next
 }
-
 function leaveAllDealRooms() {
   const socket = getSocket()
   joinedDealIds.forEach((id) => socket.emit('deal:leave', id))
   joinedDealIds = new Set()
 }
 
-const filteredDeals = computed(() => {
-  let result = [...deals.value]
-  if (searchQuery.value.trim()) {
-    const q = searchQuery.value.toLowerCase()
-    result = result.filter(d => d.title.toLowerCase().includes(q) || d.store?.name?.toLowerCase().includes(q))
-  }
-  if (userLocation.value) {
-    result = result.map(d => ({ ...d, distanceKm: calcDistance(userLocation.value!.lat, userLocation.value!.lng, Number(d.latitude), Number(d.longitude)) })).sort((a: any, b: any) => a.distanceKm - b.distanceKm)
-  }
-  return result
-})
-
 onMounted(async () => {
-  const q = route.query.search as string | undefined
   const c = route.query.category as string | undefined
-  if (q) searchQuery.value = q
   if (c) category.value = c
-  await loadDeals()
   const saved = localStorage.getItem('foodly_location')
   if (saved) {
-    try { const loc = JSON.parse(saved); userLocation.value = loc; showLocationPrompt.value = false } catch { /* */ }
+    try {
+      const loc = JSON.parse(saved)
+      userLocation.value = loc
+      showLocationPrompt.value = false
+    } catch { /* noop */ }
   }
+  await loadDeals()
   await nextTick()
-  initMap()
-  if (saved) { drawUserMarker(); centerMap(userLocation.value!.lat, userLocation.value!.lng) }
+  if (showMap.value) await nextTick(initMap)
+  if (userLocation.value) { drawUserMarker(); centerMap(userLocation.value.lat, userLocation.value.lng, 13) }
   refreshLocationSilently()
 
   const socket = getSocket()
@@ -89,58 +142,45 @@ onMounted(async () => {
     scheduleMarkerUpdate()
   })
   socket.on('deal:quantity', (p: { id: string; remaining: number }) => {
-    const d = deals.value.find(i => i.id === p.id); if (d) d.remainingQuantity = p.remaining
+    const d = deals.value.find((i) => i.id === p.id); if (d) d.remainingQuantity = p.remaining
   })
   socket.on('deal:updated', (p: { id: string; changes: any }) => {
-    const d = deals.value.find(i => i.id === p.id)
+    const d = deals.value.find((i) => i.id === p.id)
     if (d && p.changes) { Object.assign(d, p.changes); scheduleMarkerUpdate() }
   })
 })
-
 onUnmounted(() => {
-  window.clearTimeout(searchTimer)
-  getSocket().off('deal:created'); getSocket().off('deal:quantity'); getSocket().off('deal:updated')
   leaveAllDealRooms()
   map.value?.remove()
 })
 
-watch(searchQuery, () => {
-  window.clearTimeout(searchTimer)
-  searchTimer = window.setTimeout(loadDeals, 250)
+watch([() => route.query.category, () => route.query.search], ([nextCategory, nextSearch]) => {
+  if (typeof nextSearch === 'string' && searchQuery.value !== nextSearch) searchQuery.value = nextSearch
+  if (typeof nextCategory === 'string' && category.value !== nextCategory) category.value = nextCategory
 })
-
-watch(
-  () => [route.query.category, route.query.search] as const,
-  ([nextCategory, nextSearch]) => {
-    if (typeof nextSearch === 'string' && searchQuery.value !== nextSearch) searchQuery.value = nextSearch
-    if (typeof nextCategory === 'string' && category.value !== nextCategory) {
-      category.value = nextCategory
-      loadDeals()
-    }
-  },
-)
-
-watch(filteredDeals, () => scheduleMarkerUpdate())
+watch(filteredDeals, () => { scheduleMarkerUpdate(); joinDealRooms(filteredDeals.value) })
+watch(showMap, (v: boolean) => { if (v) nextTick(initMap); else deselectDeal() })
 
 let markerUpdateTimer: number | undefined
+let listRefreshTimer: number | undefined
 function scheduleMarkerUpdate() {
   window.clearTimeout(markerUpdateTimer)
   markerUpdateTimer = window.setTimeout(rebuildMarkers, 50)
+  window.clearTimeout(listRefreshTimer)
+  listRefreshTimer = window.setTimeout(() => joinDealRooms(deals.value), 200)
 }
 
 async function loadDeals() {
   isLoading.value = true; error.value = ''
   try {
-    const params: Record<string, any> = { status: 'active', limit: 100 }
-    if (searchQuery.value.trim()) params.search = searchQuery.value.trim()
-    if (category.value && category.value !== 'All') params.category = category.value
-    const result = await dealsService.findAll(params)
+    const result = await dealsService.findAll({ status: 'active', limit: 100 })
     deals.value = result.deals || []
-    joinDealRooms(deals.value)
   } catch { deals.value = [] }
   finally { isLoading.value = false }
 }
-
+function resetFilters() {
+  selectedStore.value = ''; selectedRating.value = 0; verifiedOnly.value = false; minDiscount.value = 0; radiusKm.value = 0; searchQuery.value = ''; category.value = 'All'
+}
 function initMap() {
   if (!mapContainer.value || map.value) return
   map.value = L.map(mapContainer.value, { center: [10.8231, 106.6297], zoom: 12, zoomControl: false })
@@ -152,13 +192,10 @@ function initMap() {
   rebuildMarkers()
 }
 
-watch(showMap, (visible) => { if (!visible) deselectDeal() })
-
 const markerMap = new Map<string, L.Marker>()
-
 function createDealIcon(deal: Deal, selected = false) {
-  const pct = deal.originalPrice && deal.discountPrice ? Math.round((1 - deal.discountPrice / deal.originalPrice) * 100) : 0
-  const color = selected ? '#059669' : (deal.verified ? '#10b981' : '#ee4d2d')
+  const pct = discountPct(deal)
+  const color = selected ? '#059669' : deal.verified ? '#10b981' : '#ee4d2d'
   return L.divIcon({
     html: '<div class="deal-marker" style="--mc:' + color + '">' +
       '<span class="deal-marker-price">' + (pct > 0 ? '-' + pct + '%' : formatVND(Number(deal.discountPrice))) + '</span>' +
@@ -166,18 +203,16 @@ function createDealIcon(deal: Deal, selected = false) {
     className: '', iconSize: L.point(70, 34), iconAnchor: L.point(35, 34),
   })
 }
-
 function rebuildMarkers() {
   if (!markerCluster.value) return
   markerCluster.value.clearLayers()
   markerMap.clear()
-  filteredDeals.value.slice(0, 80).forEach(deal => {
+  filteredDeals.value.slice(0, 80).forEach((deal) => {
     const marker = L.marker([Number(deal.latitude), Number(deal.longitude)], { icon: createDealIcon(deal, selectedDeal.value?.id === deal.id) })
     marker.on('click', () => selectDeal(deal))
     markerMap.set(deal.id, marker); markerCluster.value.addLayer(marker)
   })
 }
-
 function drawUserMarker() {
   if (!map.value || !userLocation.value) return
   if (userMarker.value) map.value.removeLayer(userMarker.value)
@@ -189,7 +224,6 @@ function drawUserMarker() {
     zIndexOffset: 10000,
   }).addTo(map.value).bindPopup('Your location')
 }
-
 function centerMap(lat: number, lng: number, zoom = 14) { map.value?.setView([lat, lng], zoom) }
 
 async function locateUser() {
@@ -213,36 +247,28 @@ async function locateUser() {
     } else { error.value = 'Could not determine location. Please try again.' }
   } finally { isLocating.value = false }
 }
-
 async function refreshLocationSilently() {
   if (!navigator.geolocation) return
   let granted = false
   try {
-    if (navigator.permissions?.query) {
-      const p = await navigator.permissions.query({ name: 'geolocation' })
-      granted = p.state === 'granted'
-    }
+    if (navigator.permissions?.query) { const p = await navigator.permissions.query({ name: 'geolocation' }); granted = p.state === 'granted' }
   } catch { granted = false }
   if (!granted) return
   try {
     const pos = await new Promise<GeolocationPosition>((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, maximumAge: 30000, timeout: 8000 }))
     userLocation.value = { lat: pos.coords.latitude, lng: pos.coords.longitude }
     localStorage.setItem('foodly_location', JSON.stringify(userLocation.value))
-    if (map.value) {
-      drawUserMarker()
-      centerMap(userLocation.value.lat, userLocation.value.lng, Math.max(map.value.getZoom(), 13))
-    }
+    if (map.value) { drawUserMarker(); centerMap(userLocation.value.lat, userLocation.value.lng, Math.max(map.value.getZoom(), 13)) }
   } catch { /* keep cached location */ }
 }
-
-function selectDeal(deal: Deal) { selectedDeal.value = deal; routeInfo.value = null; rebuildMarkers(); centerMap(Number(deal.latitude), Number(deal.longitude), 15) }
-function deselectDeal() { selectedDeal.value = null; routeInfo.value = null; rebuildMarkers() }
-function handlePanelOutsideClick(event: Event) {
-  const target = event.target as HTMLElement
-  if (target.closest('.leaflet-marker-icon') || target.closest('.leaflet-div-icon')) return
-  deselectDeal()
+function formatDist(v?: number) { return v === undefined ? '' : v < 1 ? Math.round(v * 1000) + 'm' : v.toFixed(1) + 'km' }
+function calcDistance(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const r = (v: number) => v * Math.PI / 180
+  const a = Math.sin(r(lat2 - lat1) / 2) ** 2 + Math.cos(r(lat1)) * Math.cos(r(lat2)) * Math.sin(r(lng2 - lng1) / 2) ** 2
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
-
+function selectDeal(deal: Deal) { selectedDeal.value = deal; routeInfo.value = null; rebuildMarkers(); if (map.value) centerMap(Number(deal.latitude), Number(deal.longitude), 15) }
+function deselectDeal() { selectedDeal.value = null; routeInfo.value = null; rebuildMarkers() }
 async function buildRoute() {
   if (!selectedDeal.value || !userLocation.value) return
   isRouting.value = true; error.value = ''
@@ -257,7 +283,6 @@ async function buildRoute() {
   } catch { error.value = 'Could not calculate directions' }
   finally { isRouting.value = false }
 }
-
 function drawRoute(geo: any) {
   if (!map.value) return
   if (routeLine.value) map.value.removeLayer(routeLine.value)
@@ -265,16 +290,6 @@ function drawRoute(geo: any) {
   routeLine.value = L.polyline(coords, { color: '#ee4d2d', weight: 4, opacity: 0.85 }).addTo(map.value)
   map.value.fitBounds(routeLine.value.getBounds().pad(0.15))
 }
-
-function calcDistance(lat1: number, lng1: number, lat2: number, lng2: number) {
-  const r = (v: number) => v * Math.PI / 180
-  const a = Math.sin(r(lat2 - lat1) / 2) ** 2 + Math.cos(r(lat1)) * Math.cos(r(lat2)) * Math.sin(r(lng2 - lng1) / 2) ** 2
-  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-
-function formatDist(v?: number) { return v === undefined ? '' : v < 1 ? Math.round(v * 1000) + 'm' : v.toFixed(1) + 'km' }
-function discountPct(d: any) { return d.originalPrice && d.discountPrice ? Math.round((1 - d.discountPrice / d.originalPrice) * 100) : 0 }
-
 function handleAllowLocation() { locateUser() }
 function handleSkipLocation() {
   showLocationPrompt.value = false
@@ -292,168 +307,647 @@ function handleSkipLocation() {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input v-model="searchQuery" type="search" placeholder="Search deals, stores..." class="toolbar-search" />
       </div>
-      <button class="btn-map-toggle" :class="{ active: showMap }" @click="showMap = !showMap" :title="showMap ? 'Hide map' : 'Show map'">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
-      </button>
-    </div>
-
-    <div v-if="showLocationPrompt" class="location-overlay">
-      <div class="location-dialog">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        <h3>Enable location?</h3>
-        <p>Find the best deals near you with location access.</p>
-        <div class="location-actions">
-          <button class="btn btn-primary" @click="handleAllowLocation">{{ isLocating ? 'Locating...' : 'Enable' }}</button>
-          <button class="btn btn-outline" @click="handleSkipLocation">Use default location</button>
-        </div>
+      <div class="toolbar-actions">
+        <select v-model="sortBy" class="input input-sm sort-select" aria-label="Sort deals">
+          <option value="default">Sort: Default</option>
+          <option value="discount">Biggest discount</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+        </select>
+        <button class="btn-ghost btn-icon" :title="showMap ? 'Show list' : 'Show map'" @click="showMap = !showMap">
+          <svg v-if="showMap" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </button>
+        <button class="btn-ghost btn-icon d-md-none" @click="showFilters = true" :title="'Filters'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+          <span v-if="activeFiltersCount" class="filter-dot">{{ activeFiltersCount }}</span>
+        </button>
       </div>
     </div>
 
     <div class="explore-layout">
-      <div class="explore-list" :class="{ 'explore-list-full': !showMap }">
-        <div v-if="isLoading" class="list-loading"><div v-for="n in 4" :key="n" class="skeleton"></div></div>
-        <div v-else-if="filteredDeals.length === 0" class="empty-state"><h3>No deals found</h3><p>Try adjusting your search or filters.</p></div>
-        <div v-else class="deals-list">
-          <router-link v-for="deal in filteredDeals" :key="deal.id" :to="'/deals/' + deal.id" class="deal-card">
-            <div class="deal-card-img">
-              <img :src="deal.images?.[0] || 'https://images.unsplash.com/photo-1586999768265-24af89630739?w=200&q=80'" :alt="deal.title" loading="lazy" />
-              <span v-if="discountPct(deal) > 0" class="deal-discount">-{{ discountPct(deal) }}%</span>
-            </div>
-            <div class="deal-card-body">
-              <div class="deal-store">{{ deal.store?.name || 'Store' }}</div>
-              <h4 class="deal-title">{{ deal.title }}</h4>
-              <div class="deal-meta">
-                <span class="deal-price">{{ formatVND(deal.discountPrice) }}</span>
-                <span v-if="deal.originalPrice > deal.discountPrice" class="deal-original">{{ formatVND(deal.originalPrice) }}</span>
-              </div>
-              <div class="deal-footer">
-                <span v-if="deal.remainingQuantity <= 3" class="deal-low">Low stock</span>
-                <span v-if="userLocation" class="deal-distance">{{ formatDist(calcDistance(userLocation.lat, userLocation.lng, Number(deal.latitude), Number(deal.longitude))) }}</span>
-                <span v-if="deal.verified" class="deal-badge">Verified</span>
-              </div>
-            </div>
-          </router-link>
+      <aside class="explore-filters" :class="{ open: showFilters }">
+        <div class="filters-head">
+          <h3 class="filter-title">Filters</h3>
+          <button class="btn-ghost btn-sm" @click="resetFilters()">Reset</button>
         </div>
-      </div>
+        <div class="filter-body">
+          <div class="filter-group">
+            <label class="filter-label">Location</label>
+            <div v-if="!userLocation" class="flex gap-2">
+              <button class="btn btn-sm" @click="locateUser()" :disabled="isLocating">{{ isLocating ? 'Locating…' : 'Use my location' }}</button>
+            </div>
+            <div v-else class="flex flex-col gap-2">
+              <select v-model="radiusKm" class="input input-sm">
+                <option :value="0">All distances</option>
+                <option v-for="r in radiusOptions" :key="r" :value="r">{{ r }} km</option>
+              </select>
+              <div class="location-hint">Location set</div>
+            </div>
+          </div>
 
-      <div v-show="showMap" class="map-section">
-        <div ref="mapContainer" class="map-canvas"></div>
-      <button class="btn-locate" @click="locateUser" :disabled="isLocating" :title="'Locate me'">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
-      </button>
-      <div v-if="selectedDeal" v-click-outside="handlePanelOutsideClick" class="map-info-panel">
-          <button class="info-close" @click="deselectDeal" aria-label="Close deal details">&times;</button>
-          <div class="info-row">
-            <div class="info-thumb">
-              <img :src="selectedDeal.images?.[0] || 'https://images.unsplash.com/photo-1586999768265-24af89630739?w=100&q=80'" :alt="selectedDeal.title" />
-            </div>
-            <div class="info-content">
-              <h4>{{ selectedDeal.title }}</h4>
-              <div class="info-store">{{ selectedDeal.store?.name || 'Store' }}</div>
-              <div class="info-price">{{ formatVND(selectedDeal.discountPrice) }} <s v-if="selectedDeal.originalPrice > selectedDeal.discountPrice">{{ formatVND(selectedDeal.originalPrice) }}</s></div>
+          <div class="filter-group">
+            <label class="filter-label">Store</label>
+            <select v-model="selectedStore" class="input input-sm">
+              <option value="">All stores</option>
+              <option v-for="s in stores" :key="s" :value="s">{{ s }}</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label">Category</label>
+            <div class="filter-chips">
+              <button @click="category = 'All'" :class="['chip', { active: category === 'All' }]">All</button>
+              <button v-for="c in categories" :key="c" @click="category = c" :class="['chip', { active: category === c }]">{{ c }}</button>
             </div>
           </div>
-          <div class="info-meta">
-            <span class="info-stock">{{ selectedDeal.remainingQuantity }} left</span>
-            <span v-if="userLocation" class="info-dist">{{ formatDist(calcDistance(userLocation.lat, userLocation.lng, Number(selectedDeal.latitude), Number(selectedDeal.longitude))) }}</span>
+
+          <div class="filter-group">
+            <label class="filter-label">Min rating</label>
+            <div class="filter-chips">
+              <button @click="selectedRating = 0" :class="['chip', { active: selectedRating === 0 }]">Any</button>
+              <button v-for="s in ratingOptions" :key="s" @click="selectedRating = s" :class="['chip rating-chip', { active: selectedRating === s }]">
+                <span class="stars sm">
+                  <svg v-for="i in 5" :key="i" width="10" height="10" viewBox="0 0 24 24"
+                    :fill="i <= s ? 'var(--color-rating)' : 'none'"
+                    :stroke="i <= s ? 'var(--color-rating)' : 'var(--color-text-tertiary)'">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                </span>
+                {{ s }}+
+              </button>
+            </div>
           </div>
-          <div class="info-actions">
-            <router-link :to="'/deals/' + selectedDeal.id" class="btn btn-primary btn-sm">Details</router-link>
-            <button class="btn btn-outline btn-sm" @click="buildRoute" :disabled="isRouting">{{ isRouting ? 'Routing...' : 'Directions' }}</button>
-            <button class="btn-map-center" @click="centerMap(Number(selectedDeal.latitude), Number(selectedDeal.longitude), 16)" title="Center map">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+
+          <div class="filter-group">
+            <label class="filter-label">Verified</label>
+            <button @click="verifiedOnly = !verifiedOnly" :class="['chip', { active: verifiedOnly }]">
+              <svg v-if="verifiedOnly" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-4-4"/></svg>
+              Verified only
             </button>
           </div>
-          <div v-if="routeInfo" class="info-route">{{ formatDist(routeInfo.distanceKm) }} &middot; {{ Math.round(routeInfo.durationMin) }} min</div>
+
+          <div class="filter-group">
+            <label class="filter-label">Min discount</label>
+            <div class="filter-chips">
+              <button @click="minDiscount = 0" :class="['chip', { active: minDiscount === 0 }]">Any</button>
+              <button v-for="d in discountTiers" :key="d" @click="minDiscount = d" :class="['chip', { active: minDiscount === d }]">&ge; {{ d }}%</button>
+            </div>
+          </div>
         </div>
-      </div>
+      </aside>
+      <div v-if="showFilters" class="filter-backdrop" @click="showFilters = false"></div>
+
+      <main class="explore-main">
+        <div v-if="showMap" class="map-section">
+          <div v-if="showLocationPrompt" class="location-overlay">
+            <div class="location-dialog">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <h3>Enable location?</h3>
+              <p>Find the best deals near you with location access.</p>
+              <div class="location-actions">
+                <button class="btn btn-primary" @click="handleAllowLocation">{{ isLocating ? 'Locating...' : 'Enable' }}</button>
+                <button class="btn btn-outline" @click="handleSkipLocation">Use default location</button>
+              </div>
+            </div>
+          </div>
+          <div ref="mapContainer" class="map-canvas"></div>
+          <button class="btn-locate" @click="locateUser" :disabled="isLocating" title="Locate me">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+          </button>
+          <div v-if="selectedDeal" class="map-info-panel">
+            <button class="info-close" @click="deselectDeal" aria-label="Close deal details">&times;</button>
+            <div class="info-row">
+              <div class="info-thumb"><img :src="selectedDeal.images?.[0] || 'https://images.unsplash.com/photo-1586999768265-24af89630739?w=100&q=80'" :alt="selectedDeal.title" /></div>
+              <div class="info-content">
+                <h4>{{ selectedDeal.title }}</h4>
+                <div class="info-store">{{ selectedDeal.store?.name || 'Store' }}</div>
+                <div class="info-price">{{ formatVND(selectedDeal.discountPrice) }} <s v-if="selectedDeal.originalPrice > selectedDeal.discountPrice">{{ formatVND(selectedDeal.originalPrice) }}</s></div>
+              </div>
+            </div>
+            <div class="info-meta">
+              <span class="info-stock">{{ selectedDeal.remainingQuantity }} left</span>
+              <span v-if="userLocation" class="info-dist">{{ formatDist(calcDistance(userLocation.lat, userLocation.lng, Number(selectedDeal.latitude), Number(selectedDeal.longitude))) }}</span>
+            </div>
+            <div class="info-actions">
+              <router-link :to="'/deals/' + selectedDeal.id" class="btn btn-primary btn-sm">Details</router-link>
+              <button class="btn btn-outline btn-sm" @click="buildRoute" :disabled="isRouting">{{ isRouting ? 'Routing...' : 'Directions' }}</button>
+              <button class="btn-map-center" @click="centerMap(Number(selectedDeal.latitude), Number(selectedDeal.longitude), 16)" title="Center map">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+              </button>
+            </div>
+            <div v-if="routeInfo" class="info-route">{{ formatDist(routeInfo.distanceKm) }} and {{ Math.round(routeInfo.durationMin) }} min</div>
+          </div>
+        </div>
+
+        <div v-else class="deals-grid">
+          <div v-if="isLoading" class="grid-skeleton">
+            <div v-for="n in 6" :key="n" class="skeleton-card"></div>
+          </div>
+          <div v-else-if="filteredDeals.length === 0" class="empty-state">
+            <h3>No deals found</h3>
+            <p>Try adjusting your filters.</p>
+            <button class="btn btn-outline btn-sm" @click="resetFilters()">Reset filters</button>
+          </div>
+          <div v-else class="deal-grid">
+            <router-link v-for="deal in filteredDeals" :key="deal.id" :to="'/deals/' + deal.id" class="deal-card">
+              <div class="deal-card-img">
+                <img :src="deal.images?.[0] || 'https://images.unsplash.com/photo-1586999768265-24af89630739?w=200&q=80'" :alt="deal.title" loading="lazy" />
+                <span v-if="discountPct(deal) > 0" class="deal-discount">-{{ discountPct(deal) }}%</span>
+                <span v-if="deal.verified" class="deal-badge" title="Verified">V</span>
+                <span v-if="deal.remainingQuantity <= 3" class="deal-low-badge">Low</span>
+              </div>
+              <div class="deal-card-body">
+                <div class="deal-store">{{ deal.store?.name || 'Store' }}</div>
+                <h4 class="deal-title">{{ deal.title }}</h4>
+                <div class="deal-meta-row">
+                  <span class="deal-price">{{ formatVND(deal.discountPrice) }}</span>
+                  <s v-if="deal.originalPrice > deal.discountPrice" class="deal-original">{{ formatVND(deal.originalPrice) }}</s>
+                </div>
+                <div class="deal-meta-bottom">
+                  <span v-if="userLocation && deal.latitude" class="deal-distance">{{ formatDist(deal.distanceKm) }}</span>
+                </div>
+              </div>
+            </router-link>
+          </div>
+        </div>
+      </main>
     </div>
+
     <div v-if="error" class="error-bar">{{ error }}</div>
   </div>
 </template>
 
 <style scoped>
-.explore-page { display: flex; flex-direction: column; height: calc(100vh - 56px); background: var(--color-bg); }
-.explore-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--color-border); background: var(--color-bg); z-index: 10; }
-.search-wrapper { display: flex; align-items: center; gap: 8px; flex: 1; padding: 8px 14px; border-radius: var(--radius-full); background: var(--color-bg-secondary); border: 1px solid var(--color-border); }
-.search-wrapper:focus-within { border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(238,77,45,0.1); }
-.search-wrapper svg { flex-shrink: 0; color: var(--color-text-tertiary); }
-.toolbar-search { flex: 1; border: none; background: transparent; font-size: 0.875rem; color: var(--color-text); outline: none; }
-.btn-map-toggle { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.btn-map-toggle.active { background: var(--color-accent-light); color: var(--color-accent); border-color: var(--color-accent); }
-.explore-layout { display: flex; flex: 1; min-height: 0; }
-.explore-list { width: 380px; overflow-y: auto; border-right: 1px solid var(--color-border); background: var(--color-bg); }
-.explore-list-full { width: 100%; border-right: none; }
-.list-loading { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.skeleton { height: 100px; border-radius: var(--radius-sm); background: var(--color-bg-tertiary); animation: skeleton-loading 1.5s ease infinite; }
-.deals-list { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
-.explore-list-full .deals-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
-.deal-card { display: flex; gap: 14px; padding: 12px; border-radius: 12px; background: var(--color-card-bg); border: 1px solid var(--color-border); text-decoration: none; cursor: pointer; transition: all var(--transition-fast); box-shadow: var(--shadow-xs); }
-.explore-list-full .deal-card { flex-direction: column; gap: 0; padding: 0; overflow: hidden; }
-.deal-card:hover { box-shadow: var(--shadow-card-hover); border-color: var(--color-accent-light); }
-.deal-card:active { transform: scale(0.98); }
-.deal-card-img { position: relative; width: 92px; height: 92px; border-radius: 10px; overflow: hidden; flex-shrink: 0; background: var(--color-bg-tertiary); }
-.explore-list-full .deal-card-img { width: 100%; height: 150px; border-radius: 0; }
-.deal-card-img img { width: 100%; height: 100%; object-fit: cover; }
-.explore-list-full .deal-card-img img { transition: transform 0.35s ease; }
-.explore-list-full .deal-card:hover .deal-card-img img { transform: scale(1.06); }
-.deal-discount { position: absolute; top: 6px; left: 6px; padding: 3px 8px; background: var(--color-accent); color: white; font-size: 0.7rem; font-weight: 700; border-radius: 6px; box-shadow: 0 2px 6px rgba(238,77,45,0.3); }
-.deal-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.explore-list-full .deal-card-body { padding: 12px 14px 14px; gap: 5px; }
-.deal-store { font-size: 0.7rem; color: var(--color-text-tertiary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.deal-title { font-size: 0.875rem; font-weight: 600; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.explore-list-full .deal-title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 2.4em; }
-.deal-meta { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
-.deal-price { font-size: 0.9375rem; font-weight: 700; color: var(--color-accent); }
-.explore-list-full .deal-price { font-size: 1.125rem; }
-.deal-original { font-size: 0.75rem; color: var(--color-text-tertiary); text-decoration: line-through; }
-.deal-low { font-size: 0.65rem; padding: 2px 6px; background: #fef2f2; color: #dc2626; border-radius: 4px; font-weight: 600; }
-.deal-footer { display: flex; align-items: center; gap: 8px; font-size: 0.7rem; color: var(--color-text-tertiary); margin-top: auto; }
-.explore-list-full .deal-footer { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--color-border-light); }
-.deal-badge { color: var(--color-success); font-weight: 600; gap: 4px; display: inline-flex; align-items: center; margin-left: auto; }
-.deal-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--color-success); }
-.map-section { flex: 1; position: relative; min-width: 0; background: var(--color-bg-secondary); }
-.map-canvas { height: 100%; width: 100%; }
-.btn-locate { position: absolute; top: 88px; right: 10px; z-index: 1000; width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-card-bg); color: var(--color-text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.15); transition: all var(--transition-fast); }
-.btn-locate:hover:not(:disabled) { border-color: var(--color-accent); color: var(--color-accent); }
-.btn-locate:disabled { opacity: 0.6; cursor: wait; }
-.map-info-panel { position: absolute; bottom: 16px; left: 16px; right: 16px; background: var(--color-card-bg); border-radius: 14px; padding: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); border: 1px solid var(--color-border); z-index: 1000; max-width: 360px; }
-.info-close { position: absolute; top: 8px; right: 10px; background: none; border: none; font-size: 1.4rem; color: var(--color-text-tertiary); cursor: pointer; line-height: 1; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all var(--transition-fast); }
-.info-close:hover { background: var(--color-bg-secondary); color: var(--color-text); }
-.info-row { display: flex; gap: 12px; margin-bottom: 10px; }
-.info-thumb { width: 64px; height: 64px; border-radius: 10px; overflow: hidden; flex-shrink: 0; background: var(--color-bg-tertiary); }
-.info-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.info-content { flex: 1; min-width: 0; }
-.info-content h4 { font-size: 0.9375rem; font-weight: 600; margin-bottom: 2px; padding-right: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.info-store { font-size: 0.75rem; color: var(--color-text-tertiary); margin-bottom: 4px; }
-.info-price { font-size: 1rem; font-weight: 700; color: var(--color-accent); }
-.info-price s { font-size: 0.75rem; color: var(--color-text-tertiary); font-weight: 400; margin-left: 6px; }
-.info-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font-size: 0.8rem; color: var(--color-text-secondary); }
-.info-actions { display: flex; gap: 6px; }
-.info-actions .btn { flex: 1; padding: 7px 12px; font-size: 0.8125rem; }
-.btn-map-center { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all var(--transition-fast); }
-.btn-map-center:hover { border-color: var(--color-accent); color: var(--color-accent); background: var(--color-accent-light); }
-.info-route { margin-top: 8px; text-align: center; font-size: 0.8125rem; color: var(--color-accent); font-weight: 600; }
-.location-overlay { position: fixed; inset: 0; z-index: 9999; background: var(--color-overlay); display: flex; align-items: center; justify-content: center; padding: 20px; }
-.location-dialog { background: var(--color-card-bg); border-radius: 14px; padding: 36px 28px 28px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
-.location-dialog h3 { font-size: 1.2rem; font-weight: 600; margin: 12px 0 8px; color: var(--color-text); }
-.location-dialog p { color: var(--color-text-secondary); margin-bottom: 24px; font-size: 0.9rem; }
-.location-actions { display: flex; flex-direction: column; gap: 8px; }
-.location-actions .btn { width: 100%; }
-.error-bar { padding: 8px 16px; color: #92400e; background: #fffbeb; border-bottom: 1px solid #fde68a; font-size: 0.875rem; }
-.empty-state { text-align: center; padding: 40px 16px; color: var(--color-text-secondary); }
-.empty-state h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; color: var(--color-text); }
-</style>
+.explore-page {
+  min-height: calc(100vh - 56px);
+  background: var(--color-bg);
+}
 
-<style>
-/* -- Map markers style -- */
-.deal-marker { display: flex; flex-direction: column; align-items: center; cursor: pointer; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25)); transition: transform 0.15s; }
-.deal-marker:hover { transform: scale(1.1); z-index: 1000 !important; }
-.deal-marker-price { display: inline-flex; align-items: center; padding: 3px 10px; background: white; border: 2px solid var(--mc, #ee4d2d); border-radius: 14px; font-size: 11px; font-weight: 700; color: var(--mc, #ee4d2d); white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,0.15); transition: all 0.2s; }
-.deal-marker-dot { width: 8px; height: 8px; background: var(--mc, #ee4d2d); border: 2.5px solid white; border-radius: 50%; margin-top: -5px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-/* -- User location marker -- */
-.user-loc-marker { position: relative; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
-.user-loc-pulse { position: absolute; width: 24px; height: 24px; border-radius: 50%; background: rgba(59,130,246,0.2); animation: user-pulse 2s ease infinite; }
-.user-loc-dot { width: 14px; height: 14px; border-radius: 50%; background: #3b82f6; border: 3px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.3); position: relative; z-index: 1; }
-@keyframes user-pulse { 0% { transform: scale(0.8); opacity: 0.6; } 50% { transform: scale(1.5); opacity: 0.2; } 100% { transform: scale(0.8); opacity: 0.6; } }
+.explore-toolbar {
+  position: sticky;
+  top: 56px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.search-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  max-width: 460px;
+  padding: 8px 14px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.search-wrapper:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-light);
+}
+.toolbar-search {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 14px;
+  font-family: var(--font-family);
+}
+.toolbar-search::placeholder { color: var(--color-text-tertiary); }
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sort-select { width: auto; }
+
+.filter-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
+.btn-icon { position: relative; }
+
+.explore-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 16px 48px;
+  align-items: start;
+}
+
+.explore-filters {
+  position: sticky;
+  top: 120px;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  max-height: calc(100vh - 136px);
+}
+.filters-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+.filter-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.filter-body {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px;
+}
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-secondary);
+}
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.chip:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.chip.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+}
+.rating-chip { padding: 6px 10px; }
+.stars.sm { display: inline-flex; gap: 1px; }
+.location-hint { font-size: 12px; color: var(--color-text-tertiary); }
+
+.explore-main { min-width: 0; }
+
+.map-section {
+  position: relative;
+  height: calc(100vh - 132px);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+}
+.map-canvas {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+}
+.btn-locate {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 500;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  box-shadow: 0 2px 8px var(--color-card-shadow);
+}
+.btn-locate:disabled { opacity: 0.5; cursor: default; }
+
+.location-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-overlay);
+}
+.location-dialog {
+  max-width: 340px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 40px var(--color-card-shadow);
+}
+.location-dialog h3 { font-size: 17px; font-weight: 700; color: var(--color-text); }
+.location-dialog p { font-size: 13px; color: var(--color-text-secondary); }
+.location-actions { display: flex; gap: 10px; justify-content: center; }
+
+.map-info-panel {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  z-index: 500;
+  width: 300px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 28px var(--color-card-shadow);
+}
+.info-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: none;
+  background: none;
+  color: var(--color-text-tertiary);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-close:hover { color: var(--color-text); }
+.info-row { display: flex; gap: 12px; }
+.info-thumb {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.info-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.info-content { min-width: 0; }
+.info-content h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.info-store { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+.info-price { font-weight: 700; color: var(--color-accent); margin-top: 4px; }
+.info-price s { font-weight: 400; color: var(--color-text-tertiary); margin-left: 6px; }
+.info-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.info-stock { color: var(--color-warning); font-weight: 600; }
+.info-dist { color: var(--color-text-tertiary); }
+.info-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.btn-map-center {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.btn-map-center:hover { color: var(--color-accent); border-color: var(--color-accent); }
+.info-route { font-size: 12px; font-weight: 600; color: var(--color-success); }
+
+.deals-grid { min-height: 60vh; }
+.deal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.deal-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.deal-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px var(--color-card-shadow);
+}
+.deal-card-img {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--color-bg-secondary);
+}
+.deal-card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+.deal-card:hover .deal-card-img img { transform: scale(1.05); }
+.deal-discount {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 3px 8px;
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: var(--radius-xs);
+}
+.deal-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--color-success);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+}
+.deal-low-badge {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  padding: 2px 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+}
+.deal-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px 14px;
+}
+.deal-store {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.deal-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.8em;
+}
+.deal-meta-row { display: flex; align-items: baseline; gap: 8px; }
+.deal-price { font-size: 16px; font-weight: 700; color: var(--color-accent); }
+.deal-original { font-size: 12px; color: var(--color-text-tertiary); }
+.deal-meta-bottom { display: flex; justify-content: space-between; margin-top: auto; }
+.deal-distance { font-size: 12px; color: var(--color-text-tertiary); }
+
+.grid-skeleton {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.skeleton-card {
+  height: 300px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(100deg, var(--color-bg-secondary) 40%, var(--color-surface-container) 50%, var(--color-bg-secondary) 60%);
+  background-size: 200% 100%;
+  animation: skeleton-load 1.2s ease-in-out infinite;
+}
+@keyframes skeleton-load {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 64px 20px;
+  text-align: center;
+}
+.empty-state h3 { font-size: 16px; font-weight: 700; color: var(--color-text); }
+.empty-state p { font-size: 13px; color: var(--color-text-secondary); }
+
+.error-bar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  padding: 10px 18px;
+  background: var(--color-accent-light);
+  color: var(--color-accent-dark);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-accent);
+}
+
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.gap-2 { gap: 8px; }
+
+.d-md-none { display: none; }
+.filter-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: var(--color-overlay);
+}
+
+@media (max-width: 1024px) {
+  .explore-layout { grid-template-columns: 1fr; }
+  .explore-filters {
+    position: fixed;
+    top: 56px;
+    bottom: 0;
+    left: 0;
+    width: 300px;
+    max-height: none;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    border-radius: 0;
+    border: none;
+    border-right: 1px solid var(--color-border);
+    z-index: 40;
+  }
+  .explore-filters.open { transform: translateX(0); }
+  .d-md-none { display: inline-flex; }
+  .filter-backdrop { display: block; }
+}
+
+@media (max-width: 768px) {
+  .deal-grid,
+  .grid-skeleton { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 560px) {
+  .deal-grid,
+  .grid-skeleton { grid-template-columns: 1fr; }
+  .explore-toolbar { flex-wrap: wrap; }
+  .search-wrapper { max-width: none; }
+  .sort-select { flex: 1; }
+}
 </style>
