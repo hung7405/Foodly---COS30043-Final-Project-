@@ -43,7 +43,7 @@ try {
   $envContent = @(
     "VITE_API_URL=$apiUrl",
     "VITE_SOCKET_URL=$url",
-    "VITE_ANALYTICS_SOCKET_URL=$url:3001"
+    "VITE_ANALYTICS_SOCKET_URL=$url/analytics"
   ) -join "`n"
   Set-Content -Path $envFile -Value $envContent -NoNewline
 

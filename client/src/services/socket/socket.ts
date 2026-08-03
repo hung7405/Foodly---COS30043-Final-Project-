@@ -3,6 +3,23 @@ import { io, Socket } from 'socket.io-client'
 let socket: Socket | null = null
 let analyticsSocket: Socket | null = null
 
+function pickUrl(raw: string | undefined, fallback: string): string {
+  const value = (raw || '').trim()
+  if (/^https?:\/\//i.test(value) && !/^vite_/i.test(value)) {
+    const host = value.replace(/^https?:\/\//i, '').split(/[/:]/)[0].toLowerCase()
+    if (!import.meta.env.PROD || (host !== 'localhost' && host !== '127.0.0.1')) return value
+  }
+  return fallback
+}
+
+const DEFAULT_SOCKET_URL = import.meta.env.PROD
+  ? 'https://foodly-cos30043-final-project.onrender.com'
+  : 'http://localhost:3000'
+
+const DEFAULT_ANALYTICS_URL = import.meta.env.PROD
+  ? 'https://foodly-cos30043-final-project.onrender.com/analytics'
+  : 'http://localhost:3000/analytics'
+
 function currentToken(): string | null {
   return localStorage.getItem('token')
 }
@@ -19,7 +36,7 @@ function makeOptions() {
 
 export function getSocket(): Socket {
   if (!socket) {
-    socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000', makeOptions())
+    socket = io(pickUrl(import.meta.env.VITE_SOCKET_URL, DEFAULT_SOCKET_URL), makeOptions())
   }
   return socket
 }
@@ -27,7 +44,7 @@ export function getSocket(): Socket {
 export function getAnalyticsSocket(): Socket {
   if (!analyticsSocket) {
     analyticsSocket = io(
-      import.meta.env.VITE_ANALYTICS_SOCKET_URL || 'http://localhost:3001/analytics',
+      pickUrl(import.meta.env.VITE_ANALYTICS_SOCKET_URL, DEFAULT_ANALYTICS_URL),
       makeOptions(),
     )
   }

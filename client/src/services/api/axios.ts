@@ -15,8 +15,21 @@ function mapKeys(data: unknown): unknown {
   return data
 }
 
+function pickUrl(raw: string | undefined, fallback: string): string {
+  const value = (raw || '').trim()
+  if (/^https?:\/\//i.test(value) && !/^vite_/i.test(value)) {
+    const host = value.replace(/^https?:\/\//i, '').split(/[/:]/)[0].toLowerCase()
+    if (!import.meta.env.PROD || (host !== 'localhost' && host !== '127.0.0.1')) return value
+  }
+  return fallback
+}
+
+const DEFAULT_API_URL = import.meta.env.PROD
+  ? 'https://foodly-cos30043-final-project.onrender.com/api'
+  : 'http://localhost:3000/api'
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+  baseURL: pickUrl(import.meta.env.VITE_API_URL, DEFAULT_API_URL),
   headers: { 'Content-Type': 'application/json' },
 })
 

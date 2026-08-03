@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { recommendationsService, dealsService, http } from '../services/api'
+import BannerCarousel from '../components/BannerCarousel.vue'
 import { formatVND } from '../utils/currency'
 import type { Deal } from '../types'
 
@@ -9,8 +10,6 @@ const router = useRouter()
 
 const recommendedDeals = ref<Deal[]>([])
 const flashDeals = ref<Deal[]>([])
-const currentBanner = ref(0)
-let bannerTimer: number | undefined
 const flashSaleEnd = ref(0)
 let flashTimer: number | undefined
 const loading = ref(true)
@@ -25,12 +24,6 @@ const categories = [
   { id: 'western', name: 'Western', color: '#fff3e0', icon: '<path d="M12 3c-2 0-3.5 1.5-3.5 3.5S10 10 12 10s3.5-1.5 3.5-3.5S14 3 12 3z"/><path d="M12 10v11"/><path d="M8 21h8"/><path d="M12 10a3 3 0 0 1-3 3"/><path d="M12 10a3 3 0 0 0 3 3"/>' },
   { id: 'dessert', name: 'Dessert', color: '#f3e5f5', icon: '<path d="M12 2v4"/><path d="M4 6h16"/><path d="M6 6l2 16h8l2-16"/><path d="M9 10l3 3 3-3"/>' },
   { id: 'healthy', name: 'Healthy', color: '#e8f5e9', icon: '<path d="M12 3a4 4 0 0 0-4 4c0 2 1 3 2 4v10h4V11c1-1 2-2 2-4a4 4 0 0 0-4-4z"/><path d="M12 3c2 0 3 1 3 3"/>' },
-]
-
-const banners = [
-  { image: 'https://images.unsplash.com/photo-1588964895597-cfccd6e2dbf9?w=800&q=80', title: 'Big Discounts Today', subtitle: 'Up to 70% off on grocery items', color: 'linear-gradient(135deg, #ee4d2d, #ff6f00)' },
-  { image: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=800&q=80', title: 'Snack Deals', subtitle: 'Stock up on your favorites', color: 'linear-gradient(135deg, #00b14f, #00e676)' },
-  { image: 'https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=800&q=80', title: 'Drinks & Beverages', subtitle: 'Cool down with great offers', color: 'linear-gradient(135deg, #3b82f6, #6366f1)' },
 ]
 
 const FOOD_IMGS = [
@@ -51,12 +44,10 @@ const flashCountdown = computed(() => {
 
 onMounted(async () => {
   await loadDeals()
-  bannerTimer = window.setInterval(() => { currentBanner.value = (currentBanner.value + 1) % banners.length }, 4000)
   flashTimer = window.setInterval(() => { if (flashSaleEnd.value > 0) flashSaleEnd.value-- }, 1000)
 })
 
 onUnmounted(() => {
-  if (bannerTimer) window.clearInterval(bannerTimer)
   if (flashTimer) window.clearInterval(flashTimer)
 })
 
@@ -117,23 +108,7 @@ function dealRating(deal: any) {
       </div>
     </div>
 
-    <section class="banner-section">
-      <div class="banner-carousel">
-        <div v-for="(banner, i) in banners" :key="i" class="banner-slide" :class="{ active: currentBanner === i }" :style="{ background: banner.color }">
-          <div class="banner-content">
-            <h2 class="banner-title">{{ banner.title }}</h2>
-            <p class="banner-subtitle">{{ banner.subtitle }}</p>
-            <router-link to="/explore" class="banner-cta">Shop Now</router-link>
-          </div>
-          <div class="banner-image-wrapper">
-            <img :src="banner.image" :alt="banner.title" class="banner-image" loading="lazy" />
-          </div>
-        </div>
-      </div>
-      <div class="banner-dots">
-        <button v-for="(_, i) in banners" :key="i" class="banner-dot" :class="{ active: currentBanner === i }" :aria-label="'Go to slide ' + (i + 1)" :aria-current="currentBanner === i ? 'true' : undefined" @click="currentBanner = i" />
-      </div>
-    </section>
+    <BannerCarousel />
 
     <section class="category-section">
       <div class="cat-scroll">
@@ -267,22 +242,6 @@ function dealRating(deal: any) {
 .search-bar svg { flex-shrink: 0; color: var(--color-text-tertiary); }
 .search-placeholder { color: var(--color-text-tertiary); font-size: 0.875rem; }
 
-/* ── Banner ─────────────────────────────────────────── */
-.banner-section { padding: 16px 0 4px; }
-.banner-carousel { position: relative; border-radius: var(--radius-lg); overflow: hidden; height: 150px; }
-.banner-slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; opacity: 0; transition: opacity 0.5s ease; pointer-events: none; }
-.banner-slide.active { opacity: 1; pointer-events: all; }
-.banner-content { flex: 1; color: white; z-index: 1; }
-.banner-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 4px; line-height: 1.2; letter-spacing: -0.02em; }
-.banner-subtitle { font-size: 0.8125rem; opacity: 0.9; margin-bottom: 12px; }
-.banner-cta { display: inline-flex; padding: 6px 18px; background: rgba(255,255,255,0.2); color: white; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 600; text-decoration: none; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); transition: all var(--transition-fast); }
-.banner-cta:hover { background: rgba(255,255,255,0.35); transform: translateY(-1px); }
-.banner-image-wrapper { width: 110px; height: 110px; border-radius: 50%; overflow: hidden; flex-shrink: 0; border: 3px solid rgba(255,255,255,0.3); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
-.banner-image { width: 100%; height: 100%; object-fit: cover; }
-.banner-dots { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
-.banner-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-banner-indicator); border: none; cursor: pointer; padding: 0; transition: all var(--transition-fast); }
-.banner-dot.active { width: 24px; border-radius: 4px; background: var(--color-accent); }
-
 /* ── Categories ─────────────────────────────────────── */
 .category-section { padding: 16px 0 4px; }
 .cat-scroll { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
@@ -354,8 +313,6 @@ function dealRating(deal: any) {
 
 @media (min-width: 768px) {
   .home-page { padding: 0 32px 48px; }
-  .banner-carousel { height: 200px; border-radius: var(--radius-xl); }
-  .banner-image-wrapper { width: 140px; height: 140px; }
   .cat-scroll { justify-content: center; }
   .rec-grid { grid-template-columns: repeat(4, 1fr); }
 }

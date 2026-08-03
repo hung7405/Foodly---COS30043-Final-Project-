@@ -10,9 +10,9 @@ import { Server, Socket } from 'socket.io'
 import { AnalyticsService } from './analytics.service'
 import { config } from '../config'
 
-@WebSocketGateway(Number(process.env.ANALYTICS_PORT || 3001), {
-  cors: { origin: config.corsOrigins, credentials: true },
+@WebSocketGateway({
   namespace: '/analytics',
+  cors: { origin: config.corsOrigins, credentials: true },
 })
 export class AnalyticsGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy {
   private readonly logger = new Logger(AnalyticsGateway.name)

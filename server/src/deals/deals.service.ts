@@ -7,6 +7,26 @@ import { InteractionAction } from '../interactions/entities/interaction.entity'
 import { SocketGateway } from '../socket/socket.gateway'
 import { AnalyticsService } from '../analytics/analytics.service'
 
+const CATEGORY_TAGS: Record<string, string[]> = {
+  food: ['com', 'ga', 'gao', 'thit', 'ca', 'mi', 'banh mi', 'bento', 'pizza', 'xuc xich', 'cha gio', 'suon', 'chan ga', 'ramen', 'dimsum', 'takoyaki', 'tokbokki', 'sandwich', 'banh trang', 'do an nhanh', 'kem', 'khoai tay', 'bo', 'bo kho', 'pasta', 'salad', 'thit nuong', 'bit tet'],
+  drinks: ['uong', 'nuoc', 'ca phe', 'tra sua', 'bia', 'sua', 'tang luc', 'yen sao', 'matcha', 'tra dao', 'sua chua', 'sua da', 'nuoc ngot', 'nuoc ep', 'tra', 'vang'],
+  bakery: ['banh', 'sandwich', 'baguette', 'mochi', 'taiyaki', 'flan', 'banh gao', 'banh mi', 'banh ngot'],
+  grocery: ['thuc pham', 'rau', 'cu', 'gao', 'trung', 'pho mai', 'trai cay', 'dua hau', 'tom', 'hai san', 'thit', 'heo', 'dau olive', 'tuoi song', 'sua', 'hat', 'mi tom', 'sua chua', 'banh gao', 'nuoc'],
+  asian: ['hang han', 'hang nhat', 'nhat', 'hoa', 'viet', 'kim chi', 'kim bap', 'tokbokki', 'ramen', 'dimsum', 'ha cao', 'mochi', 'taiyaki', 'takoyaki', 'banh trang', 'cha gio', 'pho', 'gochujang', 'han'],
+  western: ['tay', 'y', 'phap', 'duc', 'my', 'pizza', 'pasta', 'bit tet', 'steak', 'ruou', 'vang', 'pho mai', 'cheese', 'bo', 'thit bo', 'nhap khau'],
+  dessert: ['trang mieng', 'kem', 'banh ngot', 'snack ngot', 'flan', 'che', 'mochi', 'taiyaki', 'cheesecake', 'socola', 'caramel'],
+  healthy: ['healthy', 'suc khoe', 'salad', 'rau', 'khong duong', 'nguyen cam', 'tuoi song', 'trai cay', 'nuoc ep'],
+}
+
+function dealMatchesCategory(deal: any, category: string): boolean {
+  const keywords = CATEGORY_TAGS[category.toLowerCase()] || [category.toLowerCase()]
+  return (deal.tags || []).some((tag: string) => {
+    const normalized = String(tag).toLowerCase().replace(/_/g, ' ')
+    const tokens = normalized.split(/\s+/).filter(Boolean)
+    return keywords.some(kw => (kw.includes(' ') ? normalized.includes(kw) : tokens.includes(kw)))
+  })
+}
+
 @Injectable()
 export class DealsService {
   constructor(
@@ -57,8 +77,7 @@ export class DealsService {
     }
 
     if (query.category && query.category !== 'All') {
-      const c = String(query.category).toLowerCase()
-      filtered = filtered.filter(deal => deal.tags?.some((tag: string) => tag.toLowerCase().includes(c)))
+      filtered = filtered.filter(deal => dealMatchesCategory(deal, String(query.category)))
     }
 
     const lat = Number(query.lat)

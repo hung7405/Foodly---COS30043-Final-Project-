@@ -3,11 +3,6 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "env": {
-    "VITE_API_URL": "https://your-mercury-api-host/api",
-    "VITE_SOCKET_URL": "https://your-mercury-api-host",
-    "VITE_ANALYTICS_SOCKET_URL": "https://your-mercury-api-host:3001"
-  },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
