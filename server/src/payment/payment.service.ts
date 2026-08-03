@@ -126,9 +126,15 @@ export class PaymentService {
       .eq('id', paymentId)
       .single()
     if (paymentError || !payment) throw new NotFoundException('Payment not found')
+
+    // Idempotency: if a concurrent call already confirmed this payment, return
+    // the already-successful payment instead of failing or double-awarding.
+    if (payment.status === PaymentStatus.SUCCESS) return payment
     if (payment.status !== PaymentStatus.PROCESSING) throw new BadRequestException('Payment is not in processing state')
 
-    const { error: updatePaymentError } = await this.supabase.client
+    // Atomic PROCESSING -> SUCCESS transition. Only the first caller wins; a
+    // concurrent confirm sees 0 rows and returns idempotently below.
+    const { data: confirmed, error: updatePaymentError } = await this.supabase.client
       .from('payments')
       .update({
         status: PaymentStatus.SUCCESS,
@@ -136,8 +142,22 @@ export class PaymentService {
         provider_response: providerResponse || null,
       })
       .eq('id', paymentId)
+      .eq('status', PaymentStatus.PROCESSING)
+      .select()
+      .maybeSingle()
     if (updatePaymentError) throw updatePaymentError
+    if (!confirmed) {
+      const { data: recheck } = await this.supabase.client
+        .from('payments')
+        .select('*')
+        .eq('id', paymentId)
+        .single()
+      if (recheck?.status === PaymentStatus.SUCCESS) return recheck
+      throw new BadRequestException('Payment is not in processing state')
+    }
 
+    // Confirm the reservation only if it is still ACTIVE. A cancelled or
+    // expired reservation is never resurrected to confirmed.
     const { error: updateReservationError } = await this.supabase.client
       .from('reservations')
       .update({
@@ -145,31 +165,38 @@ export class PaymentService {
         confirmed_at: new Date().toISOString(),
       })
       .eq('id', payment.reservation_id)
+      .eq('status', ReservationStatus.ACTIVE)
     if (updateReservationError) throw updateReservationError
-
-    const { data: updatedPayment } = await this.supabase.client
-      .from('payments')
-      .select('*')
-      .eq('id', paymentId)
-      .single()
 
     await this.awardLoyaltyPoints(payment.user_id, Number(payment.amount))
 
     this.socketGateway.emitReservationConfirmed(payment.reservation_id)
-    return updatedPayment
+    return confirmed
   }
 
   private async awardLoyaltyPoints(userId: string, amount: number) {
     if (!userId || !amount) return
     const points = Math.max(1, Math.round(amount / 1000))
-    const { data: user } = await this.supabase.client
-      .from('users')
-      .select('reputation_points')
-      .eq('id', userId)
-      .single()
-    const next = (user?.reputation_points ?? 0) + points
-    await this.supabase.client.from('users').update({ reputation_points: next }).eq('id', userId)
-    this.socketGateway.server?.to(`user:${userId}`).emit('points:awarded', { points, balance: next, reason: 'purchase' })
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { data: user } = await this.supabase.client
+        .from('users')
+        .select('reputation_points')
+        .eq('id', userId)
+        .single()
+      const current = user?.reputation_points ?? 0
+      const next = current + points
+      const { data: updated } = await this.supabase.client
+        .from('users')
+        .update({ reputation_points: next })
+        .eq('id', userId)
+        .eq('reputation_points', current)
+        .select('reputation_points')
+        .maybeSingle()
+      if (updated) {
+        this.socketGateway.server?.to(`user:${userId}`).emit('points:awarded', { points, balance: next, reason: 'purchase' })
+        return
+      }
+    }
   }
 
   async failPayment(paymentId: string, reason: string) {
@@ -245,10 +272,13 @@ export class PaymentService {
     const list = expired || []
 
     for (const payment of list) {
+      // Atomic state guard: only expire if the payment is still in the state we
+      // fetched. A concurrent confirmPayment may have moved it to SUCCESS.
       await this.supabase.client
         .from('payments')
         .update({ status: PaymentStatus.EXPIRED })
         .eq('id', payment.id)
+        .eq('status', payment.status)
     }
 
     return list.length

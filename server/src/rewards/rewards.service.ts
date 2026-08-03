@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common'
+import { Injectable, BadRequestException, ConflictException } from '@nestjs/common'
 import { Cron } from '@nestjs/schedule'
 import { SupabaseService } from '../supabase/supabase.service'
 import { SocketGateway } from '../socket/socket.gateway'
@@ -45,14 +45,22 @@ export class RewardsService {
 
   async dailySpin(userId: string) {
     const today = new Date().toISOString().slice(0, 10)
-    const { data: existing } = await this.supabase.client
+    const eventId = this.dailySpinEventId(userId, today)
+
+    const prize = this.randomPrize()
+    // Atomic claim: deterministic id from (user, day) + upsert on the primary key.
+    // PostgREST `ignoreDuplicates` means exactly ONE concurrent request wins and
+    // actually inserts the row; losers get 0 rows back and read as alreadyUsed.
+    const { data: claimed, error: claimError } = await this.supabase.client
       .from('activity_events')
+      .upsert(
+        { id: eventId, user_id: userId, event_type: 'daily_spin', metadata: { prize, at: new Date().toISOString() } },
+        { onConflict: 'id', ignoreDuplicates: true },
+      )
       .select('id')
-      .eq('user_id', userId)
-      .eq('event_type', 'daily_spin')
-      .gte('created_at', today)
-      .maybeSingle()
-    if (existing) {
+    if (claimError) throw claimError
+
+    if (!claimed || claimed.length === 0) {
       const { data: user } = await this.supabase.client
         .from('users')
         .select('reputation_points')
@@ -61,43 +69,66 @@ export class RewardsService {
       return { alreadyUsed: true, prize: 0, balance: user?.reputation_points ?? 0 }
     }
 
-    const prize = this.randomPrize()
     const balance = await this.awardPoints(userId, prize)
-    await this.supabase.client.from('activity_events').insert({
-      user_id: userId,
-      event_type: 'daily_spin',
-      metadata: { prize, at: new Date().toISOString() },
-    })
     return { alreadyUsed: false, prize, balance }
   }
 
   async redeem(userId: string, points: number) {
     const amount = Math.max(100, Math.floor(Number(points) || 0))
-    const balance = (await this.getBalance(userId)).balance
-    if (amount > balance) throw new BadRequestException('Not enough points')
-
     const discount = Math.round((amount / 100) * 1000)
     const code = 'FOODLY-' + crypto.randomBytes(4).toString('hex').toUpperCase()
-    const remaining = balance - amount
-    await this.supabase.client.from('users').update({ reputation_points: remaining }).eq('id', userId)
-    await this.supabase.client.from('activity_events').insert({
-      user_id: userId,
-      event_type: 'reward_redeem',
-      metadata: { points: amount, code, discount, at: new Date().toISOString() },
-    })
-    return { code, points: amount, discount, remaining }
+
+    // Compare-and-swap on reputation_points: the update only applies when the
+    // balance is unchanged since we read it, so concurrent redeems can never
+    // overspend / double-spend. Retry a few times if a concurrent write wins.
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const balance = (await this.getBalance(userId)).balance
+      if (amount > balance) throw new BadRequestException('Not enough points')
+
+      const remaining = balance - amount
+      const { data: updated, error: updateError } = await this.supabase.client
+        .from('users')
+        .update({ reputation_points: remaining })
+        .eq('id', userId)
+        .eq('reputation_points', balance)
+        .select('reputation_points')
+        .maybeSingle()
+      if (updateError) throw updateError
+      if (updated) {
+        await this.supabase.client.from('activity_events').insert({
+          user_id: userId,
+          event_type: 'reward_redeem',
+          metadata: { points: amount, code, discount, at: new Date().toISOString() },
+        })
+        return { code, points: amount, discount, remaining }
+      }
+    }
+    throw new ConflictException('Concurrent points update — please try again')
   }
 
   async awardPoints(userId: string, points: number) {
-    const { data: user } = await this.supabase.client
-      .from('users')
-      .select('reputation_points')
-      .eq('id', userId)
-      .single()
-    const next = (user?.reputation_points ?? 0) + points
-    await this.supabase.client.from('users').update({ reputation_points: next }).eq('id', userId)
-    this.socketGateway.server?.to(`user:${userId}`).emit('points:awarded', { points, balance: next })
-    return next
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { data: user } = await this.supabase.client
+        .from('users')
+        .select('reputation_points')
+        .eq('id', userId)
+        .single()
+      const current = user?.reputation_points ?? 0
+      const next = current + points
+      const { data: updated, error: updateError } = await this.supabase.client
+        .from('users')
+        .update({ reputation_points: next })
+        .eq('id', userId)
+        .eq('reputation_points', current)
+        .select('reputation_points')
+        .maybeSingle()
+      if (updateError) throw updateError
+      if (updated) {
+        this.socketGateway.server?.to(`user:${userId}`).emit('points:awarded', { points, balance: next })
+        return next
+      }
+    }
+    throw new ConflictException('Concurrent points update — please try again')
   }
 
   async escalateDiscounts() {
@@ -124,6 +155,17 @@ export class RewardsService {
         this.socketGateway.emitDealUpdated(deal.id, { discountPrice: next, priceDrop: true })
       }
     }
+  }
+
+  private dailySpinEventId(userId: string, day: string) {
+    const namespace = Buffer.from('6ba7b810-9dad-11d1-80b4-00c04fd430c8'.replace(/-/g, ''), 'hex')
+    const name = Buffer.from(`daily_spin:${userId}:${day}`)
+    const hash = crypto.createHash('sha1').update(namespace).update(name).digest()
+    const id = Buffer.from(hash.subarray(0, 16))
+    id[6] = (id[6] & 0x0f) | 0x50
+    id[8] = (id[8] & 0x3f) | 0x80
+    const hex = id.toString('hex')
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
   }
 
   private randomPrize() {

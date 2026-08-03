@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common'
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common'
 import { SupabaseService } from '../supabase/supabase.service'
 import { Deal, DealStatus } from './entities/deal.entity'
 import { CommentStatus } from '../comments/entities/comment.entity'
@@ -299,16 +299,7 @@ export class DealsService {
 
       if (deleteError) throw deleteError
 
-      const { data: deal } = await this.supabase
-        .from('deals')
-        .select('like_count')
-        .eq('id', dealId)
-        .single()
-
-      await this.supabase
-        .from('deals')
-        .update({ like_count: Math.max(0, (deal?.like_count || 0) - 1) })
-        .eq('id', dealId)
+      await this.decrementCounter('deals', dealId, 'like_count')
 
       ;(async () => { try { await this.supabase.from('user_interactions').insert({ user_id: userId, deal_id: dealId, action: InteractionAction.UNLIKE }) } catch {} })()
 
@@ -321,16 +312,7 @@ export class DealsService {
 
     if (insertError) throw insertError
 
-    const { data: deal } = await this.supabase
-      .from('deals')
-      .select('like_count')
-      .eq('id', dealId)
-      .single()
-
-    await this.supabase
-      .from('deals')
-      .update({ like_count: (deal?.like_count || 0) + 1 })
-      .eq('id', dealId)
+    await this.incrementCounter('deals', dealId, 'like_count')
 
     ;(async () => { try { await this.supabase.from('user_interactions').insert({ user_id: userId, deal_id: dealId, action: InteractionAction.LIKE }) } catch {} })()
 
@@ -353,16 +335,7 @@ export class DealsService {
 
       if (deleteError) throw deleteError
 
-      const { data: deal } = await this.supabase
-        .from('deals')
-        .select('bookmark_count')
-        .eq('id', dealId)
-        .single()
-
-      await this.supabase
-        .from('deals')
-        .update({ bookmark_count: Math.max(0, (deal?.bookmark_count || 0) - 1) })
-        .eq('id', dealId)
+      await this.decrementCounter('deals', dealId, 'bookmark_count')
 
       ;(async () => { try { await this.supabase.from('user_interactions').insert({ user_id: userId, deal_id: dealId, action: InteractionAction.UNBOOKMARK }) } catch {} })()
 
@@ -375,20 +348,59 @@ export class DealsService {
 
     if (insertError) throw insertError
 
-    const { data: deal } = await this.supabase
-      .from('deals')
-      .select('bookmark_count')
-      .eq('id', dealId)
-      .single()
-
-    await this.supabase
-      .from('deals')
-      .update({ bookmark_count: (deal?.bookmark_count || 0) + 1 })
-      .eq('id', dealId)
+    await this.incrementCounter('deals', dealId, 'bookmark_count')
 
     ;(async () => { try { await this.supabase.from('user_interactions').insert({ user_id: userId, deal_id: dealId, action: InteractionAction.BOOKMARK }) } catch {} })()
 
     return { bookmarked: true }
+  }
+
+  /**
+   * Atomic increment via compare-and-swap on the counter column: the update
+   * only applies when the stored value still matches what we read, so two
+   * concurrent likes can never lose an increment. Retries a few times when
+   * a concurrent write wins the race.
+   */
+  private async incrementCounter(table: string, id: string, column: string) {
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const { data: row } = await this.supabase
+        .from(table)
+        .select(column)
+        .eq('id', id)
+        .single()
+      const current = Number(row?.[column] || 0)
+      const { data: updated } = await this.supabase
+        .from(table)
+        .update({ [column]: current + 1 })
+        .eq('id', id)
+        .eq(column, current)
+        .select(column)
+        .maybeSingle()
+      if (updated) return
+      await new Promise((r) => setTimeout(r, 5))
+    }
+    throw new ConflictException('Concurrent update — please try again')
+  }
+
+  private async decrementCounter(table: string, id: string, column: string) {
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const { data: row } = await this.supabase
+        .from(table)
+        .select(column)
+        .eq('id', id)
+        .single()
+      const current = Number(row?.[column] || 0)
+      const { data: updated } = await this.supabase
+        .from(table)
+        .update({ [column]: Math.max(0, current - 1) })
+        .eq('id', id)
+        .eq(column, current)
+        .select(column)
+        .maybeSingle()
+      if (updated) return
+      await new Promise((r) => setTimeout(r, 5))
+    }
+    throw new ConflictException('Concurrent update — please try again')
   }
 
   private distanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {

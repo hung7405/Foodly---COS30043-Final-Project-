@@ -39,39 +39,68 @@ export class ReservationsService {
 
     const code = crypto.randomBytes(4).toString('hex').toUpperCase()
 
-    const { data: currentDeal, error: currentError } = await this.supabase.client
-      .from('deals')
-      .select('remaining_quantity, version')
-      .eq('id', dealId)
-      .single()
-    if (currentError || !currentDeal) throw new NotFoundException('Deal not found')
-    if (currentDeal.remaining_quantity <= 0) throw new BadRequestException('No items remaining')
+    // Optimistic-lock retry loop: re-read version and retry the CAS instead of
+    // giving up on the first version conflict. This lets as many reservations
+    // succeed as there is stock, while the .eq('version', ...) guard still makes
+    // oversell impossible.
+    let updatedDeal: any = null
+    let reservation: any = null
+    for (let attempt = 0; attempt < 5 && !reservation; attempt++) {
+      const { data: currentDeal, error: currentError } = await this.supabase.client
+        .from('deals')
+        .select('remaining_quantity, version')
+        .eq('id', dealId)
+        .single()
+      if (currentError || !currentDeal) throw new NotFoundException('Deal not found')
+      if (currentDeal.remaining_quantity <= 0) throw new BadRequestException('No items remaining')
 
-    const { data: updatedDeal, error: updateError } = await this.supabase.client
-      .from('deals')
-      .update({ remaining_quantity: currentDeal.remaining_quantity - 1, version: currentDeal.version + 1 })
-      .eq('id', dealId)
-      .eq('version', currentDeal.version)
-      .select()
-      .single()
+      const result = await this.supabase.client
+        .from('deals')
+        .update({ remaining_quantity: currentDeal.remaining_quantity - 1, version: currentDeal.version + 1 })
+        .eq('id', dealId)
+        .eq('version', currentDeal.version)
+        .select()
+        .single()
+      if (result.error || !result.data) continue // lost the race — retry with fresh version
 
-    if (updateError || !updatedDeal) {
-      throw new ConflictException('Concurrent reservation conflict — please try again')
+      updatedDeal = result.data
+
+      const inserted = await this.supabase.client
+        .from('reservations')
+        .insert({
+          deal_id: dealId,
+          user_id: userId,
+          status: ReservationStatus.ACTIVE,
+          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+          reservation_code: code,
+        })
+        .select()
+        .single()
+
+      if (!inserted.error) {
+        reservation = inserted.data
+      } else {
+        // Compensating restore: we decremented remaining_quantity. If the
+        // reservation insert fails, put the item back so stock is never leaked.
+        const { data: dealNow } = await this.supabase.client
+          .from('deals')
+          .select('remaining_quantity, version')
+          .eq('id', dealId)
+          .single()
+        if (dealNow) {
+          await this.supabase.client
+            .from('deals')
+            .update({ remaining_quantity: dealNow.remaining_quantity + 1, version: dealNow.version + 1 })
+            .eq('id', dealId)
+            .eq('version', dealNow.version)
+        }
+        throw inserted.error
+      }
     }
 
-    const { data: reservation, error: insertError } = await this.supabase.client
-      .from('reservations')
-      .insert({
-        deal_id: dealId,
-        user_id: userId,
-        status: ReservationStatus.ACTIVE,
-        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-        reservation_code: code,
-      })
-      .select()
-      .single()
-
-    if (insertError) throw insertError
+    if (!reservation || !updatedDeal) {
+      throw new ConflictException('Concurrent reservation conflict — please try again')
+    }
 
     this.socketGateway.emitReservationCreated(reservation)
     this.socketGateway.emitDealQuantity(dealId, updatedDeal.remaining_quantity)
@@ -149,18 +178,7 @@ export class ReservationsService {
     if (updateError) throw updateError
     if (!cancelled) throw new BadRequestException('Reservation is not active')
 
-    const { data: deal } = await this.supabase.client
-      .from('deals')
-      .select('remaining_quantity, version')
-      .eq('id', reservation.deal_id)
-      .single()
-
-    if (deal) {
-      await this.supabase.client
-        .from('deals')
-        .update({ remaining_quantity: deal.remaining_quantity + reservation.quantity_reserved, version: deal.version + 1 })
-        .eq('id', reservation.deal_id)
-    }
+    await this.restoreQuantity(reservation.deal_id, reservation.quantity_reserved)
 
     const { data: updatedDeal } = await this.supabase.client
       .from('deals')
@@ -211,18 +229,7 @@ export class ReservationsService {
     if (updateError) throw updateError
     if (!expired) return
 
-    const { data: deal } = await this.supabase.client
-      .from('deals')
-      .select('remaining_quantity, version')
-      .eq('id', reservation.deal_id)
-      .single()
-
-    if (deal) {
-      await this.supabase.client
-        .from('deals')
-        .update({ remaining_quantity: deal.remaining_quantity + reservation.quantity_reserved, version: deal.version + 1 })
-        .eq('id', reservation.deal_id)
-    }
+    await this.restoreQuantity(reservation.deal_id, reservation.quantity_reserved)
 
     this.socketGateway.emitReservationExpired(reservation.id, reservation.deal_id)
     const { data: updatedDeal } = await this.supabase.client
@@ -231,5 +238,24 @@ export class ReservationsService {
       .eq('id', reservation.deal_id)
       .single()
     this.socketGateway.emitDealQuantity(reservation.deal_id, updatedDeal?.remaining_quantity ?? 0)
+  }
+
+  /**
+   * Version-guarded stock restore: increments remaining_quantity by amount via
+   * compare-and-swap on `version`. Concurrent restores (cancel + expire of two
+   * different reservations on the same deal) can never lose an increment.
+   */
+  private async restoreQuantity(dealId: string, amount: number) {
+    const { data: deal } = await this.supabase.client
+      .from('deals')
+      .select('remaining_quantity, version')
+      .eq('id', dealId)
+      .single()
+    if (!deal) return
+    await this.supabase.client
+      .from('deals')
+      .update({ remaining_quantity: deal.remaining_quantity + amount, version: deal.version + 1 })
+      .eq('id', dealId)
+      .eq('version', deal.version)
   }
 }
