@@ -1021,3 +1021,76 @@ function handleSkipLocation() {
   .sort-select { flex: 1; }
 }
 </style>
+
+<style>
+/* Leaflet injects marker HTML via innerHTML, so these must NOT be scoped */
+.deal-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));
+  transition: transform 0.15s;
+}
+.deal-marker:hover { transform: scale(1.1); z-index: 1000 !important; }
+.deal-marker-price {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  background: white;
+  border: 2px solid var(--mc, #ee4d2d);
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mc, #ee4d2d);
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  transition: all 0.2s;
+}
+.deal-marker-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--mc, #ee4d2d);
+  border: 2.5px solid white;
+  border-radius: 50%;
+  margin-top: -5px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* -- User location marker -- */
+.user-loc-marker {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.user-loc-pulse {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(59,130,246,0.2);
+  animation: user-pulse 2s ease infinite;
+}
+.user-loc-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #3b82f6;
+  border: 3px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  position: relative;
+  z-index: 1;
+}
+@keyframes user-pulse {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  50% { transform: scale(1.5); opacity: 0.2; }
+  100% { transform: scale(0.8); opacity: 0.6; }
+}
+
+/* Leaflet cluster fixes */
+.leaflet-marker-icon { outline: none; }
+.leaflet-container { font-family: var(--font-family); }
+</style>
