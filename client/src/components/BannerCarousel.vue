@@ -124,6 +124,7 @@ onUnmounted(() => {
         :key="banner.id"
         class="banner-slide"
         :class="{ active: i === current }"
+        :style="{ background: banner.color }"
         :aria-hidden="i !== current"
         :aria-label="banner.title"
         :data-banner-id="banner.id"
@@ -393,17 +394,16 @@ onUnmounted(() => {
   padding: 10px 22px;
   border-radius: var(--radius-full);
   font: 600 0.875rem/1 var(--font-family);
-  color: #fff;
+  color: #1a1a2e;
   text-decoration: none;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  backdrop-filter: blur(8px);
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.6);
   transition: all var(--transition-fast);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 
 .banner-cta:hover {
-  background: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.88);
   transform: translateY(-1px) scale(1.03);
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
 }

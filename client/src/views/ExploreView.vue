@@ -54,11 +54,46 @@ const stores = computed(() => {
   deals.value.forEach((d) => d.store?.name && s.add(d.store.name))
   return [...s].sort()
 })
-const categories = computed(() => {
-  const c = new Set<string>()
-  deals.value.forEach((d) => (d.tags || []).forEach((t) => c.add(t)))
-  return [...c].sort()
-})
+const categories = [
+  'Food',
+  'Drinks',
+  'Bakery',
+  'Grocery',
+  'Asian',
+  'Western',
+  'Dessert',
+  'Healthy',
+]
+const categoryOptions = [
+  { id: 'food', name: 'Food' },
+  { id: 'drinks', name: 'Drinks' },
+  { id: 'bakery', name: 'Bakery' },
+  { id: 'grocery', name: 'Grocery' },
+  { id: 'asian', name: 'Asian' },
+  { id: 'western', name: 'Western' },
+  { id: 'dessert', name: 'Dessert' },
+  { id: 'healthy', name: 'Healthy' },
+]
+const categoryKeywords: Record<string, Array<string> | undefined> = {
+  Food: ['com', 'ga', 'bento', 'banh mi', 'sandwich', 'pizza', 'dimsum', 'tokbokki', 'kimbap', 'ramen', 'takoyaki', 'xuc xich', 'chao', 'xoi'],
+  Drinks: ['uong', 'ca phe', 'tra', 'nuoc', 'bia', 'sua chua', 'yen sao', 'tra dao', 'sua'],
+  Bakery: ['banh', 'baguette', 'flan'],
+  Grocery: ['thuc pham', 'rau', 'thit', 'ca', 'tom', 'trung', 'gao', 'trai cay', 'pho mai', 'dau olive', 'pasta'],
+  Asian: ['han', 'nhat', 'hoa', 'viet', 'kim chi', 'kim bap', 'taiyaki', 'mochi'],
+  Western: ['nhap khau', 'phap', 'duc', 'tay', 'bit tet', 'ruou', 'pasta'],
+  Dessert: ['trang mieng', 'kem', 'ngot', 'mochi', 'che', 'flan', 'taiyaki'],
+  Healthy: ['healthy', 'suc khoe', 'khong duong', 'rau', 'salad', 'nguyen cam', 'tuoi song'],
+}
+function dealMatchesCategory(d: Deal, name: string) {
+  const keywords = categoryKeywords[name]
+  if (!keywords) return true
+  const tags = (d.tags || []).map((t) => (t || '').toLowerCase().replace(/_/g, ' '))
+  return tags.some((t) => keywords.some((k) => t.includes(k)))
+}
+function normalizeCategoryQuery(value: string) {
+  const found = categoryOptions.find((o) => o.id === value.toLowerCase())
+  return found ? found.name : value
+}
 const activeFiltersCount = computed(
   () =>
     [selectedStore.value, selectedRating.value, minDiscount.value, radiusKm.value].filter(Boolean).length +
@@ -87,7 +122,7 @@ const filteredDeals = computed(() => {
     result = result.filter((d) => d.title.toLowerCase().includes(q) || d.store?.name?.toLowerCase().includes(q))
   }
   if (category.value && category.value !== 'All') {
-    result = result.filter((d) => (d.tags || []).includes(category.value))
+    result = result.filter((d) => dealMatchesCategory(d, category.value))
   }
   switch (sortBy.value) {
     case 'discount':
@@ -120,7 +155,7 @@ function leaveAllDealRooms() {
 
 onMounted(async () => {
   const c = route.query.category as string | undefined
-  if (c) category.value = c
+  if (c) category.value = normalizeCategoryQuery(c)
   const saved = localStorage.getItem('foodly_location')
   if (saved) {
     try {
@@ -156,7 +191,7 @@ onUnmounted(() => {
 
 watch([() => route.query.category, () => route.query.search], ([nextCategory, nextSearch]) => {
   if (typeof nextSearch === 'string' && searchQuery.value !== nextSearch) searchQuery.value = nextSearch
-  if (typeof nextCategory === 'string' && category.value !== nextCategory) category.value = nextCategory
+  if (typeof nextCategory === 'string' && category.value !== normalizeCategoryQuery(nextCategory)) category.value = normalizeCategoryQuery(nextCategory)
 })
 watch(filteredDeals, () => { scheduleMarkerUpdate(); joinDealRooms(filteredDeals.value) })
 watch(showMap, (v: boolean) => { if (v) nextTick(initMap); else deselectDeal() })
