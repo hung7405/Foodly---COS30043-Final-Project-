@@ -9,7 +9,7 @@ import {
 } from '@nestjs/websockets'
 import { Server, Socket } from 'socket.io'
 import * as jwt from 'jsonwebtoken'
-import { config } from '../config'
+import { config, corsOrigin } from '../config'
 
 interface SocketUser {
   id: string
@@ -18,7 +18,7 @@ interface SocketUser {
 }
 
 @WebSocketGateway({
-  cors: { origin: config.corsOrigins, credentials: true },
+  cors: { origin: corsOrigin, credentials: true },
   namespace: '/',
 })
 export class SocketGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {

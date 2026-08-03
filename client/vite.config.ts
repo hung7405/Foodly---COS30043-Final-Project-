@@ -30,15 +30,10 @@ export default defineConfig({
         navigateFallback: `${process.env.VITE_BASE_URL || '/'}index.html`,
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.pathname.startsWith('/api/deals'),
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'deals-cache',
-              expiration: { maxEntries: 40, maxAgeSeconds: 60 * 5 },
-              networkTimeoutSeconds: 3,
-            },
-          },
-          {
+            // Images (Unsplash) only. API routes are intentionally NOT cached
+            // by the ServiceWorker so the browser always hits the live backend
+            // and receives fresh CORS headers; cached API responses from a
+            // broken-deploy window would otherwise be replayed without ACAO.
             urlPattern: ({ url }) => url.hostname === 'images.unsplash.com',
             handler: 'CacheFirst',
             options: {

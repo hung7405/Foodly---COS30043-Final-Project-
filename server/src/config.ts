@@ -6,19 +6,23 @@ function required(name: string): string {
   return v || ''
 }
 
-const explicit = (process.env.CORS_ORIGINS || '')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean)
-const isProduction = process.env.NODE_ENV === 'production'
+type CorsCallback = (err: Error | null, allow?: boolean | string) => void
+
+// Authentication on this API uses an Authorization (Bearer) header and NEVER
+// cookies, so a browser cannot exploit a permissive CORS policy to steal a
+// victim's token (the token is not auto-attached to cross-origin requests).
+// We therefore REFLECT the request Origin for every browser origin — this is
+// robust against shifting Vercel preview URLs (regenerated on each deploy),
+// the Mercury subpath origin, and localhost dev, with zero per-deploy env edits.
+// The reflected value is the specific Origin string (never '*'), so
+// Allow-Credentials stays valid. This single handler is shared by the REST
+// layer (app.enableCors) and both WebSocket gateways (socket.io cors).
+export const corsOrigin = (origin: string | undefined, callback: CorsCallback): void => {
+  if (!origin) return callback(null, false) // no Origin header => same-origin / server-to-server / non-browser
+  return callback(null, origin) // reflect the request origin
+}
 
 export const config = {
   jwtSecret: required('JWT_SECRET') || 'test-secret-for-dev',
-  // Strict allowlist when CORS_ORIGINS is set. When it is NOT set we leave the
-  // list empty and let main.ts reflect the request Origin for every origin
-  // (see enableCors). Safe because auth uses an Authorization header, never
-  // cookies, so a permissive CORS policy cannot steal a victim's token.
-  corsOrigins: explicit.length ? explicit : [],
-  isProduction,
+  isProduction: process.env.NODE_ENV === 'production',
 }
-

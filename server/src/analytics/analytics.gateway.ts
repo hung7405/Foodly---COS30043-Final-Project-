@@ -8,11 +8,11 @@ import {
 } from '@nestjs/websockets'
 import { Server, Socket } from 'socket.io'
 import { AnalyticsService } from './analytics.service'
-import { config } from '../config'
+import { corsOrigin } from '../config'
 
 @WebSocketGateway({
   namespace: '/analytics',
-  cors: { origin: config.corsOrigins, credentials: true },
+  cors: { origin: corsOrigin, credentials: true },
 })
 export class AnalyticsGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy {
   private readonly logger = new Logger(AnalyticsGateway.name)
