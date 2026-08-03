@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch, shallowRef, nextTick } from 'vue'
 import { useDirections } from '../../composables/useDirections'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 
 const props = defineProps<{
   destinationLat: number
@@ -20,12 +22,28 @@ const {
   error,
   selectedRouteId,
   selectedRoute,
+  profile,
   getUserLocation,
   calculateRoutes,
+  setProfile,
 } = useDirections()
+
+const mapContainer = ref<HTMLDivElement | null>(null)
+const miniMap = shallowRef<L.Map | null>(null)
+const routeLayers = shallowRef<L.Polyline[]>([])
+const originMarker = shallowRef<L.CircleMarker | null>(null)
+const destMarker = shallowRef<L.Marker | null>(null)
+
+const profileOptions = [
+  { id: 'driving', label: 'Drive', icon: '🚗' },
+  { id: 'walking', label: 'Walk', icon: '🚶' },
+  { id: 'cycling', label: 'Cycle', icon: '🚲' },
+] as const
 
 onMounted(async () => {
   if (props.visible) {
+    await nextTick()
+    initMiniMap()
     await getUserLocation()
     await calculateRoutes(props.destinationLat, props.destinationLng)
   }
@@ -35,11 +53,91 @@ watch(
   () => props.visible,
   async (val) => {
     if (val) {
+      await nextTick()
+      initMiniMap()
       await getUserLocation()
       await calculateRoutes(props.destinationLat, props.destinationLng)
     }
   }
 )
+
+watch(profile, async () => {
+  await calculateRoutes(props.destinationLat, props.destinationLng)
+})
+
+watch(selectedRouteId, () => { redraw() })
+watch(() => routes.value, () => { redraw() })
+
+function initMiniMap() {
+  if (!mapContainer.value || miniMap.value) return
+  miniMap.value = L.map(mapContainer.value, {
+    center: [10.8231, 106.6297],
+    zoom: 13,
+    zoomControl: false,
+    attributionControl: false,
+  })
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+  }).addTo(miniMap.value)
+  drawMarkers()
+  drawRoutes()
+}
+
+function drawMarkers() {
+  if (!miniMap.value) return
+  if (originMarker.value) { miniMap.value.removeLayer(originMarker.value); originMarker.value = null }
+  if (destMarker.value) { miniMap.value.removeLayer(destMarker.value); destMarker.value = null }
+
+  const origin = userLocation.value
+  originMarker.value = L.circleMarker([origin.lat, origin.lng], {
+    radius: 7,
+    color: 'var(--color-accent, #10b981)',
+    fillColor: 'var(--color-accent, #10b981)',
+    fillOpacity: 1,
+  }).addTo(miniMap.value).bindPopup('You')
+
+  destMarker.value = L.marker([props.destinationLat, props.destinationLng])
+    .addTo(miniMap.value)
+    .bindPopup(props.destinationName)
+}
+
+function drawRoutes() {
+  if (!miniMap.value) return
+  routeLayers.value.forEach((l) => { miniMap.value?.removeLayer(l) })
+  routeLayers.value = []
+
+  routes.value.forEach((r) => {
+    const isSelected = r.id === selectedRouteId.value
+    const line = L.polyline(r.polyline, {
+      color: isSelected ? 'var(--color-accent, #10b981)' : 'var(--color-border, #d1d5db)',
+      weight: isSelected ? 4 : 2,
+      opacity: isSelected ? 0.9 : 0.4,
+      dashArray: isSelected ? undefined : '6,6',
+    }).addTo(miniMap.value!)
+    routeLayers.value.push(line)
+  })
+
+  const points = routes.value.flatMap((r) => r.polyline)
+  if (points.length >= 2) {
+    const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng]))
+    miniMap.value.fitBounds(bounds.pad(0.25))
+  } else if (miniMap.value) {
+    miniMap.value.setView([userLocation.value.lat, userLocation.value.lng], 13)
+  }
+}
+
+function redraw() {
+  if (!miniMap.value) return
+  drawRoutes()
+}
+
+onUnmounted(() => {
+  routeLayers.value.forEach((l) => miniMap.value?.removeLayer(l))
+  routeLayers.value = []
+  miniMap.value?.remove()
+  miniMap.value = null
+})
 
 function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600)
@@ -60,34 +158,23 @@ function formatDuration(seconds: number): string {
         <button class="close-btn" @click="emit('close')" aria-label="Close directions">&times;</button>
       </div>
 
+      <div class="mode-switch" role="group" aria-label="Travel mode">
+        <button
+          v-for="opt in profileOptions"
+          :key="opt.id"
+          class="mode-btn"
+          :class="{ active: profile === opt.id }"
+          :aria-pressed="profile === opt.id"
+          @click="setProfile(opt.id)"
+        >
+          <span class="mode-icon" aria-hidden="true">{{ opt.icon }}</span>
+          {{ opt.label }}
+        </button>
+      </div>
+
       <!-- Mini Map -->
       <div class="mini-map">
-        <svg viewBox="0 0 400 200" class="route-svg">
-          <!-- Background grid -->
-          <rect width="400" height="200" fill="var(--color-bg-tertiary)" rx="8"/>
-          <!-- Origin dot -->
-          <circle cx="50" cy="150" r="8" fill="var(--color-accent)" stroke="white" stroke-width="2"/>
-          <text x="50" y="140" text-anchor="middle" font-size="10" fill="var(--color-text)">You</text>
-          <!-- Destination dot -->
-          <circle cx="350" cy="40" r="8" fill="#10b981" stroke="white" stroke-width="2"/>
-          <text x="350" y="30" text-anchor="middle" font-size="10" fill="var(--color-text)">Store</text>
-          <!-- Route lines -->
-          <template v-for="route in routes" :key="route.id">
-            <path
-                :d="'M' + route.polyline.map((p, i) => {
-                const x = 50 + ((p.lng - (userLocation?.lng || 106.6297)) / 0.03) * 300
-                const y = 150 - ((p.lat - (userLocation?.lat || 10.8231)) / 0.03) * 110
-                return `${i === 0 ? '' : 'L'}${Math.max(10, Math.min(390, x))},${Math.max(10, Math.min(190, y))}`
-              }).join(' ')"
-              :stroke="route.id === selectedRouteId ? 'var(--color-accent)' : 'var(--color-border)'"
-              :stroke-width="route.id === selectedRouteId ? 3 : 1.5"
-              fill="none"
-              stroke-linecap="round"
-              stroke-dasharray="5,5"
-              :opacity="route.id === selectedRouteId ? 1 : 0.4"
-            />
-          </template>
-        </svg>
+        <div ref="mapContainer" class="mini-map-canvas"></div>
       </div>
 
       <!-- Loading -->
@@ -114,7 +201,7 @@ function formatDuration(seconds: number): string {
           <div class="route-rank">{{ route.id }}</div>
           <div class="route-info">
             <div class="route-name">{{ route.name }}</div>
-            <div class="route-summary">{{ route.summary }}</div>
+            <div class="route-summary">{{ route.summary || 'Via city roads' }}</div>
           </div>
           <div class="route-stats">
             <span class="route-duration">{{ formatDuration(route.durationValue) }}</span>
@@ -126,10 +213,10 @@ function formatDuration(seconds: number): string {
 
       <!-- Selected Route Summary -->
       <div v-if="selectedRoute" class="route-summary-bar">
-        <div class="summary-icon">🚗</div>
+        <div class="summary-icon" aria-hidden="true">🚗</div>
         <div class="summary-text">
           <strong>{{ formatDuration(selectedRoute.durationValue) }}</strong>
-          <span>{{ selectedRoute.distance }} via {{ selectedRoute.summary }}</span>
+          <span>{{ selectedRoute.distance }} via {{ selectedRoute.summary || 'city roads' }}</span>
         </div>
         <a
           :href="`https://www.google.com/maps/dir/${userLocation?.lat},${userLocation?.lng}/${destinationLat},${destinationLng}`"
@@ -184,14 +271,53 @@ function formatDuration(seconds: number): string {
   background: var(--color-bg-tertiary);
 }
 
+.mode-switch {
+  display: flex;
+  gap: 6px;
+  padding: 12px 20px 0;
+}
+
+.mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card-bg);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.mode-btn:hover {
+  border-color: var(--color-accent);
+}
+
+.mode-btn.active {
+  border-color: var(--color-accent);
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.mode-icon {
+  font-size: 1rem;
+}
+
 .mini-map {
   padding: 12px;
 }
 
-.route-svg {
+.mini-map-canvas {
   width: 100%;
   height: 180px;
   border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
 }
 
 .routes-loading {

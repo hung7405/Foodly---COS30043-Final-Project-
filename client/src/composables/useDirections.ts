@@ -1,4 +1,6 @@
 import { ref, computed } from 'vue'
+import { freeApis } from '../services/freeApis'
+import type { RouteProfile } from '../services/freeApis'
 
 export interface RouteOption {
   id: number
@@ -17,6 +19,7 @@ export function useDirections() {
   const isLoading = ref(false)
   const selectedRouteId = ref<number | null>(null)
   const error = ref('')
+  const profile = ref<RouteProfile>('driving')
 
   async function getUserLocation() {
     if (navigator.geolocation) {
@@ -43,28 +46,24 @@ export function useDirections() {
     error.value = ''
 
     try {
-      const origin = `${userLocation.value.lng},${userLocation.value.lat}`
-      const dest = `${destLng},${destLat}`
+      const legs = await freeApis.getRoutes(
+        [userLocation.value.lat, userLocation.value.lng],
+        [destLat, destLng],
+        profile.value,
+      )
 
-      // Try OSRM free routing API
-      try {
-        const url = `https://router.project-osrm.org/route/v1/driving/${origin};${dest}?alternatives=true&geometries=geojson&steps=true`
-        const res = await fetch(url)
-        const data = await res.json()
-
-        if (data.routes) {
-          routes.value = data.routes.slice(0, 5).map((r: any, i: number) => ({
-            id: i + 1,
-            name: i === 0 ? 'Recommended' : `Option ${i + 1}`,
-            distance: `${(r.distance / 1000).toFixed(1)} km`,
-            distanceValue: r.distance,
-            duration: `${Math.round(r.duration / 60)} min`,
-            durationValue: r.duration,
-            summary: r.legs?.[0]?.summary || '',
-            polyline: r.geometry.coordinates.map((c: number[]) => ({ lat: c[1], lng: c[0] })),
-          }))
-        }
-      } catch {
+      if (legs.length > 0) {
+        routes.value = legs.map((r, i) => ({
+          id: i + 1,
+          name: i === 0 ? 'Recommended' : `Option ${i + 1}`,
+          distance: `${r.distanceKm.toFixed(1)} km`,
+          distanceValue: r.distanceKm * 1000,
+          duration: `${Math.round(r.durationMin)} min`,
+          durationValue: r.durationMin * 60,
+          summary: r.summary || '',
+          polyline: (r.geometry?.coordinates || []).map((c: number[]) => ({ lat: c[1], lng: c[0] })),
+        }))
+      } else {
         // OSRM failed — generate mock routes
         routes.value = generateMockRoutes(userLocation.value, { lat: destLat, lng: destLng })
       }
@@ -72,12 +71,17 @@ export function useDirections() {
       if (routes.value.length > 0) {
         selectedRouteId.value = routes.value[0].id
       }
-    } catch (err) {
+    } catch {
       error.value = 'Could not calculate routes. Showing estimated routes.'
       routes.value = generateMockRoutes(userLocation.value, { lat: destLat, lng: destLng })
     } finally {
       isLoading.value = false
     }
+  }
+
+  function setProfile(next: RouteProfile) {
+    if (profile.value === next) return
+    profile.value = next
   }
 
   const selectedRoute = computed(() =>
@@ -91,8 +95,10 @@ export function useDirections() {
     error,
     selectedRouteId,
     selectedRoute,
+    profile,
     getUserLocation,
     calculateRoutes,
+    setProfile,
   }
 }
 

@@ -18,6 +18,8 @@ const userMarker = shallowRef<L.Marker | null>(null)
 const markerCluster = shallowRef<any>(null)
 const deals = ref<Deal[]>([])
 const selectedDeal = ref<Deal | null>(null)
+const dealAddress = ref<string | null>(null)
+let addressReqId = 0
 const isLoading = ref(true)
 const isLocating = ref(false)
 const isRouting = ref(false)
@@ -245,7 +247,7 @@ function rebuildMarkers() {
   if (!markerCluster.value) return
   markerCluster.value.clearLayers()
   markerMap.clear()
-  filteredDeals.value.slice(0, 80).forEach((deal) => {
+  filteredDeals.value.forEach((deal) => {
     const marker = L.marker([Number(deal.latitude), Number(deal.longitude)], { icon: createDealIcon(deal, selectedDeal.value?.id === deal.id) })
     marker.on('click', () => selectDeal(deal))
     markerMap.set(deal.id, marker); markerCluster.value.addLayer(marker)
@@ -305,19 +307,29 @@ function calcDistance(lat1: number, lng1: number, lat2: number, lng2: number) {
   const a = Math.sin(r(lat2 - lat1) / 2) ** 2 + Math.cos(r(lat1)) * Math.cos(r(lat2)) * Math.sin(r(lng2 - lng1) / 2) ** 2
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
-function selectDeal(deal: Deal) { selectedDeal.value = deal; routeInfo.value = null; rebuildMarkers(); if (map.value) centerMap(Number(deal.latitude), Number(deal.longitude), 15) }
-function deselectDeal() { selectedDeal.value = null; routeInfo.value = null; rebuildMarkers() }
+function selectDeal(deal: Deal) { selectedDeal.value = deal; routeInfo.value = null; rebuildMarkers(); if (map.value) centerMap(Number(deal.latitude), Number(deal.longitude), 15); resolveDealAddress(deal) }
+function deselectDeal() { selectedDeal.value = null; routeInfo.value = null; dealAddress.value = null; addressReqId++; rebuildMarkers() }
+async function resolveDealAddress(deal: Deal) {
+  const reqId = ++addressReqId
+  dealAddress.value = deal.address || deal.store?.address || null
+  if (dealAddress.value) return
+  try {
+    const addr = await freeApis.reverseGeocode(Number(deal.latitude), Number(deal.longitude))
+    if (reqId === addressReqId) dealAddress.value = addr
+  } catch { /* optional enhancement */ }
+}
 async function buildRoute() {
   if (!selectedDeal.value || !userLocation.value) return
   isRouting.value = true; error.value = ''
   try {
-    const profile = routeMode.value === 'walking' ? 'foot' : routeMode.value === 'cycling' ? 'cycling' : 'driving'
-    const res = await fetch('https://router.project-osrm.org/route/v1/' + profile + '/' + userLocation.value.lng + ',' + userLocation.value.lat + ';' + selectedDeal.value.longitude + ',' + selectedDeal.value.latitude + '?geometries=geojson&overview=full')
-    const data = await res.json()
-    const r = data.routes?.[0]
-    if (!r) throw new Error('')
-    routeInfo.value = { distanceKm: r.distance / 1000, durationMin: r.duration / 60 }
-    drawRoute(r.geometry)
+    const route = await freeApis.getRoute(
+      [userLocation.value.lat, userLocation.value.lng],
+      [Number(selectedDeal.value.latitude), Number(selectedDeal.value.longitude)],
+      routeMode.value,
+    )
+    if (!route) throw new Error('')
+    routeInfo.value = { distanceKm: route.distanceKm, durationMin: route.durationMin }
+    drawRoute(route.geometry)
   } catch { error.value = 'Could not calculate directions' }
   finally { isRouting.value = false }
 }
@@ -450,7 +462,7 @@ function handleSkipLocation() {
             </div>
           </div>
           <div ref="mapContainer" class="map-canvas"></div>
-          <button class="btn-locate" @click="locateUser" :disabled="isLocating" title="Locate me">
+          <button class="btn-locate" @click="locateUser" :disabled="isLocating" title="Locate me" aria-label="Locate me">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
           </button>
           <div v-if="selectedDeal" class="map-info-panel">
@@ -460,6 +472,10 @@ function handleSkipLocation() {
               <div class="info-content">
                 <h4>{{ selectedDeal.title }}</h4>
                 <div class="info-store">{{ selectedDeal.store?.name || 'Store' }}</div>
+                <div v-if="dealAddress" class="info-address">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  {{ dealAddress }}
+                </div>
                 <div class="info-price">{{ formatVND(selectedDeal.discountPrice) }} <s v-if="!isSurpriseDeal(selectedDeal) && selectedDeal.originalPrice > selectedDeal.discountPrice">{{ formatVND(selectedDeal.originalPrice) }}</s><span v-if="isSurpriseDeal(selectedDeal)" class="info-up-to">up to {{ formatVND(selectedDeal.originalPrice) }} value</span></div>
               </div>
             </div>
@@ -470,7 +486,7 @@ function handleSkipLocation() {
             <div class="info-actions">
               <router-link :to="'/deals/' + selectedDeal.id" class="btn btn-primary btn-sm">Details</router-link>
               <button class="btn btn-outline btn-sm" @click="buildRoute" :disabled="isRouting">{{ isRouting ? 'Routing...' : 'Directions' }}</button>
-              <button class="btn-map-center" @click="centerMap(Number(selectedDeal.latitude), Number(selectedDeal.longitude), 16)" title="Center map">
+              <button class="btn-map-center" @click="centerMap(Number(selectedDeal.latitude), Number(selectedDeal.longitude), 16)" title="Center map" aria-label="Center map on this deal">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
               </button>
             </div>
@@ -776,6 +792,7 @@ function handleSkipLocation() {
   overflow: hidden;
 }
 .info-store { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+.info-address { font-size: 11px; color: var(--color-text-tertiary); margin-top: 2px; display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .info-price { font-weight: 700; color: var(--color-accent); margin-top: 4px; }
 .info-price s { font-weight: 400; color: var(--color-text-tertiary); margin-left: 6px; }
 .info-up-to { display: inline-block; font-size: 11px; font-weight: 600; color: #7c3aed; background: #f3e8ff; padding: 2px 8px; border-radius: var(--radius-full); margin-left: 8px; }
