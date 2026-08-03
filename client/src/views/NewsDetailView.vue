@@ -42,15 +42,25 @@ onMounted(async () => {
         <div class="empty-state">
           <h3>{{ error }}</h3>
           <p>The article you're looking for doesn't exist.</p>
-          <router-link to="/news" class="btn btn-outline" style="margin-top: 16px;">Back to News</router-link>
+          <router-link to="/news" class="btn btn-outline" style="margin-top: 16px">Back to News</router-link>
         </div>
       </template>
 
       <template v-else-if="article">
         <article class="article-detail">
           <router-link to="/news" class="back-link">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="15 18 9 12 15 6"/>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="15 18 9 12 15 6" />
             </svg>
             Back to News
           </router-link>
@@ -59,18 +69,17 @@ onMounted(async () => {
             <span class="article-category">{{ article.category }}</span>
             <h1 class="article-title">{{ article.title }}</h1>
             <time class="article-date" :datetime="article.publishedDate">
-              {{ new Date(article.publishedDate).toLocaleDateString('en-AU', {
-                year: 'numeric', month: 'long', day: 'numeric'
-              }) }}
+              {{
+                new Date(article.publishedDate).toLocaleDateString('en-AU', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })
+              }}
             </time>
           </div>
 
-          <img
-            v-if="article.imageUrl"
-            :src="article.imageUrl"
-            :alt="article.title"
-            class="article-image"
-          />
+          <img v-if="article.imageUrl" :src="article.imageUrl" :alt="article.title" class="article-image" />
 
           <div class="article-content">
             <p>{{ article.content }}</p>
@@ -170,7 +179,8 @@ onMounted(async () => {
 }
 
 @media (max-width: 768px) {
-  .article-title { font-size: 1.625rem; }
+  .article-title {
+    font-size: 1.625rem;
+  }
 }
 </style>
-

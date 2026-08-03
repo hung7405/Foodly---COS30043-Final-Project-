@@ -82,17 +82,52 @@ function dismiss() {
   max-width: 420px;
   margin: 0 auto;
 }
-.pwa-install-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.pwa-install-icon { border-radius: 10px; flex-shrink: 0; }
-.pwa-install-text { display: flex; flex-direction: column; min-width: 0; }
-.pwa-install-text strong { font-size: 0.92rem; }
-.pwa-install-text span { font-size: 0.78rem; color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pwa-install-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.pwa-install-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.pwa-install-icon {
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.pwa-install-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.pwa-install-text strong {
+  font-size: 0.92rem;
+}
+.pwa-install-text span {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pwa-install-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
 
-.install-slide-enter-active, .install-slide-leave-active { transition: transform 0.3s ease, opacity 0.3s ease; }
-.install-slide-enter-from, .install-slide-leave-to { transform: translateY(120%); opacity: 0; }
+.install-slide-enter-active,
+.install-slide-leave-active {
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+}
+.install-slide-enter-from,
+.install-slide-leave-to {
+  transform: translateY(120%);
+  opacity: 0;
+}
 
 @media (min-width: 768px) {
-  .pwa-install-banner { bottom: 1rem; }
+  .pwa-install-banner {
+    bottom: 1rem;
+  }
 }
 </style>

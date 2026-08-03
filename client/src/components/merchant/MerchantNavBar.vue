@@ -47,9 +47,13 @@ function isActive(item: { to: string; exact?: boolean }) {
   color: var(--color-text-secondary);
   white-space: nowrap;
   text-decoration: none;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
 }
-.merchant-nav-item:hover { color: var(--color-text); }
+.merchant-nav-item:hover {
+  color: var(--color-text);
+}
 .merchant-nav-item.active {
   background: var(--color-card-bg);
   color: var(--color-accent);

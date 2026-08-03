@@ -66,9 +66,7 @@ async function loadReservations() {
     ])
     reservations.value = resList
     paidReservationIds.value = new Set(
-      (payList as Payment[])
-        .filter((p) => p.status === 'completed')
-        .map((p) => p.reservationId),
+      (payList as Payment[]).filter((p) => p.status === 'completed').map((p) => p.reservationId)
     )
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Could not load reservations.'
@@ -113,7 +111,7 @@ async function confirm(id: string) {
       <div v-else-if="reservations.length === 0" class="empty-state">
         <h3>No reservations</h3>
         <p>Explore deals, reserve an item, then return here to confirm the hold and pickup code.</p>
-        <router-link to="/explore" class="btn btn-outline" style="margin-top:16px">Browse Deals</router-link>
+        <router-link to="/explore" class="btn btn-outline" style="margin-top: 16px">Browse Deals</router-link>
       </div>
 
       <div v-else class="reservations-list">
@@ -145,8 +143,15 @@ async function confirm(id: string) {
           </div>
           <div class="res-actions">
             <router-link v-if="res.dealId" :to="`/deals/${res.dealId}`" class="btn btn-outline">View Deal</router-link>
-            <router-link v-if="res.status === 'active' && !isPaid(res.id)" :to="`/payments/${res.id}`" class="btn btn-primary">Pay now</router-link>
-            <button v-if="res.status === 'active' && isPaid(res.id)" class="btn btn-primary" @click="confirm(res.id)">Confirm Pickup</button>
+            <router-link
+              v-if="res.status === 'active' && !isPaid(res.id)"
+              :to="`/payments/${res.id}`"
+              class="btn btn-primary"
+              >Pay now</router-link
+            >
+            <button v-if="res.status === 'active' && isPaid(res.id)" class="btn btn-primary" @click="confirm(res.id)">
+              Confirm Pickup
+            </button>
             <button v-if="res.status === 'active'" class="btn btn-ghost danger" @click="cancel(res.id)">Cancel</button>
           </div>
         </article>
@@ -156,25 +161,113 @@ async function confirm(id: string) {
 </template>
 
 <style scoped>
-.reservations-page { padding: 40px 0 60px; animation: fade-in 0.4s ease; }
-.page-title { font-size: 1.55rem; font-weight: 700; margin-bottom: 28px; }
-.error-box { padding: 14px 16px; background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; border-radius: var(--radius-sm); margin-bottom: 18px; }
-.reservations-list { display: flex; flex-direction: column; gap: 12px; }
-.skeleton-card { height: 170px; border-radius: var(--radius-md); }
-.reservation-card { padding: 20px; background: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
-.res-top { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
-.res-top h3 { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
-.res-top p { color: var(--color-text-secondary); font-size: 0.9rem; }
-.status-badge { padding: 5px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; background: var(--color-bg-tertiary); }
-.status-badge.active { background: #ecfdf5; color: #166534; }
-.status-badge.confirmed { background: #dcfce7; color: #166534; }
-.status-badge.cancelled, .status-badge.expired { background: #f1f5f9; color: #64748b; }
-.res-body { display: flex; gap: 32px; flex-wrap: wrap; }
-.res-timeline { margin: 4px 0 20px; padding: 12px 16px; background: var(--color-bg-tertiary); border-radius: var(--radius-sm); }
-.res-detail { display: flex; flex-direction: column; gap: 4px; }
-.res-label { font-size: 0.78rem; color: var(--color-text-tertiary); }
-.res-value { font-size: 0.95rem; font-weight: 700; }
-.res-value.code { font-family: monospace; font-size: 1.15rem; letter-spacing: 2px; }
-.res-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--color-border); }
-.danger { color: var(--color-error); }
+.reservations-page {
+  padding: 40px 0 60px;
+  animation: fade-in 0.4s ease;
+}
+.page-title {
+  font-size: 1.55rem;
+  font-weight: 700;
+  margin-bottom: 28px;
+}
+.error-box {
+  padding: 14px 16px;
+  background: #fff7ed;
+  color: #9a3412;
+  border: 1px solid #fdba74;
+  border-radius: var(--radius-sm);
+  margin-bottom: 18px;
+}
+.reservations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.skeleton-card {
+  height: 170px;
+  border-radius: var(--radius-md);
+}
+.reservation-card {
+  padding: 20px;
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.res-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+.res-top h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.res-top p {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+.status-badge {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  background: var(--color-bg-tertiary);
+}
+.status-badge.active {
+  background: #ecfdf5;
+  color: #166534;
+}
+.status-badge.confirmed {
+  background: #dcfce7;
+  color: #166534;
+}
+.status-badge.cancelled,
+.status-badge.expired {
+  background: #f1f5f9;
+  color: #64748b;
+}
+.res-body {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+.res-timeline {
+  margin: 4px 0 20px;
+  padding: 12px 16px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+.res-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.res-label {
+  font-size: 0.78rem;
+  color: var(--color-text-tertiary);
+}
+.res-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.res-value.code {
+  font-family: monospace;
+  font-size: 1.15rem;
+  letter-spacing: 2px;
+}
+.res-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+.danger {
+  color: var(--color-error);
+}
 </style>

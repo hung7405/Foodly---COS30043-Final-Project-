@@ -14,7 +14,12 @@ export type RouteProfile = 'driving' | 'walking' | 'cycling'
 
 const PROFILE_MAP: Record<RouteProfile, string> = { driving: 'driving', walking: 'foot', cycling: 'cycling' }
 
-async function fetchOSRM(profile: RouteProfile, origin: [number, number], destination: [number, number], alternatives = false) {
+async function fetchOSRM(
+  profile: RouteProfile,
+  origin: [number, number],
+  destination: [number, number],
+  alternatives = false
+) {
   const url =
     `${OSRM_URL}/${PROFILE_MAP[profile]}/${origin[1]},${origin[0]};${destination[1]},${destination[0]}` +
     `?geometries=geojson&overview=full&steps=false${alternatives ? '&alternatives=3' : ''}`
@@ -57,12 +62,20 @@ export const freeApis = {
     return `${QR_API_URL}?size=${size}x${size}&data=${encodeURIComponent(text)}`
   },
 
-  async getRoute(origin: [number, number], destination: [number, number], profile: RouteProfile = 'driving'): Promise<RouteLeg | null> {
+  async getRoute(
+    origin: [number, number],
+    destination: [number, number],
+    profile: RouteProfile = 'driving'
+  ): Promise<RouteLeg | null> {
     const routes = await fetchOSRM(profile, origin, destination, false)
     return routes[0] ? toRoute(routes[0]) : null
   },
 
-  async getRoutes(origin: [number, number], destination: [number, number], profile: RouteProfile = 'driving'): Promise<RouteLeg[]> {
+  async getRoutes(
+    origin: [number, number],
+    destination: [number, number],
+    profile: RouteProfile = 'driving'
+  ): Promise<RouteLeg[]> {
     const routes = await fetchOSRM(profile, origin, destination, true)
     return routes.slice(0, 5).map(toRoute)
   },
@@ -70,7 +83,7 @@ export const freeApis = {
   async reverseGeocode(lat: number, lng: number): Promise<string | null> {
     try {
       const res = await fetch(
-        `${NOMINATIM_URL}/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=vi`,
+        `${NOMINATIM_URL}/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=vi`
       )
       if (!res.ok) return null
       const data = await res.json()

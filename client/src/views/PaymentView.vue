@@ -141,7 +141,11 @@ function formatCountdown(seconds: number) {
           <hr />
           <div class="summary-row total">
             <span><strong>Total</strong></span>
-            <span><strong>{{ formatVND(Number(reservation.deal?.discountPrice) * reservation.quantityReserved) }}</strong></span>
+            <span
+              ><strong>{{
+                formatVND(Number(reservation.deal?.discountPrice) * reservation.quantityReserved)
+              }}</strong></span
+            >
           </div>
         </div>
 
@@ -173,19 +177,32 @@ function formatCountdown(seconds: number) {
 
           <div class="countdown-bar">
             <span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 6px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                style="vertical-align: -2px; margin-right: 6px"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
               Complete payment within
             </span>
             <span class="countdown-timer" :class="{ urgent: countdown <= 60 }">{{ formatCountdown(countdown) }}</span>
           </div>
 
-          <button
-            v-if="!payment"
-            class="btn btn-primary btn-lg pay-btn"
-            :disabled="isPaying"
-            @click="initiatePayment"
-          >
-            {{ isPaying ? 'Processing...' : `Pay ${formatVND(Number(reservation.deal?.discountPrice) * reservation.quantityReserved)}` }}
+          <button v-if="!payment" class="btn btn-primary btn-lg pay-btn" :disabled="isPaying" @click="initiatePayment">
+            {{
+              isPaying
+                ? 'Processing...'
+                : `Pay ${formatVND(Number(reservation.deal?.discountPrice) * reservation.quantityReserved)}`
+            }}
           </button>
         </div>
 
@@ -200,7 +217,20 @@ function formatCountdown(seconds: number) {
           <div v-if="paymentMethod === 'mock'" class="mock-pay-section">
             <p class="mock-hint">Mock payment: click to simulate successful payment</p>
             <button class="btn btn-primary btn-lg" :disabled="isPaying || !!success" @click="completeMockPayment">
-              <svg v-if="!isPaying" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg
+                v-if="!isPaying"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
               {{ isPaying ? 'Processing...' : 'Confirm payment (Demo)' }}
             </button>
           </div>
@@ -218,34 +248,161 @@ function formatCountdown(seconds: number) {
 </template>
 
 <style scoped>
-.payment-page { padding: 24px 0 60px; }
-.back-link { display: inline-block; margin-bottom: 20px; color: var(--color-text-secondary); font-weight: 600; }
-.state-banner { margin-bottom: 16px; padding: 14px 16px; border-radius: var(--radius-sm); }
-.state-banner.error { background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; }
-.state-banner.success { background: #f0fdf4; color: #166534; border: 1px solid #86efac; }
-.payment-layout { display: grid; gap: 24px; max-width: 640px; margin: 0 auto; }
-.payment-card { padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-card-bg); }
-.summary-card h2 { margin-bottom: 16px; font-size: 1.25rem; }
-.summary-row { display: flex; justify-content: space-between; padding: 6px 0; color: var(--color-text-secondary); }
-.summary-row.total { font-size: 1.12rem; }
-h3 { margin-bottom: 14px; font-size: 1.05rem; }
-.method-options { display: grid; gap: 10px; margin-bottom: 20px; }
-.method-option { display: flex; align-items: center; gap: 12px; padding: 14px; border: 2px solid var(--color-border); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s ease; }
-.method-option.selected { border-color: var(--color-accent); background: var(--color-accent-light); }
-.method-option input { display: none; }
-.method-content { display: grid; gap: 2px; }
-.method-name { font-weight: 600; color: var(--color-text); }
-.method-desc { font-size: 0.85rem; color: var(--color-text-secondary); }
-.countdown-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--color-bg-secondary); border-radius: var(--radius-sm); margin-bottom: 16px; font-size: 0.92rem; }
-.countdown-timer { font-weight: 700; font-size: 1.1rem; color: var(--color-text); }
-.countdown-timer.urgent { color: #dc2626; animation: pulse 1s infinite; }
-.pay-btn { width: 100%; justify-content: center; font-size: 1.1rem; }
-.qr-card { text-align: center; }
-.qr-wrapper { margin: 16px auto; max-width: 280px; }
-.qr-image { width: 100%; border-radius: var(--radius-sm); }
-.qr-placeholder { width: 280px; height: 280px; background: var(--color-bg-secondary); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: var(--color-text-tertiary); }
-.qr-hint { color: var(--color-text-secondary); font-size: 0.92rem; margin-bottom: 20px; }
-.mock-pay-section { margin: 20px 0; padding: 16px; background: #f0fdf4; border-radius: var(--radius-sm); }
-.mock-hint { color: #166534; font-size: 0.88rem; margin-bottom: 12px; }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.payment-page {
+  padding: 24px 0 60px;
+}
+.back-link {
+  display: inline-block;
+  margin-bottom: 20px;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+.state-banner {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+}
+.state-banner.error {
+  background: #fff7ed;
+  color: #9a3412;
+  border: 1px solid #fdba74;
+}
+.state-banner.success {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+.payment-layout {
+  display: grid;
+  gap: 24px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+.payment-card {
+  padding: 24px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-card-bg);
+}
+.summary-card h2 {
+  margin-bottom: 16px;
+  font-size: 1.25rem;
+}
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  color: var(--color-text-secondary);
+}
+.summary-row.total {
+  font-size: 1.12rem;
+}
+h3 {
+  margin-bottom: 14px;
+  font-size: 1.05rem;
+}
+.method-options {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.method-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.method-option.selected {
+  border-color: var(--color-accent);
+  background: var(--color-accent-light);
+}
+.method-option input {
+  display: none;
+}
+.method-content {
+  display: grid;
+  gap: 2px;
+}
+.method-name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+.method-desc {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+.countdown-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+  font-size: 0.92rem;
+}
+.countdown-timer {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--color-text);
+}
+.countdown-timer.urgent {
+  color: #dc2626;
+  animation: pulse 1s infinite;
+}
+.pay-btn {
+  width: 100%;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+.qr-card {
+  text-align: center;
+}
+.qr-wrapper {
+  margin: 16px auto;
+  max-width: 280px;
+}
+.qr-image {
+  width: 100%;
+  border-radius: var(--radius-sm);
+}
+.qr-placeholder {
+  width: 280px;
+  height: 280px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+}
+.qr-hint {
+  color: var(--color-text-secondary);
+  font-size: 0.92rem;
+  margin-bottom: 20px;
+}
+.mock-pay-section {
+  margin: 20px 0;
+  padding: 16px;
+  background: #f0fdf4;
+  border-radius: var(--radius-sm);
+}
+.mock-hint {
+  color: #166534;
+  font-size: 0.88rem;
+  margin-bottom: 12px;
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
 </style>

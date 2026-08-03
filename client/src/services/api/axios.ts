@@ -6,11 +6,14 @@ const toCamel = (str: string) => str.replace(/_([a-z])/g, (_, c) => c.toUpperCas
 function mapKeys(data: unknown): unknown {
   if (Array.isArray(data)) return data.map(mapKeys)
   if (data && typeof data === 'object') {
-    return Object.keys(data).reduce((acc, key) => {
-      const value = (data as Record<string, unknown>)[key]
-      acc[toCamel(key)] = mapKeys(value)
-      return acc
-    }, {} as Record<string, unknown>)
+    return Object.keys(data).reduce(
+      (acc, key) => {
+        const value = (data as Record<string, unknown>)[key]
+        acc[toCamel(key)] = mapKeys(value)
+        return acc
+      },
+      {} as Record<string, unknown>
+    )
   }
   return data
 }
@@ -18,7 +21,10 @@ function mapKeys(data: unknown): unknown {
 function pickUrl(raw: string | undefined, fallback: string): string {
   const value = (raw || '').trim()
   if (/^https?:\/\//i.test(value) && !/^vite_/i.test(value)) {
-    const host = value.replace(/^https?:\/\//i, '').split(/[/:]/)[0].toLowerCase()
+    const host = value
+      .replace(/^https?:\/\//i, '')
+      .split(/[/:]/)[0]
+      .toLowerCase()
     if (!import.meta.env.PROD || (host !== 'localhost' && host !== '127.0.0.1')) return value
   }
   return fallback
@@ -57,7 +63,7 @@ api.interceptors.response.use(
     const message = error.response?.data?.message || error.message || 'Request failed'
     useUiStore().addToast(typeof message === 'string' ? message : message[0] || 'Request failed')
     return Promise.reject(error)
-  },
+  }
 )
 
 export default api

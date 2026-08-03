@@ -36,12 +36,23 @@ function clearFieldError(name: string) {
   }
 }
 
+function clearPasswordErrors() {
+  clearFieldError('password')
+  clearFieldError('confirmPassword')
+}
+
 async function handleSubmit() {
   if (!validate()) return
   isSubmitting.value = true
   error.value = ''
   try {
-    await auth.register(form.value.email, form.value.username, form.value.password, form.value.firstName, form.value.lastName)
+    await auth.register(
+      form.value.email,
+      form.value.username,
+      form.value.password,
+      form.value.firstName,
+      form.value.lastName
+    )
     router.push('/explore')
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Registration failed'
@@ -65,37 +76,84 @@ async function handleSubmit() {
         <div class="field-row">
           <div class="field">
             <label for="firstName">First Name</label>
-            <input id="firstName" v-model="form.firstName" type="text" placeholder="John" :class="{ invalid: fieldErrors.firstName }" @input="clearFieldError('firstName')" />
+            <input
+              id="firstName"
+              v-model="form.firstName"
+              type="text"
+              placeholder="John"
+              :class="{ invalid: fieldErrors.firstName }"
+              @input="clearFieldError('firstName')"
+            />
             <span v-if="fieldErrors.firstName" class="field-error">{{ fieldErrors.firstName }}</span>
           </div>
           <div class="field">
             <label for="lastName">Last Name</label>
-            <input id="lastName" v-model="form.lastName" type="text" placeholder="Smith" :class="{ invalid: fieldErrors.lastName }" @input="clearFieldError('lastName')" />
+            <input
+              id="lastName"
+              v-model="form.lastName"
+              type="text"
+              placeholder="Smith"
+              :class="{ invalid: fieldErrors.lastName }"
+              @input="clearFieldError('lastName')"
+            />
             <span v-if="fieldErrors.lastName" class="field-error">{{ fieldErrors.lastName }}</span>
           </div>
         </div>
 
         <div class="field">
           <label for="email">Email</label>
-          <input id="email" v-model="form.email" type="email" placeholder="you@example.com" required :class="{ invalid: fieldErrors.email }" @input="clearFieldError('email')" />
+          <input
+            id="email"
+            v-model="form.email"
+            type="email"
+            placeholder="you@example.com"
+            required
+            :class="{ invalid: fieldErrors.email }"
+            @input="clearFieldError('email')"
+          />
           <span v-if="fieldErrors.email" class="field-error">{{ fieldErrors.email }}</span>
         </div>
 
         <div class="field">
           <label for="username">Username</label>
-          <input id="username" v-model="form.username" type="text" placeholder="yourusername" required :class="{ invalid: fieldErrors.username }" @input="clearFieldError('username')" />
+          <input
+            id="username"
+            v-model="form.username"
+            type="text"
+            placeholder="yourusername"
+            required
+            :class="{ invalid: fieldErrors.username }"
+            @input="clearFieldError('username')"
+          />
           <span v-if="fieldErrors.username" class="field-error">{{ fieldErrors.username }}</span>
         </div>
 
         <div class="field-row">
           <div class="field">
             <label for="password">Password</label>
-            <input id="password" v-model="form.password" type="password" placeholder="Min 8 characters" required minlength="8" :class="{ invalid: fieldErrors.password }" @input="clearFieldError('password'); clearFieldError('confirmPassword')" />
+            <input
+              id="password"
+              v-model="form.password"
+              type="password"
+              placeholder="Min 8 characters"
+              required
+              minlength="8"
+              :class="{ invalid: fieldErrors.password }"
+              @input="clearPasswordErrors"
+            />
             <span v-if="fieldErrors.password" class="field-error">{{ fieldErrors.password }}</span>
           </div>
           <div class="field">
             <label for="confirmPassword">Confirm</label>
-            <input id="confirmPassword" v-model="form.confirmPassword" type="password" placeholder="Repeat password" required :class="{ invalid: fieldErrors.confirmPassword }" @input="clearFieldError('confirmPassword')" />
+            <input
+              id="confirmPassword"
+              v-model="form.confirmPassword"
+              type="password"
+              placeholder="Repeat password"
+              required
+              :class="{ invalid: fieldErrors.confirmPassword }"
+              @input="clearFieldError('confirmPassword')"
+            />
             <span v-if="fieldErrors.confirmPassword" class="field-error">{{ fieldErrors.confirmPassword }}</span>
           </div>
         </div>
@@ -106,9 +164,7 @@ async function handleSubmit() {
         </button>
       </form>
 
-      <p class="auth-alt">
-        Already have an account? <router-link to="/login">Sign in</router-link>
-      </p>
+      <p class="auth-alt">Already have an account? <router-link to="/login">Sign in</router-link></p>
     </div>
   </div>
 </template>
@@ -130,9 +186,20 @@ async function handleSubmit() {
   padding: 40px;
   animation: scale-in 0.3s ease;
 }
-.auth-header { text-align: center; margin-bottom: 32px; }
-.auth-header h1 { font-size: 1.5rem; font-weight: 700; color: var(--color-text); margin-bottom: 8px; }
-.auth-header p { color: var(--color-text-secondary); font-size: 0.9375rem; }
+.auth-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.auth-header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+.auth-header p {
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+}
 .auth-error {
   padding: 12px 16px;
   background: #fef2f2;
@@ -142,22 +209,77 @@ async function handleSubmit() {
   font-size: 0.875rem;
   margin-bottom: 20px;
 }
-.field { margin-bottom: 20px; }
-.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.field label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--color-text); margin-bottom: 6px; }
+.field {
+  margin-bottom: 20px;
+}
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.field label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 6px;
+}
 .field input {
-  width: 100%; padding: 12px 16px; border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-sm); font-family: var(--font-family); font-size: 0.9375rem;
-  background: var(--color-bg); color: var(--color-text); transition: border-color var(--transition-fast);
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family);
+  font-size: 0.9375rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  transition: border-color var(--transition-fast);
   box-sizing: border-box;
 }
-.field input:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-.field input.invalid { border-color: var(--color-error); }
-.field input.invalid:focus { box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }
-.field-error { display: block; margin-top: 4px; font-size: 0.75rem; color: var(--color-error); }
-.auth-submit { width: 100%; margin-top: 8px; }
-.auth-alt { text-align: center; margin-top: 24px; font-size: 0.875rem; color: var(--color-text-secondary); }
-.spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; }
-@keyframes spin { to { transform: rotate(360deg); } }
-@media (max-width: 480px) { .field-row { grid-template-columns: 1fr; } }
+.field input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+.field input.invalid {
+  border-color: var(--color-error);
+}
+.field input.invalid:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+.field-error {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--color-error);
+}
+.auth-submit {
+  width: 100%;
+  margin-top: 8px;
+}
+.auth-alt {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-width: 480px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

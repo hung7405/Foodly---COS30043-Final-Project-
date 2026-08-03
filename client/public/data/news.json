@@ -70,5 +70,53 @@
     "category": "Sustainability",
     "imageUrl": "https://images.unsplash.com/photo-1505253716362-afaea1d3d1af?w=800&q=80",
     "publishedDate": "2026-04-20"
+  },
+  {
+    "id": 10,
+    "title": "Supermarkets Redirect Surplus Food to Community Fridges",
+    "content": "A growing network of community fridges is turning surplus supermarket stock into free groceries for local residents. Partner stores set aside near-expiry produce and bakery items at closing time, volunteers stock the fridges overnight, and families in need pick up fresh food the next morning. The model cuts retail waste while building food security block by block.",
+    "category": "Food Rescue",
+    "imageUrl": "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=800&q=80",
+    "publishedDate": "2026-04-12"
+  },
+  {
+    "id": 11,
+    "title": "Circular Economy: Turning Food Waste Into Compost and Energy",
+    "content": "Industrial composting and anaerobic digestion are transforming how cities treat organic waste. Scraps from restaurants and grocers are processed into nutrient-rich compost for urban farms and biogas that powers municipal facilities. Closing the loop from fork to farm is one of the fastest ways for councils to cut landfill emissions while regenerating local soil.",
+    "category": "Sustainability",
+    "imageUrl": "https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=800&q=80",
+    "publishedDate": "2026-04-05"
+  },
+  {
+    "id": 12,
+    "title": "Meal Planning 101: Save Money and Waste Less Every Week",
+    "content": "Planning just one week of meals can cut household food waste by up to a third. Write a shopping list before you head out, cook in batches, and designate a 'use-it-up' day for leftovers before they spoil. Track what you throw away for a fortnight — the pattern will tell you exactly which habits to change first.",
+    "category": "Tips & Tricks",
+    "imageUrl": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80",
+    "publishedDate": "2026-03-28"
+  },
+  {
+    "id": 13,
+    "title": "Foodly and City Council Announce Public Food Waste Forum",
+    "content": "Foodly is co-hosting an open forum with the City Council to discuss how technology can halve municipal food waste by 2030. Panellists will cover smart markdown systems, donation logistics, and community rescue networks. Residents can submit questions in advance and attend a live demonstration of real-time surplus matching.",
+    "category": "Events",
+    "imageUrl": "https://images.unsplash.com/photo-1505253716362-afaea1d3d1af?w=800&q=80",
+    "publishedDate": "2026-03-20"
+  },
+  {
+    "id": 14,
+    "title": "Student Food Bank Partnership Expands Across Campuses",
+    "content": "A partnership between Foodly and university food banks is expanding to three new campuses this semester. Students can claim discounted and donated meals directly through the app, with volunteer-run pick-up points at each campus hub. Early results show a 40% rise in food redistribution during exam season.",
+    "category": "Community Support",
+    "imageUrl": "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&q=80",
+    "publishedDate": "2026-03-12"
+  },
+  {
+    "id": 15,
+    "title": "Date-Label Reform: A Push for Clearer 'Best Before' Rules",
+    "content": "Campaigners are urging regulators to standardise date labels so consumers stop discarding food that is still safe to eat. Proposals include clearer 'best before' phrasing, QR codes linking to storage guidance, and expiry labelling education in schools. Experts estimate clearer labels alone could prevent thousands of tonnes of avoidable household waste every year.",
+    "category": "Sustainability",
+    "imageUrl": "https://images.unsplash.com/photo-1586999768265-24af89630739?w=800&q=80",
+    "publishedDate": "2026-03-05"
   }
 ]

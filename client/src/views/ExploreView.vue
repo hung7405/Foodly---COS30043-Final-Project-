@@ -59,16 +59,7 @@ const stores = computed(() => {
   deals.value.forEach((d) => d.store?.name && s.add(d.store.name))
   return [...s].sort()
 })
-const categories = [
-  'Food',
-  'Drinks',
-  'Bakery',
-  'Grocery',
-  'Asian',
-  'Western',
-  'Dessert',
-  'Healthy',
-]
+const categories = ['Food', 'Drinks', 'Bakery', 'Grocery', 'Asian', 'Western', 'Dessert', 'Healthy']
 const categoryOptions = [
   { id: 'food', name: 'Food' },
   { id: 'drinks', name: 'Drinks' },
@@ -80,7 +71,22 @@ const categoryOptions = [
   { id: 'healthy', name: 'Healthy' },
 ]
 const categoryKeywords: Record<string, Array<string> | undefined> = {
-  Food: ['com', 'ga', 'bento', 'banh mi', 'sandwich', 'pizza', 'dimsum', 'tokbokki', 'kimbap', 'ramen', 'takoyaki', 'xuc xich', 'chao', 'xoi'],
+  Food: [
+    'com',
+    'ga',
+    'bento',
+    'banh mi',
+    'sandwich',
+    'pizza',
+    'dimsum',
+    'tokbokki',
+    'kimbap',
+    'ramen',
+    'takoyaki',
+    'xuc xich',
+    'chao',
+    'xoi',
+  ],
   Drinks: ['uong', 'ca phe', 'tra', 'nuoc', 'bia', 'sua chua', 'yen sao', 'tra dao', 'sua'],
   Bakery: ['banh', 'baguette', 'flan'],
   Grocery: ['thuc pham', 'rau', 'thit', 'ca', 'tom', 'trung', 'gao', 'trai cay', 'pho mai', 'dau olive', 'pasta'],
@@ -104,7 +110,7 @@ const activeFiltersCount = computed(
     [selectedStore.value, selectedRating.value, minDiscount.value, radiusKm.value].filter(Boolean).length +
     (verifiedOnly.value ? 1 : 0) +
     (category.value !== 'All' ? 1 : 0) +
-    (searchQuery.value.trim() ? 1 : 0),
+    (searchQuery.value.trim() ? 1 : 0)
 )
 
 const filteredDeals = computed(() => {
@@ -131,11 +137,14 @@ const filteredDeals = computed(() => {
   }
   switch (sortBy.value) {
     case 'discount':
-      result.sort((a, b) => discountPct(b) - discountPct(a)); break
+      result.sort((a, b) => discountPct(b) - discountPct(a))
+      break
     case 'price-asc':
-      result.sort((a, b) => (a.discountPrice || 0) - (b.discountPrice || 0)); break
+      result.sort((a, b) => (a.discountPrice || 0) - (b.discountPrice || 0))
+      break
     case 'price-desc':
-      result.sort((a, b) => (b.discountPrice || 0) - (a.discountPrice || 0)); break
+      result.sort((a, b) => (b.discountPrice || 0) - (a.discountPrice || 0))
+      break
     default:
       if (userLocation.value) result.sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0))
   }
@@ -147,9 +156,14 @@ function joinDealRooms(list: Deal[]) {
   const socket = getSocket()
   const next = new Set<string>()
   list.forEach((d: any) => {
-    if (d?.id && !next.has(d.id)) { next.add(d.id); socket.emit('deal:join', d.id) }
+    if (d?.id && !next.has(d.id)) {
+      next.add(d.id)
+      socket.emit('deal:join', d.id)
+    }
   })
-  joinedDealIds.forEach((id) => { if (!next.has(id)) socket.emit('deal:leave', id) })
+  joinedDealIds.forEach((id) => {
+    if (!next.has(id)) socket.emit('deal:leave', id)
+  })
   joinedDealIds = next
 }
 function leaveAllDealRooms() {
@@ -167,12 +181,17 @@ onMounted(async () => {
       const loc = JSON.parse(saved)
       userLocation.value = loc
       showLocationPrompt.value = false
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
   }
   await loadDeals()
   await nextTick()
   if (showMap.value) await nextTick(initMap)
-  if (userLocation.value) { drawUserMarker(); centerMap(userLocation.value.lat, userLocation.value.lng, 13) }
+  if (userLocation.value) {
+    drawUserMarker()
+    centerMap(userLocation.value.lat, userLocation.value.lng, 13)
+  }
   refreshLocationSilently()
 
   const socket = getSocket()
@@ -182,11 +201,15 @@ onMounted(async () => {
     scheduleMarkerUpdate()
   })
   socket.on('deal:quantity', (p: { id: string; remaining: number }) => {
-    const d = deals.value.find((i) => i.id === p.id); if (d) d.remainingQuantity = p.remaining
+    const d = deals.value.find((i) => i.id === p.id)
+    if (d) d.remainingQuantity = p.remaining
   })
   socket.on('deal:updated', (p: { id: string; changes: any }) => {
     const d = deals.value.find((i) => i.id === p.id)
-    if (d && p.changes) { Object.assign(d, p.changes); scheduleMarkerUpdate() }
+    if (d && p.changes) {
+      Object.assign(d, p.changes)
+      scheduleMarkerUpdate()
+    }
   })
 })
 onUnmounted(() => {
@@ -196,10 +219,17 @@ onUnmounted(() => {
 
 watch([() => route.query.category, () => route.query.search], ([nextCategory, nextSearch]) => {
   if (typeof nextSearch === 'string' && searchQuery.value !== nextSearch) searchQuery.value = nextSearch
-  if (typeof nextCategory === 'string' && category.value !== normalizeCategoryQuery(nextCategory)) category.value = normalizeCategoryQuery(nextCategory)
+  if (typeof nextCategory === 'string' && category.value !== normalizeCategoryQuery(nextCategory))
+    category.value = normalizeCategoryQuery(nextCategory)
 })
-watch(filteredDeals, () => { scheduleMarkerUpdate(); joinDealRooms(filteredDeals.value) })
-watch(showMap, (v: boolean) => { if (v) nextTick(initMap); else deselectDeal() })
+watch(filteredDeals, () => {
+  scheduleMarkerUpdate()
+  joinDealRooms(filteredDeals.value)
+})
+watch(showMap, (v: boolean) => {
+  if (v) nextTick(initMap)
+  else deselectDeal()
+})
 
 let markerUpdateTimer: number | undefined
 let listRefreshTimer: number | undefined
@@ -211,22 +241,41 @@ function scheduleMarkerUpdate() {
 }
 
 async function loadDeals() {
-  isLoading.value = true; error.value = ''
+  isLoading.value = true
+  error.value = ''
   try {
     const result = await dealsService.findAll({ status: 'active', limit: 100 })
     deals.value = result.deals || []
-  } catch { deals.value = [] }
-  finally { isLoading.value = false }
+  } catch {
+    deals.value = []
+  } finally {
+    isLoading.value = false
+  }
 }
 function resetFilters() {
-  selectedStore.value = ''; selectedRating.value = 0; verifiedOnly.value = false; minDiscount.value = 0; radiusKm.value = 0; searchQuery.value = ''; category.value = 'All'
+  selectedStore.value = ''
+  selectedRating.value = 0
+  verifiedOnly.value = false
+  minDiscount.value = 0
+  radiusKm.value = 0
+  searchQuery.value = ''
+  category.value = 'All'
 }
 function initMap() {
   if (!mapContainer.value || map.value) return
   map.value = L.map(mapContainer.value, { center: [10.8231, 106.6297], zoom: 12, zoomControl: false })
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, attribution: '&copy; <a href="https://carto.com/">CARTO</a>' }).addTo(map.value)
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+  }).addTo(map.value)
   L.control.zoom({ position: 'topright' }).addTo(map.value)
-  markerCluster.value = (L as any).markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 46, spiderfyOnMaxZoom: true, showCoverageOnHover: false, zoomToBoundsOnClick: true })
+  markerCluster.value = (L as any).markerClusterGroup({
+    chunkedLoading: true,
+    maxClusterRadius: 46,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true,
+  })
   map.value.addLayer(markerCluster.value)
   map.value.on('click', () => deselectDeal())
   rebuildMarkers()
@@ -237,10 +286,17 @@ function createDealIcon(deal: Deal, selected = false) {
   const pct = discountPct(deal)
   const color = selected ? '#059669' : deal.verified ? '#10b981' : '#ee4d2d'
   return L.divIcon({
-    html: '<div class="deal-marker" style="--mc:' + color + '">' +
-      '<span class="deal-marker-price">' + (isSurpriseDeal(deal) ? 'Surprise' : (pct > 0 ? '-' + pct + '%' : formatVND(Number(deal.discountPrice)))) + '</span>' +
+    html:
+      '<div class="deal-marker" style="--mc:' +
+      color +
+      '">' +
+      '<span class="deal-marker-price">' +
+      (isSurpriseDeal(deal) ? 'Surprise' : pct > 0 ? '-' + pct + '%' : formatVND(Number(deal.discountPrice))) +
+      '</span>' +
       '<span class="deal-marker-dot"></span></div>',
-    className: '', iconSize: L.point(70, 34), iconAnchor: L.point(35, 34),
+    className: '',
+    iconSize: L.point(70, 34),
+    iconAnchor: L.point(35, 34),
   })
 }
 function rebuildMarkers() {
@@ -248,9 +304,12 @@ function rebuildMarkers() {
   markerCluster.value.clearLayers()
   markerMap.clear()
   filteredDeals.value.forEach((deal) => {
-    const marker = L.marker([Number(deal.latitude), Number(deal.longitude)], { icon: createDealIcon(deal, selectedDeal.value?.id === deal.id) })
+    const marker = L.marker([Number(deal.latitude), Number(deal.longitude)], {
+      icon: createDealIcon(deal, selectedDeal.value?.id === deal.id),
+    })
     marker.on('click', () => selectDeal(deal))
-    markerMap.set(deal.id, marker); markerCluster.value.addLayer(marker)
+    markerMap.set(deal.id, marker)
+    markerCluster.value.addLayer(marker)
   })
 }
 function drawUserMarker() {
@@ -262,20 +321,28 @@ function drawUserMarker() {
   userMarker.value = L.marker([userLocation.value.lat, userLocation.value.lng], {
     icon: L.divIcon({ html: el.outerHTML, className: '', iconSize: L.point(24, 24), iconAnchor: L.point(12, 12) }),
     zIndexOffset: 10000,
-  }).addTo(map.value).bindPopup('Your location')
+  })
+    .addTo(map.value)
+    .bindPopup('Your location')
 }
-function centerMap(lat: number, lng: number, zoom = 14) { map.value?.setView([lat, lng], zoom) }
+function centerMap(lat: number, lng: number, zoom = 14) {
+  map.value?.setView([lat, lng], zoom)
+}
 
 async function locateUser() {
-  isLocating.value = true; error.value = ''
+  isLocating.value = true
+  error.value = ''
   try {
     if (!navigator.geolocation) throw new Error('')
-    const pos = await new Promise<GeolocationPosition>((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 }))
+    const pos = await new Promise<GeolocationPosition>((res, rej) =>
+      navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 })
+    )
     userLocation.value = { lat: pos.coords.latitude, lng: pos.coords.longitude }
     localStorage.setItem('foodly_location', JSON.stringify(userLocation.value))
     showLocationPrompt.value = false
     if (!map.value) await nextTick(initMap)
-    drawUserMarker(); centerMap(userLocation.value.lat, userLocation.value.lng)
+    drawUserMarker()
+    centerMap(userLocation.value.lat, userLocation.value.lng)
   } catch {
     const ip = await freeApis.detectLocation()
     if (ip) {
@@ -283,32 +350,64 @@ async function locateUser() {
       localStorage.setItem('foodly_location', JSON.stringify(userLocation.value))
       showLocationPrompt.value = false
       if (!map.value) await nextTick(initMap)
-      drawUserMarker(); centerMap(userLocation.value.lat, userLocation.value.lng)
-    } else { error.value = 'Could not determine location. Please try again.' }
-  } finally { isLocating.value = false }
+      drawUserMarker()
+      centerMap(userLocation.value.lat, userLocation.value.lng)
+    } else {
+      error.value = 'Could not determine location. Please try again.'
+    }
+  } finally {
+    isLocating.value = false
+  }
 }
 async function refreshLocationSilently() {
   if (!navigator.geolocation) return
   let granted = false
   try {
-    if (navigator.permissions?.query) { const p = await navigator.permissions.query({ name: 'geolocation' }); granted = p.state === 'granted' }
-  } catch { granted = false }
+    if (navigator.permissions?.query) {
+      const p = await navigator.permissions.query({ name: 'geolocation' })
+      granted = p.state === 'granted'
+    }
+  } catch {
+    granted = false
+  }
   if (!granted) return
   try {
-    const pos = await new Promise<GeolocationPosition>((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, maximumAge: 30000, timeout: 8000 }))
+    const pos = await new Promise<GeolocationPosition>((res, rej) =>
+      navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, maximumAge: 30000, timeout: 8000 })
+    )
     userLocation.value = { lat: pos.coords.latitude, lng: pos.coords.longitude }
     localStorage.setItem('foodly_location', JSON.stringify(userLocation.value))
-    if (map.value) { drawUserMarker(); centerMap(userLocation.value.lat, userLocation.value.lng, Math.max(map.value.getZoom(), 13)) }
-  } catch { /* keep cached location */ }
+    if (map.value) {
+      drawUserMarker()
+      centerMap(userLocation.value.lat, userLocation.value.lng, Math.max(map.value.getZoom(), 13))
+    }
+  } catch {
+    /* keep cached location */
+  }
 }
-function formatDist(v?: number) { return v === undefined ? '' : v < 1 ? Math.round(v * 1000) + 'm' : v.toFixed(1) + 'km' }
+function formatDist(v?: number) {
+  return v === undefined ? '' : v < 1 ? Math.round(v * 1000) + 'm' : v.toFixed(1) + 'km'
+}
 function calcDistance(lat1: number, lng1: number, lat2: number, lng2: number) {
-  const r = (v: number) => v * Math.PI / 180
-  const a = Math.sin(r(lat2 - lat1) / 2) ** 2 + Math.cos(r(lat1)) * Math.cos(r(lat2)) * Math.sin(r(lng2 - lng1) / 2) ** 2
+  const r = (v: number) => (v * Math.PI) / 180
+  const a =
+    Math.sin(r(lat2 - lat1) / 2) ** 2 + Math.cos(r(lat1)) * Math.cos(r(lat2)) * Math.sin(r(lng2 - lng1) / 2) ** 2
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
-function selectDeal(deal: Deal) { selectedDeal.value = deal; routeInfo.value = null; rebuildMarkers(); if (map.value) centerMap(Number(deal.latitude), Number(deal.longitude), 15); resolveDealAddress(deal) }
-function deselectDeal() { selectedDeal.value = null; routeInfo.value = null; dealAddress.value = null; addressReqId++; rebuildMarkers() }
+function selectDeal(deal: Deal) {
+  selectedDeal.value = deal
+  routeInfo.value = null
+  rebuildMarkers()
+  if (map.value) centerMap(Number(deal.latitude), Number(deal.longitude), 15)
+  resolveDealAddress(deal)
+}
+function deselectDeal() {
+  selectedDeal.value = null
+  routeInfo.value = null
+  dealAddress.value = null
+  addressReqId++
+  rebuildMarkers()
+}
 async function resolveDealAddress(deal: Deal) {
   const reqId = ++addressReqId
   dealAddress.value = deal.address || deal.store?.address || null
@@ -316,22 +415,28 @@ async function resolveDealAddress(deal: Deal) {
   try {
     const addr = await freeApis.reverseGeocode(Number(deal.latitude), Number(deal.longitude))
     if (reqId === addressReqId) dealAddress.value = addr
-  } catch { /* optional enhancement */ }
+  } catch {
+    /* optional enhancement */
+  }
 }
 async function buildRoute() {
   if (!selectedDeal.value || !userLocation.value) return
-  isRouting.value = true; error.value = ''
+  isRouting.value = true
+  error.value = ''
   try {
     const route = await freeApis.getRoute(
       [userLocation.value.lat, userLocation.value.lng],
       [Number(selectedDeal.value.latitude), Number(selectedDeal.value.longitude)],
-      routeMode.value,
+      routeMode.value
     )
     if (!route) throw new Error('')
     routeInfo.value = { distanceKm: route.distanceKm, durationMin: route.durationMin }
     drawRoute(route.geometry)
-  } catch { error.value = 'Could not calculate directions' }
-  finally { isRouting.value = false }
+  } catch {
+    error.value = 'Could not calculate directions'
+  } finally {
+    isRouting.value = false
+  }
 }
 function drawRoute(geo: any) {
   if (!map.value) return
@@ -340,13 +445,16 @@ function drawRoute(geo: any) {
   routeLine.value = L.polyline(coords, { color: '#ee4d2d', weight: 4, opacity: 0.85 }).addTo(map.value)
   map.value.fitBounds(routeLine.value.getBounds().pad(0.15))
 }
-function handleAllowLocation() { locateUser() }
+function handleAllowLocation() {
+  locateUser()
+}
 function handleSkipLocation() {
   showLocationPrompt.value = false
   userLocation.value = { lat: 10.8231, lng: 106.6297 }
   localStorage.setItem('foodly_location', JSON.stringify(userLocation.value))
   if (!map.value) return
-  drawUserMarker(); centerMap(userLocation.value.lat, userLocation.value.lng, 13)
+  drawUserMarker()
+  centerMap(userLocation.value.lat, userLocation.value.lng, 13)
 }
 </script>
 
@@ -354,7 +462,10 @@ function handleSkipLocation() {
   <div class="explore-page">
     <div class="explore-toolbar">
       <div class="search-wrapper">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
         <input v-model="searchQuery" type="search" placeholder="Search deals, stores..." class="toolbar-search" />
       </div>
       <div class="toolbar-actions">
@@ -365,11 +476,28 @@ function handleSkipLocation() {
           <option value="price-desc">Price: High to Low</option>
         </select>
         <button class="btn-ghost btn-icon" :title="showMap ? 'Show list' : 'Show map'" @click="showMap = !showMap">
-          <svg v-if="showMap" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
-          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <svg
+            v-if="showMap"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+            <line x1="8" y1="2" x2="8" y2="18" />
+            <line x1="16" y1="6" x2="16" y2="22" />
+          </svg>
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
         </button>
         <button class="btn-ghost btn-icon d-md-none" @click="showFilters = true" :title="'Filters'">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
+          </svg>
           <span v-if="activeFiltersCount" class="filter-dot">{{ activeFiltersCount }}</span>
         </button>
       </div>
@@ -385,7 +513,9 @@ function handleSkipLocation() {
           <div class="filter-group">
             <label class="filter-label">Location</label>
             <div v-if="!userLocation" class="flex gap-2">
-              <button class="btn btn-sm" @click="locateUser()" :disabled="isLocating">{{ isLocating ? 'Locating…' : 'Use my location' }}</button>
+              <button class="btn btn-sm" @click="locateUser()" :disabled="isLocating">
+                {{ isLocating ? 'Locating…' : 'Use my location' }}
+              </button>
             </div>
             <div v-else class="flex flex-col gap-2">
               <select v-model="radiusKm" class="input input-sm">
@@ -408,7 +538,14 @@ function handleSkipLocation() {
             <label class="filter-label">Category</label>
             <div class="filter-chips">
               <button @click="category = 'All'" :class="['chip', { active: category === 'All' }]">All</button>
-              <button v-for="c in categories" :key="c" @click="category = c" :class="['chip', { active: category === c }]">{{ c }}</button>
+              <button
+                v-for="c in categories"
+                :key="c"
+                @click="category = c"
+                :class="['chip', { active: category === c }]"
+              >
+                {{ c }}
+              </button>
             </div>
           </div>
 
@@ -416,12 +553,25 @@ function handleSkipLocation() {
             <label class="filter-label">Min rating</label>
             <div class="filter-chips">
               <button @click="selectedRating = 0" :class="['chip', { active: selectedRating === 0 }]">Any</button>
-              <button v-for="s in ratingOptions" :key="s" @click="selectedRating = s" :class="['chip rating-chip', { active: selectedRating === s }]">
+              <button
+                v-for="s in ratingOptions"
+                :key="s"
+                @click="selectedRating = s"
+                :class="['chip rating-chip', { active: selectedRating === s }]"
+              >
                 <span class="stars sm">
-                  <svg v-for="i in 5" :key="i" width="10" height="10" viewBox="0 0 24 24"
+                  <svg
+                    v-for="i in 5"
+                    :key="i"
+                    width="10"
+                    height="10"
+                    viewBox="0 0 24 24"
                     :fill="i <= s ? 'var(--color-rating)' : 'none'"
-                    :stroke="i <= s ? 'var(--color-rating)' : 'var(--color-text-tertiary)'">
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    :stroke="i <= s ? 'var(--color-rating)' : 'var(--color-text-tertiary)'"
+                  >
+                    <polygon
+                      points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                    />
                   </svg>
                 </span>
                 {{ s }}+
@@ -432,7 +582,17 @@ function handleSkipLocation() {
           <div class="filter-group">
             <label class="filter-label">Verified</label>
             <button @click="verifiedOnly = !verifiedOnly" :class="['chip', { active: verifiedOnly }]">
-              <svg v-if="verifiedOnly" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-4-4"/></svg>
+              <svg
+                v-if="verifiedOnly"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M20 6L9 17l-4-4" />
+              </svg>
               Verified only
             </button>
           </div>
@@ -441,7 +601,14 @@ function handleSkipLocation() {
             <label class="filter-label">Min discount</label>
             <div class="filter-chips">
               <button @click="minDiscount = 0" :class="['chip', { active: minDiscount === 0 }]">Any</button>
-              <button v-for="d in discountTiers" :key="d" @click="minDiscount = d" :class="['chip', { active: minDiscount === d }]">&ge; {{ d }}%</button>
+              <button
+                v-for="d in discountTiers"
+                :key="d"
+                @click="minDiscount = d"
+                :class="['chip', { active: minDiscount === d }]"
+              >
+                &ge; {{ d }}%
+              </button>
             </div>
           </div>
         </div>
@@ -452,45 +619,114 @@ function handleSkipLocation() {
         <div v-if="showMap" class="map-section">
           <div v-if="showLocationPrompt" class="location-overlay">
             <div class="location-dialog">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <svg
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--color-accent)"
+                stroke-width="1.5"
+              >
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
               <h3>Enable location?</h3>
               <p>Find the best deals near you with location access.</p>
               <div class="location-actions">
-                <button class="btn btn-primary" @click="handleAllowLocation">{{ isLocating ? 'Locating...' : 'Enable' }}</button>
+                <button class="btn btn-primary" @click="handleAllowLocation">
+                  {{ isLocating ? 'Locating...' : 'Enable' }}
+                </button>
                 <button class="btn btn-outline" @click="handleSkipLocation">Use default location</button>
               </div>
             </div>
           </div>
           <div ref="mapContainer" class="map-canvas"></div>
-          <button class="btn-locate" @click="locateUser" :disabled="isLocating" title="Locate me" aria-label="Locate me">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+          <button
+            class="btn-locate"
+            @click="locateUser"
+            :disabled="isLocating"
+            title="Locate me"
+            aria-label="Locate me"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <circle cx="12" cy="12" r="3" />
+              <circle cx="12" cy="12" r="8" />
+              <line x1="12" y1="2" x2="12" y2="6" />
+              <line x1="12" y1="18" x2="12" y2="22" />
+              <line x1="2" y1="12" x2="6" y2="12" />
+              <line x1="18" y1="12" x2="22" y2="12" />
+            </svg>
           </button>
           <div v-if="selectedDeal" class="map-info-panel">
             <button class="info-close" @click="deselectDeal" aria-label="Close deal details">&times;</button>
             <div class="info-row">
-              <div class="info-thumb"><img :src="selectedDeal.images?.[0] || 'https://images.unsplash.com/photo-1586999768265-24af89630739?w=100&q=80'" :alt="selectedDeal.title" /></div>
+              <div class="info-thumb">
+                <img
+                  :src="
+                    selectedDeal.images?.[0] ||
+                    'https://images.unsplash.com/photo-1586999768265-24af89630739?w=100&q=80'
+                  "
+                  :alt="selectedDeal.title"
+                />
+              </div>
               <div class="info-content">
                 <h4>{{ selectedDeal.title }}</h4>
                 <div class="info-store">{{ selectedDeal.store?.name || 'Store' }}</div>
                 <div v-if="dealAddress" class="info-address">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
                   {{ dealAddress }}
                 </div>
-                <div class="info-price">{{ formatVND(selectedDeal.discountPrice) }} <s v-if="!isSurpriseDeal(selectedDeal) && selectedDeal.originalPrice > selectedDeal.discountPrice">{{ formatVND(selectedDeal.originalPrice) }}</s><span v-if="isSurpriseDeal(selectedDeal)" class="info-up-to">up to {{ formatVND(selectedDeal.originalPrice) }} value</span></div>
+                <div class="info-price">
+                  {{ formatVND(selectedDeal.discountPrice) }}
+                  <s v-if="!isSurpriseDeal(selectedDeal) && selectedDeal.originalPrice > selectedDeal.discountPrice">{{
+                    formatVND(selectedDeal.originalPrice)
+                  }}</s
+                  ><span v-if="isSurpriseDeal(selectedDeal)" class="info-up-to"
+                    >up to {{ formatVND(selectedDeal.originalPrice) }} value</span
+                  >
+                </div>
               </div>
             </div>
             <div class="info-meta">
               <span class="info-stock">{{ selectedDeal.remainingQuantity }} left</span>
-              <span v-if="userLocation" class="info-dist">{{ formatDist(calcDistance(userLocation.lat, userLocation.lng, Number(selectedDeal.latitude), Number(selectedDeal.longitude))) }}</span>
+              <span v-if="userLocation" class="info-dist">{{
+                formatDist(
+                  calcDistance(
+                    userLocation.lat,
+                    userLocation.lng,
+                    Number(selectedDeal.latitude),
+                    Number(selectedDeal.longitude)
+                  )
+                )
+              }}</span>
             </div>
             <div class="info-actions">
               <router-link :to="'/deals/' + selectedDeal.id" class="btn btn-primary btn-sm">Details</router-link>
-              <button class="btn btn-outline btn-sm" @click="buildRoute" :disabled="isRouting">{{ isRouting ? 'Routing...' : 'Directions' }}</button>
-              <button class="btn-map-center" @click="centerMap(Number(selectedDeal.latitude), Number(selectedDeal.longitude), 16)" title="Center map" aria-label="Center map on this deal">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+              <button class="btn btn-outline btn-sm" @click="buildRoute" :disabled="isRouting">
+                {{ isRouting ? 'Routing...' : 'Directions' }}
+              </button>
+              <button
+                class="btn-map-center"
+                @click="centerMap(Number(selectedDeal.latitude), Number(selectedDeal.longitude), 16)"
+                title="Center map"
+                aria-label="Center map on this deal"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3" />
+                  <circle cx="12" cy="12" r="8" />
+                  <line x1="12" y1="2" x2="12" y2="6" />
+                  <line x1="12" y1="18" x2="12" y2="22" />
+                  <line x1="2" y1="12" x2="6" y2="12" />
+                  <line x1="18" y1="12" x2="22" y2="12" />
+                </svg>
               </button>
             </div>
-            <div v-if="routeInfo" class="info-route">{{ formatDist(routeInfo.distanceKm) }} and {{ Math.round(routeInfo.durationMin) }} min</div>
+            <div v-if="routeInfo" class="info-route">
+              {{ formatDist(routeInfo.distanceKm) }} and {{ Math.round(routeInfo.durationMin) }} min
+            </div>
           </div>
         </div>
 
@@ -506,7 +742,11 @@ function handleSkipLocation() {
           <div v-else class="deal-grid">
             <router-link v-for="deal in filteredDeals" :key="deal.id" :to="'/deals/' + deal.id" class="deal-card">
               <div class="deal-card-img">
-                <img :src="deal.images?.[0] || 'https://images.unsplash.com/photo-1586999768265-24af89630739?w=200&q=80'" :alt="deal.title" loading="lazy" />
+                <img
+                  :src="deal.images?.[0] || 'https://images.unsplash.com/photo-1586999768265-24af89630739?w=200&q=80'"
+                  :alt="deal.title"
+                  loading="lazy"
+                />
                 <span v-if="isSurpriseDeal(deal)" class="deal-surprise">Surprise</span>
                 <span v-else-if="discountPct(deal) > 0" class="deal-discount">-{{ discountPct(deal) }}%</span>
                 <span v-if="deal.verified" class="deal-badge" title="Verified">V</span>
@@ -517,11 +757,17 @@ function handleSkipLocation() {
                 <h4 class="deal-title">{{ deal.title }}</h4>
                 <div class="deal-meta-row">
                   <span class="deal-price">{{ formatVND(deal.discountPrice) }}</span>
-                  <s v-if="!isSurpriseDeal(deal) && deal.originalPrice > deal.discountPrice" class="deal-original">{{ formatVND(deal.originalPrice) }}</s>
-                  <span v-else-if="isSurpriseDeal(deal)" class="deal-up-to">up to {{ formatVND(deal.originalPrice) }} value</span>
+                  <s v-if="!isSurpriseDeal(deal) && deal.originalPrice > deal.discountPrice" class="deal-original">{{
+                    formatVND(deal.originalPrice)
+                  }}</s>
+                  <span v-else-if="isSurpriseDeal(deal)" class="deal-up-to"
+                    >up to {{ formatVND(deal.originalPrice) }} value</span
+                  >
                 </div>
                 <div class="deal-meta-bottom">
-                  <span v-if="userLocation && deal.latitude" class="deal-distance">{{ formatDist(deal.distanceKm) }}</span>
+                  <span v-if="userLocation && deal.latitude" class="deal-distance">{{
+                    formatDist(deal.distanceKm)
+                  }}</span>
                 </div>
               </div>
             </router-link>
@@ -563,7 +809,9 @@ function handleSkipLocation() {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   color: var(--color-text-secondary);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 .search-wrapper:focus-within {
   border-color: var(--color-accent);
@@ -579,14 +827,18 @@ function handleSkipLocation() {
   font-size: 14px;
   font-family: var(--font-family);
 }
-.toolbar-search::placeholder { color: var(--color-text-tertiary); }
+.toolbar-search::placeholder {
+  color: var(--color-text-tertiary);
+}
 
 .toolbar-actions {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.sort-select { width: auto; }
+.sort-select {
+  width: auto;
+}
 
 .filter-dot {
   position: absolute;
@@ -603,7 +855,9 @@ function handleSkipLocation() {
   line-height: 15px;
   text-align: center;
 }
-.btn-icon { position: relative; }
+.btn-icon {
+  position: relative;
+}
 
 .explore-layout {
   display: grid;
@@ -674,19 +928,35 @@ function handleSkipLocation() {
   font-size: 13px;
   font-family: var(--font-family);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    color 0.15s;
 }
-.chip:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.chip:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
 .chip.active {
   background: var(--color-accent);
   border-color: var(--color-accent);
   color: #fff;
 }
-.rating-chip { padding: 6px 10px; }
-.stars.sm { display: inline-flex; gap: 1px; }
-.location-hint { font-size: 12px; color: var(--color-text-tertiary); }
+.rating-chip {
+  padding: 6px 10px;
+}
+.stars.sm {
+  display: inline-flex;
+  gap: 1px;
+}
+.location-hint {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
 
-.explore-main { min-width: 0; }
+.explore-main {
+  min-width: 0;
+}
 
 .map-section {
   position: relative;
@@ -718,7 +988,10 @@ function handleSkipLocation() {
   cursor: pointer;
   box-shadow: 0 2px 8px var(--color-card-shadow);
 }
-.btn-locate:disabled { opacity: 0.5; cursor: default; }
+.btn-locate:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 
 .location-overlay {
   position: absolute;
@@ -741,9 +1014,20 @@ function handleSkipLocation() {
   border-radius: var(--radius-lg);
   box-shadow: 0 12px 40px var(--color-card-shadow);
 }
-.location-dialog h3 { font-size: 17px; font-weight: 700; color: var(--color-text); }
-.location-dialog p { font-size: 13px; color: var(--color-text-secondary); }
-.location-actions { display: flex; gap: 10px; justify-content: center; }
+.location-dialog h3 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.location-dialog p {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+.location-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
 
 .map-info-panel {
   position: absolute;
@@ -771,8 +1055,13 @@ function handleSkipLocation() {
   line-height: 1;
   cursor: pointer;
 }
-.info-close:hover { color: var(--color-text); }
-.info-row { display: flex; gap: 12px; }
+.info-close:hover {
+  color: var(--color-text);
+}
+.info-row {
+  display: flex;
+  gap: 12px;
+}
 .info-thumb {
   width: 64px;
   height: 64px;
@@ -780,8 +1069,14 @@ function handleSkipLocation() {
   border-radius: var(--radius-md);
   overflow: hidden;
 }
-.info-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.info-content { min-width: 0; }
+.info-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.info-content {
+  min-width: 0;
+}
 .info-content h4 {
   font-size: 14px;
   font-weight: 600;
@@ -791,15 +1086,61 @@ function handleSkipLocation() {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.info-store { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
-.info-address { font-size: 11px; color: var(--color-text-tertiary); margin-top: 2px; display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.info-price { font-weight: 700; color: var(--color-accent); margin-top: 4px; }
-.info-price s { font-weight: 400; color: var(--color-text-tertiary); margin-left: 6px; }
-.info-up-to { display: inline-block; font-size: 11px; font-weight: 600; color: #7c3aed; background: #f3e8ff; padding: 2px 8px; border-radius: var(--radius-full); margin-left: 8px; }
-.info-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; }
-.info-stock { color: var(--color-warning); font-weight: 600; }
-.info-dist { color: var(--color-text-tertiary); }
-.info-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.info-store {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+.info-address {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.info-price {
+  font-weight: 700;
+  color: var(--color-accent);
+  margin-top: 4px;
+}
+.info-price s {
+  font-weight: 400;
+  color: var(--color-text-tertiary);
+  margin-left: 6px;
+}
+.info-up-to {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #7c3aed;
+  background: #f3e8ff;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  margin-left: 8px;
+}
+.info-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+.info-stock {
+  color: var(--color-warning);
+  font-weight: 600;
+}
+.info-dist {
+  color: var(--color-text-tertiary);
+}
+.info-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
 .btn-map-center {
   width: 32px;
   height: 32px;
@@ -812,10 +1153,19 @@ function handleSkipLocation() {
   color: var(--color-text-secondary);
   cursor: pointer;
 }
-.btn-map-center:hover { color: var(--color-accent); border-color: var(--color-accent); }
-.info-route { font-size: 12px; font-weight: 600; color: var(--color-success); }
+.btn-map-center:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.info-route {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-success);
+}
 
-.deals-grid { min-height: 60vh; }
+.deals-grid {
+  min-height: 60vh;
+}
 .deal-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -830,7 +1180,9 @@ function handleSkipLocation() {
   overflow: hidden;
   text-decoration: none;
   color: inherit;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
 }
 .deal-card:hover {
   transform: translateY(-3px);
@@ -848,7 +1200,9 @@ function handleSkipLocation() {
   object-fit: cover;
   transition: transform 0.3s;
 }
-.deal-card:hover .deal-card-img img { transform: scale(1.05); }
+.deal-card:hover .deal-card-img img {
+  transform: scale(1.05);
+}
 .deal-discount {
   position: absolute;
   top: 10px;
@@ -925,12 +1279,38 @@ function handleSkipLocation() {
   overflow: hidden;
   min-height: 2.8em;
 }
-.deal-meta-row { display: flex; align-items: baseline; gap: 8px; }
-.deal-price { font-size: 16px; font-weight: 700; color: var(--color-accent); }
-.deal-original { font-size: 12px; color: var(--color-text-tertiary); }
-.deal-up-to { font-size: 11px; font-weight: 600; color: #7c3aed; background: #f3e8ff; padding: 2px 8px; border-radius: var(--radius-full); white-space: nowrap; }
-.deal-meta-bottom { display: flex; justify-content: space-between; margin-top: auto; }
-.deal-distance { font-size: 12px; color: var(--color-text-tertiary); }
+.deal-meta-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.deal-price {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+.deal-original {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+.deal-up-to {
+  font-size: 11px;
+  font-weight: 600;
+  color: #7c3aed;
+  background: #f3e8ff;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+.deal-meta-bottom {
+  display: flex;
+  justify-content: space-between;
+  margin-top: auto;
+}
+.deal-distance {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
 
 .grid-skeleton {
   display: grid;
@@ -940,13 +1320,22 @@ function handleSkipLocation() {
 .skeleton-card {
   height: 300px;
   border-radius: var(--radius-lg);
-  background: linear-gradient(100deg, var(--color-bg-secondary) 40%, var(--color-surface-container) 50%, var(--color-bg-secondary) 60%);
+  background: linear-gradient(
+    100deg,
+    var(--color-bg-secondary) 40%,
+    var(--color-surface-container) 50%,
+    var(--color-bg-secondary) 60%
+  );
   background-size: 200% 100%;
   animation: skeleton-load 1.2s ease-in-out infinite;
 }
 @keyframes skeleton-load {
-  0% { background-position: 100% 0; }
-  100% { background-position: -100% 0; }
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
 }
 
 .empty-state {
@@ -957,8 +1346,15 @@ function handleSkipLocation() {
   padding: 64px 20px;
   text-align: center;
 }
-.empty-state h3 { font-size: 16px; font-weight: 700; color: var(--color-text); }
-.empty-state p { font-size: 13px; color: var(--color-text-secondary); }
+.empty-state h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.empty-state p {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
 
 .error-bar {
   position: fixed;
@@ -975,11 +1371,19 @@ function handleSkipLocation() {
   border: 1px solid var(--color-accent);
 }
 
-.flex { display: flex; }
-.flex-col { flex-direction: column; }
-.gap-2 { gap: 8px; }
+.flex {
+  display: flex;
+}
+.flex-col {
+  flex-direction: column;
+}
+.gap-2 {
+  gap: 8px;
+}
 
-.d-md-none { display: none; }
+.d-md-none {
+  display: none;
+}
 .filter-backdrop {
   position: fixed;
   inset: 0;
@@ -988,7 +1392,9 @@ function handleSkipLocation() {
 }
 
 @media (max-width: 1024px) {
-  .explore-layout { grid-template-columns: 1fr; }
+  .explore-layout {
+    grid-template-columns: 1fr;
+  }
   .explore-filters {
     position: fixed;
     top: 56px;
@@ -1003,22 +1409,38 @@ function handleSkipLocation() {
     border-right: 1px solid var(--color-border);
     z-index: 40;
   }
-  .explore-filters.open { transform: translateX(0); }
-  .d-md-none { display: inline-flex; }
-  .filter-backdrop { display: block; }
+  .explore-filters.open {
+    transform: translateX(0);
+  }
+  .d-md-none {
+    display: inline-flex;
+  }
+  .filter-backdrop {
+    display: block;
+  }
 }
 
 @media (max-width: 768px) {
   .deal-grid,
-  .grid-skeleton { grid-template-columns: repeat(2, 1fr); }
+  .grid-skeleton {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 560px) {
   .deal-grid,
-  .grid-skeleton { grid-template-columns: 1fr; }
-  .explore-toolbar { flex-wrap: wrap; }
-  .search-wrapper { max-width: none; }
-  .sort-select { flex: 1; }
+  .grid-skeleton {
+    grid-template-columns: 1fr;
+  }
+  .explore-toolbar {
+    flex-wrap: wrap;
+  }
+  .search-wrapper {
+    max-width: none;
+  }
+  .sort-select {
+    flex: 1;
+  }
 }
 </style>
 
@@ -1029,10 +1451,13 @@ function handleSkipLocation() {
   flex-direction: column;
   align-items: center;
   cursor: pointer;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
   transition: transform 0.15s;
 }
-.deal-marker:hover { transform: scale(1.1); z-index: 1000 !important; }
+.deal-marker:hover {
+  transform: scale(1.1);
+  z-index: 1000 !important;
+}
 .deal-marker-price {
   display: inline-flex;
   align-items: center;
@@ -1044,7 +1469,7 @@ function handleSkipLocation() {
   font-weight: 700;
   color: var(--mc, #ee4d2d);
   white-space: nowrap;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
   transition: all 0.2s;
 }
 .deal-marker-dot {
@@ -1054,7 +1479,7 @@ function handleSkipLocation() {
   border: 2.5px solid white;
   border-radius: 50%;
   margin-top: -5px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* -- User location marker -- */
@@ -1071,7 +1496,7 @@ function handleSkipLocation() {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: rgba(59,130,246,0.2);
+  background: rgba(59, 130, 246, 0.2);
   animation: user-pulse 2s ease infinite;
 }
 .user-loc-dot {
@@ -1080,17 +1505,30 @@ function handleSkipLocation() {
   border-radius: 50%;
   background: #3b82f6;
   border: 3px solid white;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
   position: relative;
   z-index: 1;
 }
 @keyframes user-pulse {
-  0% { transform: scale(0.8); opacity: 0.6; }
-  50% { transform: scale(1.5); opacity: 0.2; }
-  100% { transform: scale(0.8); opacity: 0.6; }
+  0% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.2;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
 }
 
 /* Leaflet cluster fixes */
-.leaflet-marker-icon { outline: none; }
-.leaflet-container { font-family: var(--font-family); }
+.leaflet-marker-icon {
+  outline: none;
+}
+.leaflet-container {
+  font-family: var(--font-family);
+}
 </style>

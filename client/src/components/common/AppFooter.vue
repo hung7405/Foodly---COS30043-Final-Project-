@@ -8,13 +8,13 @@ import { SITE_NAME } from '../../utils/constants'
       <div class="footer-brand">
         <router-link to="/" class="footer-logo">
           <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-            <rect width="32" height="32" rx="8" fill="var(--color-accent)"/>
-            <path d="M8 22V10l8 6-8 6z" fill="white"/>
-            <path d="M16 22V10l8 6-8 6z" fill="white" opacity="0.6"/>
+            <rect width="32" height="32" rx="8" fill="var(--color-accent)" />
+            <path d="M8 22V10l8 6-8 6z" fill="white" />
+            <path d="M16 22V10l8 6-8 6z" fill="white" opacity="0.6" />
           </svg>
           <span>{{ SITE_NAME }}</span>
         </router-link>
-        <p class="footer-tagline">Fresh deals, less waste. <br/>Reserve & pick up today.</p>
+        <p class="footer-tagline">Fresh deals, less waste. <br />Reserve & pick up today.</p>
       </div>
       <div class="footer-links">
         <div class="footer-col">
@@ -49,7 +49,9 @@ import { SITE_NAME } from '../../utils/constants'
   border-top: 1px solid var(--color-border);
   padding: 40px 16px 24px;
   margin-top: 48px;
-  transition: background var(--transition-slow), border-color var(--transition-slow);
+  transition:
+    background var(--transition-slow),
+    border-color var(--transition-slow);
 }
 
 .footer-inner {

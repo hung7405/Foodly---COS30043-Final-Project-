@@ -8,9 +8,7 @@ export interface Toast {
 }
 
 export const useUiStore = defineStore('ui', () => {
-  const theme = ref<'light' | 'dark'>(
-    (localStorage.getItem('theme') as 'light' | 'dark') || 'light'
-  )
+  const theme = ref<'light' | 'dark'>((localStorage.getItem('theme') as 'light' | 'dark') || 'light')
   const isMobileNavOpen = ref(false)
   const toasts = ref<Toast[]>([])
   let toastId = 0
@@ -34,7 +32,7 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   function removeToast(id: number) {
-    toasts.value = toasts.value.filter(t => t.id !== id)
+    toasts.value = toasts.value.filter((t) => t.id !== id)
   }
 
   function toggleMobileNav() {

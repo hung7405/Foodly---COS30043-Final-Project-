@@ -40,9 +40,7 @@ const filteredArticles = computed(() => {
       article.publishedDate.includes(search) ||
       article.category.toLowerCase().includes(search)
 
-    const matchesCategory =
-      filters.value.category === 'All' ||
-      article.category === filters.value.category
+    const matchesCategory = filters.value.category === 'All' || article.category === filters.value.category
 
     return matchesSearch && matchesCategory
   })
@@ -88,9 +86,7 @@ function setCategory(category: string) {
       <div class="container">
         <div class="news-header">
           <h1 class="section-title">News & Updates</h1>
-          <p class="section-subtitle">
-            Stay informed about food waste, community initiatives, and sustainability.
-          </p>
+          <p class="section-subtitle">Stay informed about food waste, community initiatives, and sustainability.</p>
         </div>
       </div>
     </section>
@@ -99,8 +95,20 @@ function setCategory(category: string) {
     <section class="news-controls" aria-label="News search and filters">
       <div class="container">
         <div class="search-bar">
-          <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <svg
+            class="search-icon"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
           <input
             v-model="filters.search"
@@ -147,20 +155,20 @@ function setCategory(category: string) {
 
         <template v-else>
           <div class="articles-grid">
-            <article
-              v-for="article in paginatedArticles"
-              :key="article.id"
-              class="article-card card"
-            >
+            <article v-for="article in paginatedArticles" :key="article.id" class="article-card card">
               <div class="article-image">
                 <img :src="article.imageUrl" :alt="article.title" loading="lazy" />
                 <span class="article-category">{{ article.category }}</span>
               </div>
               <div class="card-body">
                 <time class="article-date" :datetime="article.publishedDate">
-                  {{ new Date(article.publishedDate).toLocaleDateString('en-AU', {
-                    year: 'numeric', month: 'long', day: 'numeric'
-                  }) }}
+                  {{
+                    new Date(article.publishedDate).toLocaleDateString('en-AU', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })
+                  }}
                 </time>
                 <h2 class="article-title">
                   <router-link :to="`/news/${article.id}`">
@@ -172,8 +180,19 @@ function setCategory(category: string) {
                 </p>
                 <router-link :to="`/news/${article.id}`" class="article-read-more">
                   Read more
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
                   </svg>
                 </router-link>
               </div>
@@ -188,8 +207,18 @@ function setCategory(category: string) {
               @click="goToPage(filters.page - 1)"
               aria-label="Previous page"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <polyline points="15 18 9 12 15 6"/>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="15 18 9 12 15 6" />
               </svg>
               Previous
             </button>
@@ -215,8 +244,18 @@ function setCategory(category: string) {
               aria-label="Next page"
             >
               Next
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <polyline points="9 18 15 12 9 6"/>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="9 18 15 12 9 6" />
               </svg>
             </button>
           </nav>
@@ -265,7 +304,9 @@ function setCategory(category: string) {
   font-size: 0.9375rem;
   background: var(--color-card-bg);
   color: var(--color-text);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .search-input:focus {
@@ -321,11 +362,21 @@ function setCategory(category: string) {
   animation: fade-in-up 0.5s ease both;
 }
 
-.article-card:nth-child(2) { animation-delay: 0.1s; }
-.article-card:nth-child(3) { animation-delay: 0.2s; }
-.article-card:nth-child(4) { animation-delay: 0.3s; }
-.article-card:nth-child(5) { animation-delay: 0.4s; }
-.article-card:nth-child(6) { animation-delay: 0.5s; }
+.article-card:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.article-card:nth-child(3) {
+  animation-delay: 0.2s;
+}
+.article-card:nth-child(4) {
+  animation-delay: 0.3s;
+}
+.article-card:nth-child(5) {
+  animation-delay: 0.4s;
+}
+.article-card:nth-child(6) {
+  animation-delay: 0.5s;
+}
 
 .article-image {
   position: relative;

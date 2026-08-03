@@ -5,7 +5,9 @@ export function formatVND(amount: number): string {
     currency: 'VND',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount).replace('₫', '₫')
+  })
+    .format(amount)
+    .replace('₫', '₫')
 }
 
 export function formatVNDCompact(amount: number): string {

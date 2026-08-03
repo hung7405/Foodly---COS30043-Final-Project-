@@ -49,7 +49,7 @@ export function useDirections() {
       const legs = await freeApis.getRoutes(
         [userLocation.value.lat, userLocation.value.lng],
         [destLat, destLng],
-        profile.value,
+        profile.value
       )
 
       if (legs.length > 0) {
@@ -84,9 +84,7 @@ export function useDirections() {
     profile.value = next
   }
 
-  const selectedRoute = computed(() =>
-    routes.value.find((r) => r.id === selectedRouteId.value) || routes.value[0]
-  )
+  const selectedRoute = computed(() => routes.value.find((r) => r.id === selectedRouteId.value) || routes.value[0])
 
   return {
     userLocation,
@@ -109,7 +107,8 @@ function generateMockRoutes(from: { lat: number; lng: number }, to: { lat: numbe
 
   return [
     {
-      id: 1, name: 'Via Main Street',
+      id: 1,
+      name: 'Via Main Street',
       distance: `${(baseDist / 1000).toFixed(1)} km`,
       distanceValue: baseDist,
       duration: `${Math.round(baseDist / 80 / 60)} min`,
@@ -118,7 +117,8 @@ function generateMockRoutes(from: { lat: number; lng: number }, to: { lat: numbe
       polyline: generatePolyline(from, to, 0),
     },
     {
-      id: 2, name: 'Via Express Lane',
+      id: 2,
+      name: 'Via Express Lane',
       distance: `${((baseDist * 1.1) / 1000).toFixed(1)} km`,
       distanceValue: baseDist * 1.1,
       duration: `${Math.round(baseDist / 90 / 60)} min`,
@@ -127,7 +127,8 @@ function generateMockRoutes(from: { lat: number; lng: number }, to: { lat: numbe
       polyline: generatePolyline(from, to, 0.02),
     },
     {
-      id: 3, name: 'Scenic Route',
+      id: 3,
+      name: 'Scenic Route',
       distance: `${((baseDist * 1.3) / 1000).toFixed(1)} km`,
       distanceValue: baseDist * 1.3,
       duration: `${Math.round(baseDist / 60 / 60)} min`,
@@ -136,7 +137,8 @@ function generateMockRoutes(from: { lat: number; lng: number }, to: { lat: numbe
       polyline: generatePolyline(from, to, -0.02),
     },
     {
-      id: 4, name: 'Via Park Road',
+      id: 4,
+      name: 'Via Park Road',
       distance: `${((baseDist * 1.15) / 1000).toFixed(1)} km`,
       distanceValue: baseDist * 1.15,
       duration: `${Math.round(baseDist / 70 / 60)} min`,
@@ -145,7 +147,8 @@ function generateMockRoutes(from: { lat: number; lng: number }, to: { lat: numbe
       polyline: generatePolyline(from, to, 0.01),
     },
     {
-      id: 5, name: 'Via Riverside',
+      id: 5,
+      name: 'Via Riverside',
       distance: `${((baseDist * 1.4) / 1000).toFixed(1)} km`,
       distanceValue: baseDist * 1.4,
       duration: `${Math.round(baseDist / 55 / 60)} min`,

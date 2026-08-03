@@ -67,9 +67,15 @@ const endOfDay = computed(() => {
 })
 const remaining = ref(0)
 
-function next() { current.value = (current.value + 1) % banners.length }
-function prev() { current.value = (current.value - 1 + banners.length) % banners.length }
-function goTo(i: number) { current.value = i }
+function next() {
+  current.value = (current.value + 1) % banners.length
+}
+function prev() {
+  current.value = (current.value - 1 + banners.length) % banners.length
+}
+function goTo(i: number) {
+  current.value = i
+}
 
 function tick() {
   remaining.value = Math.max(0, Math.floor((endOfDay.value - Date.now()) / 1000))
@@ -94,7 +100,9 @@ watch(current, () => {
 })
 
 onMounted(() => {
-  timer = window.setInterval(() => { if (!hover.value) next() }, interval)
+  timer = window.setInterval(() => {
+    if (!hover.value) next()
+  }, interval)
   if (banners[current.value].countdown) {
     tick()
     countdownTimer = window.setInterval(tick, 1000)
@@ -108,17 +116,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section
-    class="banner-section"
-    role="region"
-    aria-label="Featured offers"
-    aria-roledescription="carousel"
-  >
-    <div
-      class="banner-viewport"
-      @mouseenter="hover = true"
-      @mouseleave="hover = false"
-    >
+  <section class="banner-section" role="region" aria-label="Featured offers" aria-roledescription="carousel">
+    <div class="banner-viewport" @mouseenter="hover = true" @mouseleave="hover = false">
       <div
         v-for="(banner, i) in banners"
         :key="banner.id"
@@ -135,13 +134,7 @@ onUnmounted(() => {
 
         <div class="banner-image-wrapper">
           <div class="banner-image-outer" :style="{ background: banner.color }">
-            <img
-              :src="banner.image"
-              :alt="banner.title"
-              class="banner-image"
-              loading="eager"
-              fetchpriority="high"
-            />
+            <img :src="banner.image" :alt="banner.title" class="banner-image" loading="eager" fetchpriority="high" />
             <div class="banner-glow"></div>
           </div>
         </div>
@@ -171,21 +164,17 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <button
-        type="button"
-        class="banner-nav banner-nav-prev"
-        :aria-label="'Previous offer'"
-        @click="prev"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      <button type="button" class="banner-nav banner-nav-prev" :aria-label="'Previous offer'" @click="prev">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="19" y1="12" x2="5" y2="12" />
+          <polyline points="12 19 5 12 12 5" />
+        </svg>
       </button>
-      <button
-        type="button"
-        class="banner-nav banner-nav-next"
-        :aria-label="'Next offer'"
-        @click="next"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      <button type="button" class="banner-nav banner-nav-next" :aria-label="'Next offer'" @click="next">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="12" x2="19" y2="12" />
+          <polyline points="12 5 19 12 12 19" />
+        </svg>
       </button>
     </div>
 
@@ -228,7 +217,9 @@ onUnmounted(() => {
   padding: 24px 24px 24px 28px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 600ms ease, visibility 0ms linear 600ms;
+  transition:
+    opacity 600ms ease,
+    visibility 0ms linear 600ms;
   overflow: hidden;
 }
 
@@ -300,11 +291,7 @@ onUnmounted(() => {
   position: absolute;
   inset: -10px;
   border-radius: var(--radius-full);
-  background: radial-gradient(
-    55% 55% at 30% 30%,
-    rgba(255, 255, 255, 0.35),
-    transparent 70%
-  );
+  background: radial-gradient(55% 55% at 30% 30%, rgba(255, 255, 255, 0.35), transparent 70%);
   z-index: 0;
   pointer-events: none;
 }
@@ -436,8 +423,16 @@ onUnmounted(() => {
   outline-offset: 2px;
 }
 
-.banner-nav-prev { inset-inline-start: 12px; top: 50%; transform: translateY(-50%); }
-.banner-nav-next { inset-inline-end: 12px; top: 50%; transform: translateY(-50%); }
+.banner-nav-prev {
+  inset-inline-start: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.banner-nav-next {
+  inset-inline-end: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
 
 .banner-dots {
   display: inline-flex;
@@ -464,18 +459,44 @@ onUnmounted(() => {
 }
 
 @media (min-width: 768px) {
-  .banner-viewport { height: 220px; }
-  .banner-title { font-size: 32px; }
-  .banner-image-outer { width: 38%; }
+  .banner-viewport {
+    height: 220px;
+  }
+  .banner-title {
+    font-size: 32px;
+  }
+  .banner-image-outer {
+    width: 38%;
+  }
 }
 
 @media (max-width: 768px) {
-  .banner-slide { flex-direction: column; text-align: center; padding: 20px 16px 24px; }
-  .banner-content { max-width: 100%; }
-  .banner-viewport { height: 170px; }
-  .banner-image-wrapper { justify-content: center; position: absolute; bottom: -14px; }
-  .banner-image-outer { width: 120px; height: 120px; min-height: 0; }
-  .banner-title { font-size: 22px; }
-  .banner-nav { display: none; }
+  .banner-slide {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px 16px 24px;
+  }
+  .banner-content {
+    max-width: 100%;
+  }
+  .banner-viewport {
+    height: 170px;
+  }
+  .banner-image-wrapper {
+    justify-content: center;
+    position: absolute;
+    bottom: -14px;
+  }
+  .banner-image-outer {
+    width: 120px;
+    height: 120px;
+    min-height: 0;
+  }
+  .banner-title {
+    font-size: 22px;
+  }
+  .banner-nav {
+    display: none;
+  }
 }
 </style>

@@ -19,7 +19,7 @@ onMounted(() => {
 
 const showBottomTab = computed(() => {
   const hidden = ['/login', '/register', '/admin', '/dashboard', '/deals/new']
-  return !hidden.some(r => route.path === r)
+  return !hidden.some((r) => route.path === r)
 })
 </script>
 
@@ -92,13 +92,19 @@ const showBottomTab = computed(() => {
   color: #fff;
   cursor: pointer;
   max-width: 400px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   font-size: 0.875rem;
 }
 
-.toast--error { background: var(--color-error); }
-.toast--success { background: var(--color-success); }
-.toast--info { background: var(--color-info); }
+.toast--error {
+  background: var(--color-error);
+}
+.toast--success {
+  background: var(--color-success);
+}
+.toast--info {
+  background: var(--color-info);
+}
 
 @media (min-width: 768px) {
   .bottom-tab-bar {

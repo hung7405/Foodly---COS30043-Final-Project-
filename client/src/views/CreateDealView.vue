@@ -40,13 +40,16 @@ onMounted(async () => {
   }
 })
 
-watch(() => form.value.storeId, storeId => {
-  const store = stores.value.find(item => item.id === storeId)
-  if (!store) return
-  form.value.address = store.address || form.value.address
-  form.value.latitude = Number(store.latitude)
-  form.value.longitude = Number(store.longitude)
-})
+watch(
+  () => form.value.storeId,
+  (storeId) => {
+    const store = stores.value.find((item) => item.id === storeId)
+    if (!store) return
+    form.value.address = store.address || form.value.address
+    form.value.latitude = Number(store.latitude)
+    form.value.longitude = Number(store.longitude)
+  }
+)
 
 function hydrateForm(deal: Deal) {
   form.value = {
@@ -62,7 +65,8 @@ function hydrateForm(deal: Deal) {
     expiresIn: Math.max(Math.round((new Date(deal.expiresAt).getTime() - Date.now()) / 3600000), 1),
     tags: deal.tags.join(', '),
     imageUrl: deal.images?.[0] || form.value.imageUrl,
-    isSurprise: deal.tags.includes('surprise') || deal.metadata?.surprise_bag === true || deal.metadata?.surpriseBag === true,
+    isSurprise:
+      deal.tags.includes('surprise') || deal.metadata?.surprise_bag === true || deal.metadata?.surpriseBag === true,
     isFlash: deal.tags.includes('flash') || deal.metadata?.flash === true,
   }
 }
@@ -97,18 +101,28 @@ async function handleSubmit() {
   message.value = ''
   const fe: Record<string, string> = {}
   if (!form.value.title.trim()) fe.title = 'Title is required'
-  if (!Number.isFinite(form.value.discountPrice) || form.value.discountPrice <= 0) fe.discountPrice = 'Discount price must be greater than 0'
-  if (!Number.isFinite(form.value.originalPrice) || form.value.originalPrice <= 0) fe.originalPrice = 'Original price is required'
-  else if (form.value.originalPrice < form.value.discountPrice) fe.originalPrice = 'Original price must be greater than or equal to discounted price'
-  if (!Number.isFinite(form.value.remainingQuantity) || form.value.remainingQuantity < 1) fe.remainingQuantity = 'Quantity must be at least 1'
+  if (!Number.isFinite(form.value.discountPrice) || form.value.discountPrice <= 0)
+    fe.discountPrice = 'Discount price must be greater than 0'
+  if (!Number.isFinite(form.value.originalPrice) || form.value.originalPrice <= 0)
+    fe.originalPrice = 'Original price is required'
+  else if (form.value.originalPrice < form.value.discountPrice)
+    fe.originalPrice = 'Original price must be greater than or equal to discounted price'
+  if (!Number.isFinite(form.value.remainingQuantity) || form.value.remainingQuantity < 1)
+    fe.remainingQuantity = 'Quantity must be at least 1'
   if (!form.value.address.trim()) fe.address = 'Address is required for pickup'
-  if (!Number.isFinite(form.value.latitude) || form.value.latitude < -90 || form.value.latitude > 90) fe.latitude = 'Latitude must be between -90 and 90'
-  if (!Number.isFinite(form.value.longitude) || form.value.longitude < -180 || form.value.longitude > 180) fe.longitude = 'Longitude must be between -180 and 180'
-  if (!Number.isFinite(form.value.expiresIn) || form.value.expiresIn < 1 || form.value.expiresIn > 24) fe.expiresIn = 'Expiry must be between 1 and 24 hours'
+  if (!Number.isFinite(form.value.latitude) || form.value.latitude < -90 || form.value.latitude > 90)
+    fe.latitude = 'Latitude must be between -90 and 90'
+  if (!Number.isFinite(form.value.longitude) || form.value.longitude < -180 || form.value.longitude > 180)
+    fe.longitude = 'Longitude must be between -180 and 180'
+  if (!Number.isFinite(form.value.expiresIn) || form.value.expiresIn < 1 || form.value.expiresIn > 24)
+    fe.expiresIn = 'Expiry must be between 1 and 24 hours'
   fieldErrors.value = fe
   if (Object.keys(fe).length) return
 
-  const tags = form.value.tags.split(',').map(tag => tag.trim()).filter(Boolean)
+  const tags = form.value.tags
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean)
   if (form.value.isSurprise && !tags.includes('surprise')) tags.push('surprise')
   if (form.value.isFlash && !tags.includes('flash')) tags.push('flash')
 
@@ -167,36 +181,80 @@ async function handleSubmit() {
           </div>
           <div class="form-group">
             <label for="expires">Expires in (hours)</label>
-            <input id="expires" v-model.number="form.expiresIn" type="number" min="1" max="24" :class="{ invalid: fieldErrors.expiresIn }" @input="clearFieldError('expiresIn')" />
+            <input
+              id="expires"
+              v-model.number="form.expiresIn"
+              type="number"
+              min="1"
+              max="24"
+              :class="{ invalid: fieldErrors.expiresIn }"
+              @input="clearFieldError('expiresIn')"
+            />
             <span v-if="fieldErrors.expiresIn" class="field-error">{{ fieldErrors.expiresIn }}</span>
           </div>
         </div>
 
         <div class="form-group">
           <label for="title">Title</label>
-          <input id="title" v-model="form.title" type="text" placeholder="e.g. Rescue Veggie Box" required :class="{ invalid: fieldErrors.title }" @input="clearFieldError('title')" />
+          <input
+            id="title"
+            v-model="form.title"
+            type="text"
+            placeholder="e.g. Rescue Veggie Box"
+            required
+            :class="{ invalid: fieldErrors.title }"
+            @input="clearFieldError('title')"
+          />
           <span v-if="fieldErrors.title" class="field-error">{{ fieldErrors.title }}</span>
         </div>
 
         <div class="form-group">
           <label for="desc">Description</label>
-          <textarea id="desc" v-model="form.description" rows="4" placeholder="What's included, pickup timing, freshness, best use..."></textarea>
+          <textarea
+            id="desc"
+            v-model="form.description"
+            rows="4"
+            placeholder="What's included, pickup timing, freshness, best use..."
+          ></textarea>
         </div>
 
         <div class="form-row three-col">
           <div class="form-group">
             <label for="origPrice">Original Price</label>
-            <input id="origPrice" v-model.number="form.originalPrice" type="number" step="0.01" min="0" :class="{ invalid: fieldErrors.originalPrice }" @input="clearFieldError('originalPrice')" />
+            <input
+              id="origPrice"
+              v-model.number="form.originalPrice"
+              type="number"
+              step="0.01"
+              min="0"
+              :class="{ invalid: fieldErrors.originalPrice }"
+              @input="clearFieldError('originalPrice')"
+            />
             <span v-if="fieldErrors.originalPrice" class="field-error">{{ fieldErrors.originalPrice }}</span>
           </div>
           <div class="form-group">
             <label for="discPrice">Discounted Price</label>
-            <input id="discPrice" v-model.number="form.discountPrice" type="number" step="0.01" min="0" :class="{ invalid: fieldErrors.discountPrice }" @input="clearFieldError('discountPrice')" />
+            <input
+              id="discPrice"
+              v-model.number="form.discountPrice"
+              type="number"
+              step="0.01"
+              min="0"
+              :class="{ invalid: fieldErrors.discountPrice }"
+              @input="clearFieldError('discountPrice')"
+            />
             <span v-if="fieldErrors.discountPrice" class="field-error">{{ fieldErrors.discountPrice }}</span>
           </div>
           <div class="form-group">
             <label for="qty">Quantity</label>
-            <input id="qty" v-model.number="form.remainingQuantity" type="number" min="1" :class="{ invalid: fieldErrors.remainingQuantity }" @input="clearFieldError('remainingQuantity')" />
+            <input
+              id="qty"
+              v-model.number="form.remainingQuantity"
+              type="number"
+              min="1"
+              :class="{ invalid: fieldErrors.remainingQuantity }"
+              @input="clearFieldError('remainingQuantity')"
+            />
             <span v-if="fieldErrors.remainingQuantity" class="field-error">{{ fieldErrors.remainingQuantity }}</span>
           </div>
         </div>
@@ -223,19 +281,40 @@ async function handleSubmit() {
 
         <div class="form-group">
           <label for="address">Pickup Address</label>
-          <input id="address" v-model="form.address" type="text" placeholder="123 Collins St, Melbourne" :class="{ invalid: fieldErrors.address }" @input="clearFieldError('address')" />
+          <input
+            id="address"
+            v-model="form.address"
+            type="text"
+            placeholder="123 Collins St, Melbourne"
+            :class="{ invalid: fieldErrors.address }"
+            @input="clearFieldError('address')"
+          />
           <span v-if="fieldErrors.address" class="field-error">{{ fieldErrors.address }}</span>
         </div>
 
         <div class="form-row three-col">
           <div class="form-group">
             <label for="lat">Latitude</label>
-            <input id="lat" v-model.number="form.latitude" type="number" step="0.000001" :class="{ invalid: fieldErrors.latitude }" @input="clearFieldError('latitude')" />
+            <input
+              id="lat"
+              v-model.number="form.latitude"
+              type="number"
+              step="0.000001"
+              :class="{ invalid: fieldErrors.latitude }"
+              @input="clearFieldError('latitude')"
+            />
             <span v-if="fieldErrors.latitude" class="field-error">{{ fieldErrors.latitude }}</span>
           </div>
           <div class="form-group">
             <label for="lng">Longitude</label>
-            <input id="lng" v-model.number="form.longitude" type="number" step="0.000001" :class="{ invalid: fieldErrors.longitude }" @input="clearFieldError('longitude')" />
+            <input
+              id="lng"
+              v-model.number="form.longitude"
+              type="number"
+              step="0.000001"
+              :class="{ invalid: fieldErrors.longitude }"
+              @input="clearFieldError('longitude')"
+            />
             <span v-if="fieldErrors.longitude" class="field-error">{{ fieldErrors.longitude }}</span>
           </div>
           <div class="form-group locate-group">
@@ -268,30 +347,145 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
-.create-deal-page { padding: 40px 0 60px; animation: fade-in 0.4s ease; }
-.page-title { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; }
-.page-subtitle { color: var(--color-text-secondary); margin-bottom: 28px; }
-.info-box, .error-box { padding: 16px; border-radius: var(--radius-sm); margin-bottom: 18px; }
-.info-box { background: #f0fdf4; color: #166534; border: 1px solid #86efac; }
-.error-box { background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; }
-.deal-form { background: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 30px; box-shadow: var(--shadow-sm); }
-.form-group { margin-bottom: 18px; }
-.form-group label { display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 6px; color: var(--color-text); }
-.form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px 16px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); font-family: var(--font-family); font-size: 0.9375rem; background: var(--color-bg); color: var(--color-text); }
-.form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(22,163,74,0.12); }
-.form-group input.invalid { border-color: var(--color-error); }
-.form-group input.invalid:focus { box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }
-.field-error { display: block; margin-top: 4px; font-size: 0.75rem; color: var(--color-error); }
-.toggle-label { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; padding: 12px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); transition: border-color 0.2s ease, background 0.2s ease; }
-.toggle-label:hover { border-color: var(--color-accent); }
-.toggle-label:has(.toggle-input:checked) { border-color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 8%, transparent); }
-.toggle-input { margin-top: 3px; accent-color: var(--color-accent); width: 18px; height: 18px; }
-.toggle-body { display: flex; flex-direction: column; gap: 2px; }
-.toggle-body small { color: var(--color-text-secondary); font-size: 0.8125rem; font-weight: 400; }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.three-col { grid-template-columns: repeat(3, 1fr); }
-.locate-group { display: flex; flex-direction: column; }
-.locate-btn { width: 100%; }
-.form-actions { display: flex; gap: 12px; margin-top: 26px; }
-@media (max-width: 768px) { .form-row, .three-col { grid-template-columns: 1fr; } .form-actions { flex-direction: column; } }
+.create-deal-page {
+  padding: 40px 0 60px;
+  animation: fade-in 0.4s ease;
+}
+.page-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.page-subtitle {
+  color: var(--color-text-secondary);
+  margin-bottom: 28px;
+}
+.info-box,
+.error-box {
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 18px;
+}
+.info-box {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+.error-box {
+  background: #fff7ed;
+  color: #9a3412;
+  border: 1px solid #fdba74;
+}
+.deal-form {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 30px;
+  box-shadow: var(--shadow-sm);
+}
+.form-group {
+  margin-bottom: 18px;
+}
+.form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--color-text);
+}
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family);
+  font-size: 0.9375rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12);
+}
+.form-group input.invalid {
+  border-color: var(--color-error);
+}
+.form-group input.invalid:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+.field-error {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--color-error);
+}
+.toggle-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  padding: 12px 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+.toggle-label:hover {
+  border-color: var(--color-accent);
+}
+.toggle-label:has(.toggle-input:checked) {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+.toggle-input {
+  margin-top: 3px;
+  accent-color: var(--color-accent);
+  width: 18px;
+  height: 18px;
+}
+.toggle-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.toggle-body small {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.three-col {
+  grid-template-columns: repeat(3, 1fr);
+}
+.locate-group {
+  display: flex;
+  flex-direction: column;
+}
+.locate-btn {
+  width: 100%;
+}
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 26px;
+}
+@media (max-width: 768px) {
+  .form-row,
+  .three-col {
+    grid-template-columns: 1fr;
+  }
+  .form-actions {
+    flex-direction: column;
+  }
+}
 </style>

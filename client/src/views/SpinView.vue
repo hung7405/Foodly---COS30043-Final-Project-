@@ -71,7 +71,9 @@ async function spin() {
   } catch (err: any) {
     uiStore.addToast(err.response?.data?.message || 'Could not spin. Try again tomorrow.', 'error')
   } finally {
-    setTimeout(() => { isSpinning.value = false }, 3800)
+    setTimeout(() => {
+      isSpinning.value = false
+    }, 3800)
   }
 }
 </script>
@@ -80,12 +82,20 @@ async function spin() {
   <div class="spin-page">
     <div class="container-narrow">
       <h1 class="page-title">Daily Bonus Wheel</h1>
-      <p class="page-subtitle">Spin once a day to earn extra xu — spend them on vouchers, or just feel great about saving food.</p>
+      <p class="page-subtitle">
+        Spin once a day to earn extra xu — spend them on vouchers, or just feel great about saving food.
+      </p>
 
       <div class="spin-layout">
         <div class="wheel-wrap">
           <div class="wheel" :style="{ transform: `rotate(${rotation}deg)` }">
-            <div v-for="(p, i) in PRIZES" :key="p.label" class="wheel-slice" :class="`slice-${i}`" :style="{ '--start': i * sliceAngle + 'deg', '--span': sliceAngle + 'deg' }">
+            <div
+              v-for="(p, i) in PRIZES"
+              :key="p.label"
+              class="wheel-slice"
+              :class="`slice-${i}`"
+              :style="{ '--start': i * sliceAngle + 'deg', '--span': sliceAngle + 'deg' }"
+            >
               <span>{{ p.label }}</span>
             </div>
           </div>
@@ -114,8 +124,18 @@ async function spin() {
           </div>
 
           <div class="prizes-list">
-            <div v-for="p in PRIZES" :key="p.label" class="prize-row" :class="{ hit: result && !result.alreadyUsed && p.points === result.prize }">
-              <span class="prize-dot" :style="{ background: `hsl(${(sliceIndex * sliceAngle) / 10 % 360 + (p.points * 37) % 360}, 70%, 55%)` }"></span>
+            <div
+              v-for="p in PRIZES"
+              :key="p.label"
+              class="prize-row"
+              :class="{ hit: result && !result.alreadyUsed && p.points === result.prize }"
+            >
+              <span
+                class="prize-dot"
+                :style="{
+                  background: `hsl(${(((sliceIndex * sliceAngle) / 10) % 360) + ((p.points * 37) % 360)}, 70%, 55%)`,
+                }"
+              ></span>
               <span>{{ p.label }}</span>
               <span class="prize-chance">{{ p.weight }}%</span>
             </div>
@@ -129,52 +149,178 @@ async function spin() {
 </template>
 
 <style scoped>
-.spin-page { padding: 40px 0 60px; animation: fade-in 0.4s ease; }
-.page-title { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; }
-.page-subtitle { color: var(--color-text-secondary); margin-bottom: 28px; }
-.spin-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
-.wheel-wrap { position: relative; display: flex; justify-content: center; padding-top: 10px; }
+.spin-page {
+  padding: 40px 0 60px;
+  animation: fade-in 0.4s ease;
+}
+.page-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.page-subtitle {
+  color: var(--color-text-secondary);
+  margin-bottom: 28px;
+}
+.spin-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+.wheel-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding-top: 10px;
+}
 .wheel {
-  width: 320px; height: 320px; border-radius: 50%;
-  position: relative; overflow: hidden;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
   border: 8px solid var(--color-card-bg);
   box-shadow: var(--shadow-lg);
   transition: transform 4s cubic-bezier(0.15, 0.6, 0.2, 1);
 }
 .wheel-slice {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: conic-gradient(from var(--start), var(--c) 0deg, var(--c) var(--span), transparent var(--span));
 }
-.wheel-slice:nth-child(1) { --c: #f87171; }
-.wheel-slice:nth-child(2) { --c: #fbbf24; }
-.wheel-slice:nth-child(3) { --c: #34d399; }
-.wheel-slice:nth-child(4) { --c: #60a5fa; }
-.wheel-slice:nth-child(5) { --c: #a78bfa; }
-.wheel-slice:nth-child(6) { --c: #f472b6; }
-.wheel-slice span {
-  color: #fff; font-size: 0.9rem; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.35);
-  transform: translateX(-50%); position: absolute; top: 34px; left: 50%;
+.wheel-slice:nth-child(1) {
+  --c: #f87171;
 }
-.wheel-pointer { position: absolute; top: -4px; left: 50%; transform: translateX(-50%); font-size: 1.6rem; color: var(--color-accent); z-index: 2; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
-.spin-side { display: flex; flex-direction: column; gap: 16px; }
-.balance-card { padding: 20px; border-radius: var(--radius-lg); background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #78350f; }
-.balance-label { font-weight: 600; font-size: 0.8125rem; opacity: 0.85; }
-.balance-value { font-size: 2rem; font-weight: 800; }
-.balance-value span { font-size: 0.9rem; font-weight: 600; }
-.spin-btn { justify-content: center; padding: 14px; }
-.result-card { padding: 16px; border-radius: var(--radius-md); text-align: center; }
-.result-card:not(.used) { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
-.result-card.used { background: var(--color-bg-secondary); border: 1px solid var(--color-border); color: var(--color-text-secondary); }
-.result-card h3 { font-size: 1rem; margin-bottom: 4px; }
-.result-prize { font-weight: 700; }
-.prizes-list { display: grid; gap: 6px; }
-.prize-row { display: flex; align-items: center; gap: 10px; font-size: 0.875rem; color: var(--color-text-secondary); padding: 8px 10px; border-radius: var(--radius-sm); background: var(--color-bg-secondary); }
-.prize-row.hit { outline: 2px solid var(--color-success); background: #f0fdf4; color: #166534; font-weight: 700; }
-.prize-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.prize-chance { margin-left: auto; font-size: 0.75rem; }
-.back-btn { justify-content: center; }
+.wheel-slice:nth-child(2) {
+  --c: #fbbf24;
+}
+.wheel-slice:nth-child(3) {
+  --c: #34d399;
+}
+.wheel-slice:nth-child(4) {
+  --c: #60a5fa;
+}
+.wheel-slice:nth-child(5) {
+  --c: #a78bfa;
+}
+.wheel-slice:nth-child(6) {
+  --c: #f472b6;
+}
+.wheel-slice span {
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  transform: translateX(-50%);
+  position: absolute;
+  top: 34px;
+  left: 50%;
+}
+.wheel-pointer {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.6rem;
+  color: var(--color-accent);
+  z-index: 2;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+.spin-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.balance-card {
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #78350f;
+}
+.balance-label {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  opacity: 0.85;
+}
+.balance-value {
+  font-size: 2rem;
+  font-weight: 800;
+}
+.balance-value span {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.spin-btn {
+  justify-content: center;
+  padding: 14px;
+}
+.result-card {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+.result-card:not(.used) {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+.result-card.used {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+.result-card h3 {
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+.result-prize {
+  font-weight: 700;
+}
+.prizes-list {
+  display: grid;
+  gap: 6px;
+}
+.prize-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-secondary);
+}
+.prize-row.hit {
+  outline: 2px solid var(--color-success);
+  background: #f0fdf4;
+  color: #166534;
+  font-weight: 700;
+}
+.prize-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.prize-chance {
+  margin-left: auto;
+  font-size: 0.75rem;
+}
+.back-btn {
+  justify-content: center;
+}
 @media (max-width: 720px) {
-  .spin-layout { grid-template-columns: 1fr; gap: 28px; }
-  .wheel { width: 260px; height: 260px; }
+  .spin-layout {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .wheel {
+    width: 260px;
+    height: 260px;
+  }
 }
 </style>

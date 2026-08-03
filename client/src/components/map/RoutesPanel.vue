@@ -65,8 +65,15 @@ watch(profile, async () => {
   await calculateRoutes(props.destinationLat, props.destinationLng)
 })
 
-watch(selectedRouteId, () => { redraw() })
-watch(() => routes.value, () => { redraw() })
+watch(selectedRouteId, () => {
+  redraw()
+})
+watch(
+  () => routes.value,
+  () => {
+    redraw()
+  }
+)
 
 function initMiniMap() {
   if (!mapContainer.value || miniMap.value) return
@@ -86,8 +93,14 @@ function initMiniMap() {
 
 function drawMarkers() {
   if (!miniMap.value) return
-  if (originMarker.value) { miniMap.value.removeLayer(originMarker.value); originMarker.value = null }
-  if (destMarker.value) { miniMap.value.removeLayer(destMarker.value); destMarker.value = null }
+  if (originMarker.value) {
+    miniMap.value.removeLayer(originMarker.value)
+    originMarker.value = null
+  }
+  if (destMarker.value) {
+    miniMap.value.removeLayer(destMarker.value)
+    destMarker.value = null
+  }
 
   const origin = userLocation.value
   originMarker.value = L.circleMarker([origin.lat, origin.lng], {
@@ -95,7 +108,9 @@ function drawMarkers() {
     color: 'var(--color-accent, #10b981)',
     fillColor: 'var(--color-accent, #10b981)',
     fillOpacity: 1,
-  }).addTo(miniMap.value).bindPopup('You')
+  })
+    .addTo(miniMap.value)
+    .bindPopup('You')
 
   destMarker.value = L.marker([props.destinationLat, props.destinationLng])
     .addTo(miniMap.value)
@@ -104,7 +119,9 @@ function drawMarkers() {
 
 function drawRoutes() {
   if (!miniMap.value) return
-  routeLayers.value.forEach((l) => { miniMap.value?.removeLayer(l) })
+  routeLayers.value.forEach((l) => {
+    miniMap.value?.removeLayer(l)
+  })
   routeLayers.value = []
 
   routes.value.forEach((r) => {
@@ -152,7 +169,20 @@ function formatDuration(seconds: number): string {
     <div v-if="visible" class="routes-panel" role="dialog" aria-label="Directions">
       <div class="routes-header">
         <h3>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
           Directions to {{ destinationName }}
         </h3>
         <button class="close-btn" @click="emit('close')" aria-label="Close directions">&times;</button>
@@ -179,8 +209,8 @@ function formatDuration(seconds: number): string {
 
       <!-- Loading -->
       <div v-if="isLoading" class="routes-loading">
-        <div class="skeleton" style="height:60px;border-radius:var(--radius-md)"></div>
-        <div class="skeleton" style="height:60px;border-radius:var(--radius-md);width:80%"></div>
+        <div class="skeleton" style="height: 60px; border-radius: var(--radius-md)"></div>
+        <div class="skeleton" style="height: 60px; border-radius: var(--radius-md); width: 80%"></div>
       </div>
 
       <!-- Error -->
@@ -188,7 +218,7 @@ function formatDuration(seconds: number): string {
 
       <!-- Route List -->
       <div v-else class="routes-list">
-        <div v-if="routes.length === 0" class="empty-state" style="padding:20px">
+        <div v-if="routes.length === 0" class="empty-state" style="padding: 20px">
           <p>No routes available</p>
         </div>
         <button

@@ -43,12 +43,27 @@ async function handleSubmit() {
 
         <div class="field">
           <label for="email">Email</label>
-          <input id="email" v-model="email" type="email" placeholder="you@example.com" required autocomplete="email" v-focus />
+          <input
+            id="email"
+            v-model="email"
+            type="email"
+            placeholder="you@example.com"
+            required
+            autocomplete="email"
+            v-focus
+          />
         </div>
 
         <div class="field">
           <label for="password">Password</label>
-          <input id="password" v-model="password" type="password" placeholder="Your password" required autocomplete="current-password" />
+          <input
+            id="password"
+            v-model="password"
+            type="password"
+            placeholder="Your password"
+            required
+            autocomplete="current-password"
+          />
         </div>
 
         <button type="submit" class="btn btn-primary btn-lg auth-submit" :disabled="isSubmitting">
@@ -157,12 +172,16 @@ async function handleSubmit() {
 .spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255,255,255,0.3);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   border-top-color: white;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
   display: inline-block;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 </style>
