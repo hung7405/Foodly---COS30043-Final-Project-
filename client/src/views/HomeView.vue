@@ -275,13 +275,9 @@ function dealRating(deal: any) {
         </div>
         <router-link to="/explore?category=food" class="flash-view-all">View All</router-link>
       </div>
-      <div v-if="surpriseDeals.length" class="rec-grid">
-        <router-link
-          v-for="deal in surpriseDeals"
-          :key="deal.id"
-          :to="'/deals/' + deal.id"
-          class="rec-card surprise-card"
-        >
+      <div v-if="surpriseDeals.length" class="row g-3">
+        <div v-for="deal in surpriseDeals" :key="deal.id" class="col-12 col-md-6 col-lg-4">
+          <router-link :to="'/deals/' + deal.id" class="rec-card surprise-card h-100">
           <div class="rec-card-img">
             <img :src="deal.images?.[0] || FOOD_IMGS[0]" :alt="deal.title" loading="lazy" />
             <span class="rec-discount-badge surprise-badge-tag">Surprise</span>
@@ -294,7 +290,8 @@ function dealRating(deal: any) {
               <span class="surprise-value">up to {{ formatVND(deal.originalPrice) }} value</span>
             </div>
           </div>
-        </router-link>
+          </router-link>
+        </div>
       </div>
       <div v-else-if="!loading" class="surprise-empty">
         <p>No surprise bags right now — check back later today.</p>
@@ -316,21 +313,26 @@ function dealRating(deal: any) {
         <h2 class="section-title">Recommended for you</h2>
         <router-link to="/explore" class="section-link">View All</router-link>
       </div>
-      <div v-if="loading" class="rec-grid">
-        <div v-for="i in 4" :key="i" class="rec-skeleton"></div>
+      <div v-if="loading" class="row g-3">
+        <div v-for="i in 4" :key="i" class="col-12 col-md-6 col-lg-4">
+          <div class="rec-skeleton"></div>
+        </div>
       </div>
-      <div v-else-if="recommendedDeals.length === 0" class="rec-grid">
-        <div v-for="i in 4" :key="i" class="rec-card rec-card--placeholder">
-          <div class="rec-card-img placeholder-img"></div>
-          <div class="rec-card-body">
-            <div class="ph-line" style="width: 40%"></div>
-            <div class="ph-line" style="width: 90%"></div>
-            <div class="ph-line" style="width: 60%"></div>
+      <div v-else-if="recommendedDeals.length === 0" class="row g-3">
+        <div v-for="i in 4" :key="i" class="col-12 col-md-6 col-lg-4">
+          <div class="rec-card rec-card--placeholder h-100">
+            <div class="rec-card-img placeholder-img"></div>
+            <div class="rec-card-body">
+              <div class="ph-line" style="width: 40%"></div>
+              <div class="ph-line" style="width: 90%"></div>
+              <div class="ph-line" style="width: 60%"></div>
+            </div>
           </div>
         </div>
       </div>
-      <div v-else class="rec-grid">
-        <router-link v-for="deal in recommendedDeals" :key="deal.id" :to="'/deals/' + deal.id" class="rec-card">
+      <div v-else class="row g-3">
+        <div v-for="deal in recommendedDeals" :key="deal.id" class="col-12 col-md-6 col-lg-4">
+          <router-link :to="'/deals/' + deal.id" class="rec-card h-100">
           <div class="rec-card-img">
             <img :src="deal.images?.[0] || FOOD_IMGS[0]" :alt="deal.title" loading="lazy" />
             <span v-if="discountPercent(deal) > 0" class="rec-discount-badge">-{{ discountPercent(deal) }}%</span>
@@ -370,6 +372,7 @@ function dealRating(deal: any) {
             </div>
           </div>
         </router-link>
+        </div>
       </div>
     </section>
     <div class="bottom-spacer"></div>
@@ -809,11 +812,6 @@ function dealRating(deal: any) {
 .rec-header .section-link:hover {
   text-decoration: underline;
 }
-.rec-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
 .rec-skeleton {
   height: 290px;
   border-radius: 14px;
@@ -963,9 +961,6 @@ function dealRating(deal: any) {
   }
   .cat-scroll {
     justify-content: center;
-  }
-  .rec-grid {
-    grid-template-columns: repeat(4, 1fr);
   }
 }
 </style>

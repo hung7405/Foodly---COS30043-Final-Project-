@@ -139,8 +139,8 @@ function setCategory(category: string) {
     <section class="section articles-section" aria-label="News articles">
       <div class="container">
         <template v-if="isLoading">
-          <div class="articles-grid">
-            <div v-for="n in 6" :key="n">
+          <div class="row g-4">
+            <div v-for="n in 6" :key="n" class="col-12 col-sm-6 col-lg-4">
               <SkeletonLoader />
             </div>
           </div>
@@ -154,8 +154,13 @@ function setCategory(category: string) {
         </template>
 
         <template v-else>
-          <div class="articles-grid">
-            <article v-for="article in paginatedArticles" :key="article.id" class="article-card card">
+          <div class="row g-4">
+            <div
+              v-for="article in paginatedArticles"
+              :key="article.id"
+              class="col-12 col-sm-6 col-lg-4 d-flex news-col"
+            >
+              <article class="article-card card h-100">
               <div class="article-image">
                 <img :src="article.imageUrl" :alt="article.title" loading="lazy" />
                 <span class="article-category">{{ article.category }}</span>
@@ -196,7 +201,8 @@ function setCategory(category: string) {
                   </svg>
                 </router-link>
               </div>
-            </article>
+              </article>
+            </div>
           </div>
 
           <!-- Pagination -->
@@ -350,31 +356,26 @@ function setCategory(category: string) {
   color: white;
 }
 
-.articles-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-}
-
 .article-card {
   display: flex;
   flex-direction: column;
+  width: 100%;
   animation: fade-in-up 0.5s ease both;
 }
 
-.article-card:nth-child(2) {
+.news-col:nth-child(2) .article-card {
   animation-delay: 0.1s;
 }
-.article-card:nth-child(3) {
+.news-col:nth-child(3) .article-card {
   animation-delay: 0.2s;
 }
-.article-card:nth-child(4) {
+.news-col:nth-child(4) .article-card {
   animation-delay: 0.3s;
 }
-.article-card:nth-child(5) {
+.news-col:nth-child(5) .article-card {
   animation-delay: 0.4s;
 }
-.article-card:nth-child(6) {
+.news-col:nth-child(6) .article-card {
   animation-delay: 0.5s;
 }
 
@@ -518,17 +519,8 @@ function setCategory(category: string) {
 }
 
 @media (max-width: 768px) {
-  .articles-grid {
-    grid-template-columns: 1fr;
-  }
   .pagination {
     flex-wrap: wrap;
-  }
-}
-
-@media (min-width: 769px) and (max-width: 1024px) {
-  .articles-grid {
-    grid-template-columns: repeat(2, 1fr);
   }
 }
 </style>

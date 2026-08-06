@@ -67,67 +67,79 @@ onUnmounted(() => {
         <div class="live-badge">● LIVE</div>
       </div>
 
-      <div class="metrics-grid">
-        <div class="metric-card">
-          <div class="metric-value">{{ metrics.activeUsers }}</div>
-          <div class="metric-label">Active Users</div>
-          <div
-            class="metric-trend"
-            :class="trends.activeUsers > 0 ? 'up' : trends.activeUsers < 0 ? 'down' : 'neutral'"
-          >
-            {{ trends.activeUsers > 0 ? '+' : '' }}{{ trends.activeUsers }}%
+      <div class="row g-3">
+        <div class="col-12 col-sm-6 col-lg-3">
+          <div class="metric-card">
+            <div class="metric-value">{{ metrics.activeUsers }}</div>
+            <div class="metric-label">Active Users</div>
+            <div
+              class="metric-trend"
+              :class="trends.activeUsers > 0 ? 'up' : trends.activeUsers < 0 ? 'down' : 'neutral'"
+            >
+              {{ trends.activeUsers > 0 ? '+' : '' }}{{ trends.activeUsers }}%
+            </div>
           </div>
         </div>
-        <div class="metric-card">
-          <div class="metric-value">{{ metrics.reservationsPerMinute }}</div>
-          <div class="metric-label">Reservations/min</div>
-          <div
-            class="metric-trend"
-            :class="trends.reservationsPerMinute > 0 ? 'up' : trends.reservationsPerMinute < 0 ? 'down' : 'neutral'"
-          >
-            {{ trends.reservationsPerMinute > 0 ? '+' : '' }}{{ trends.reservationsPerMinute }}%
+        <div class="col-12 col-sm-6 col-lg-3">
+          <div class="metric-card">
+            <div class="metric-value">{{ metrics.reservationsPerMinute }}</div>
+            <div class="metric-label">Reservations/min</div>
+            <div
+              class="metric-trend"
+              :class="trends.reservationsPerMinute > 0 ? 'up' : trends.reservationsPerMinute < 0 ? 'down' : 'neutral'"
+            >
+              {{ trends.reservationsPerMinute > 0 ? '+' : '' }}{{ trends.reservationsPerMinute }}%
+            </div>
           </div>
         </div>
-        <div class="metric-card">
-          <div class="metric-value">{{ metrics.dealsPerMinute }}</div>
-          <div class="metric-label">Deals/min</div>
-          <div
-            class="metric-trend"
-            :class="trends.dealsPerMinute > 0 ? 'up' : trends.dealsPerMinute < 0 ? 'down' : 'neutral'"
-          >
-            {{ trends.dealsPerMinute > 0 ? '+' : '' }}{{ trends.dealsPerMinute }}%
+        <div class="col-12 col-sm-6 col-lg-3">
+          <div class="metric-card">
+            <div class="metric-value">{{ metrics.dealsPerMinute }}</div>
+            <div class="metric-label">Deals/min</div>
+            <div
+              class="metric-trend"
+              :class="trends.dealsPerMinute > 0 ? 'up' : trends.dealsPerMinute < 0 ? 'down' : 'neutral'"
+            >
+              {{ trends.dealsPerMinute > 0 ? '+' : '' }}{{ trends.dealsPerMinute }}%
+            </div>
           </div>
         </div>
-        <div class="metric-card">
-          <div class="metric-value">{{ metrics.verificationsTotal }}</div>
-          <div class="metric-label">Verifications</div>
-          <div class="metric-trend neutral">total</div>
+        <div class="col-12 col-sm-6 col-lg-3">
+          <div class="metric-card">
+            <div class="metric-value">{{ metrics.verificationsTotal }}</div>
+            <div class="metric-label">Verifications</div>
+            <div class="metric-trend neutral">total</div>
+          </div>
         </div>
       </div>
 
-      <div class="charts-grid">
-        <div class="chart-card">
-          <h3>Reservations Per Minute</h3>
-          <div class="chart-container">
-            <div
-              v-for="(v, i) in reservationData"
-              :key="i"
-              class="chart-bar"
-              :style="{ height: `${(v / Math.max(...reservationData, 1)) * 100}%` }"
-              :title="`${v} reservations`"
-            ></div>
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <div class="chart-card">
+            <h3>Reservations Per Minute</h3>
+            <div class="chart-container">
+              <div
+                v-for="(v, i) in reservationData"
+                :key="i"
+                class="chart-bar"
+                :style="{ height: `${(v / Math.max(...reservationData, 1)) * 100}%` }"
+                :title="`${v} reservations`"
+              ></div>
+            </div>
           </div>
         </div>
-        <div class="chart-card">
-          <h3>Deals Per Minute</h3>
-          <div class="chart-container">
-            <div
-              v-for="(v, i) in dealData"
-              :key="i"
-              class="chart-bar bar-alt"
-              :style="{ height: `${(v / Math.max(...dealData, 1)) * 100}%` }"
-              :title="`${v} deals`"
-            ></div>
+        <div class="col-12 col-md-6">
+          <div class="chart-card">
+            <h3>Deals Per Minute</h3>
+            <div class="chart-container">
+              <div
+                v-for="(v, i) in dealData"
+                :key="i"
+                class="chart-bar bar-alt"
+                :style="{ height: `${(v / Math.max(...dealData, 1)) * 100}%` }"
+                :title="`${v} deals`"
+              ></div>
+            </div>
           </div>
         </div>
       </div>
