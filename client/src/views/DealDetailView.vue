@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import type { Carousel } from 'bootstrap'
 import { commentsService, dealsService, reservationsService, interactionsService } from '../services/api'
 import { getSocket } from '../services/socket/socket'
 import { useAuthStore } from '../stores/auth.store'
@@ -34,6 +35,13 @@ const error = ref('')
 const success = ref('')
 const countdown = ref<number | null>(null)
 const showDirections = ref(false)
+const carouselEl = ref<HTMLElement | null>(null)
+let carouselInstance: Carousel | null = null
+
+function getBootstrapCarousel(): typeof Carousel | null {
+  const g = window as unknown as { bootstrap?: { Carousel: typeof Carousel } }
+  return g.bootstrap?.Carousel ?? null
+}
 const liked = ref(false)
 const bookmarked = ref(false)
 const togglingLike = ref(false)
@@ -55,6 +63,12 @@ const discountPct = computed(() => {
   return Math.round((1 - Number(deal.value.discountPrice) / Number(deal.value.originalPrice)) * 100)
 })
 
+const DEFAULT_DEAL_IMG = 'https://images.unsplash.com/photo-1586999768265-24af89630739?w=800&q=80'
+const carouselImages = computed(() => {
+  const imgs = (deal.value?.images || []).filter(Boolean)
+  return imgs.length ? imgs : [DEFAULT_DEAL_IMG]
+})
+
 const expiresInText = computed(() => {
   if (!deal.value) return ''
   const diff = new Date(deal.value.expiresAt).getTime() - Date.now()
@@ -66,6 +80,13 @@ const expiresInText = computed(() => {
 onMounted(async () => {
   await Promise.all([loadDeal(), loadComments(), loadReservation()])
   await loadUpsells()
+  if (deal.value) {
+    await nextTick()
+    const CarouselCtor = getBootstrapCarousel()
+    if (CarouselCtor && carouselEl.value) {
+      carouselInstance = CarouselCtor.getOrCreateInstance(carouselEl.value, { interval: 5000 })
+    }
+  }
   if (auth.isAuthenticated) {
     interactionsService.record(String(route.params.id), 'view').catch(() => {})
   } else {
@@ -103,6 +124,8 @@ onMounted(async () => {
 onUnmounted(() => {
   if (countdownTimer) window.clearInterval(countdownTimer)
   if (priceDropTimer) window.clearTimeout(priceDropTimer)
+  carouselInstance?.dispose()
+  carouselInstance = null
   const socket = getSocket()
   socket.emit('deal:leave', route.params.id)
   socket.off('deal:updated')
@@ -298,11 +321,51 @@ async function toggleBookmark() {
       <div v-else-if="deal" class="deal-detail">
         <div class="deal-detail-grid">
           <div class="deal-images">
-            <div class="main-image">
-              <img
-                :src="deal.images?.[0] || 'https://images.unsplash.com/photo-1586999768265-24af89630739?w=800&q=80'"
-                :alt="deal.title"
-              />
+            <div ref="carouselEl" id="dealCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel" data-bs-interval="5000">
+              <div class="carousel-inner">
+                <div
+                  v-for="(img, i) in carouselImages"
+                  :key="i"
+                  class="carousel-item"
+                  :class="{ active: i === 0 }"
+                >
+                  <img :src="img" :alt="deal.title" class="d-block w-100 main-image-img" />
+                </div>
+              </div>
+              <div v-if="carouselImages.length > 1" class="carousel-indicators">
+                <button
+                  v-for="i in carouselImages.length"
+                  :key="i"
+                  type="button"
+                  data-bs-target="#dealCarousel"
+                  :data-bs-slide-to="i - 1"
+                  :class="{ active: i === 1 }"
+                  :aria-label="'Slide ' + i"
+                  :aria-current="i === 1 ? 'true' : undefined"
+                ></button>
+              </div>
+              <button
+                v-if="carouselImages.length > 1"
+                class="carousel-control-prev"
+                type="button"
+                data-bs-target="#dealCarousel"
+                data-bs-slide="prev"
+                aria-label="Previous image"
+              >
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+              </button>
+              <button
+                v-if="carouselImages.length > 1"
+                class="carousel-control-next"
+                type="button"
+                data-bs-target="#dealCarousel"
+                data-bs-slide="next"
+                aria-label="Next image"
+              >
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+              </button>
             </div>
           </div>
 
@@ -566,18 +629,28 @@ async function toggleBookmark() {
   gap: 48px;
   align-items: start;
 }
-.main-image {
+.deal-images {
   border-radius: var(--radius-xl);
   overflow: hidden;
   background: var(--color-bg-tertiary);
   box-shadow: var(--shadow-lg);
   position: relative;
 }
-.main-image img {
+.main-image-img {
   width: 100%;
   height: 460px;
   object-fit: cover;
   display: block;
+}
+.deal-images .carousel-indicators {
+  margin-bottom: 12px;
+}
+.deal-images .carousel-indicators [data-bs-target] {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.2);
 }
 .badge-row {
   display: flex;
@@ -981,7 +1054,7 @@ async function toggleBookmark() {
     grid-template-columns: 1fr;
     gap: 28px;
   }
-  .main-image img {
+  .main-image-img {
     height: 320px;
   }
   .deal-info h1 {
