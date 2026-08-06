@@ -53,6 +53,9 @@ const minDiscount = ref(0)
 const radiusKm = ref(0)
 const sortBy = ref<'default' | 'discount' | 'price-asc' | 'price-desc'>('default')
 
+const PAGE_SIZE = 12
+const visibleCount = ref(PAGE_SIZE)
+
 const ratingOptions = [5, 4, 3, 2, 1]
 const discountTiers = [10, 20, 30, 50]
 const radiusOptions = [1, 3, 5, 10]
@@ -162,6 +165,14 @@ const filteredDeals = computed(() => {
   return result
 })
 
+const pagedDeals = computed(() => filteredDeals.value.slice(0, visibleCount.value))
+const showingCount = computed(() => Math.min(visibleCount.value, filteredDeals.value.length))
+const hasMore = computed(() => filteredDeals.value.length > visibleCount.value)
+
+function loadMore() {
+  visibleCount.value += PAGE_SIZE
+}
+
 let joinedDealIds = new Set<string>()
 function joinDealRooms(list: Deal[]) {
   const socket = getSocket()
@@ -224,6 +235,12 @@ watch([() => route.query.category, () => route.query.search], ([nextCategory, ne
   if (typeof nextCategory === 'string' && category.value !== normalizeCategoryQuery(nextCategory))
     category.value = normalizeCategoryQuery(nextCategory)
 })
+watch(
+  [selectedStore, selectedRating, verifiedOnly, minDiscount, radiusKm, searchQuery, category, sortBy],
+  () => {
+    visibleCount.value = PAGE_SIZE
+  }
+)
 watch(filteredDeals, () => {
   scheduleMarkerUpdate()
   joinDealRooms(filteredDeals.value)
@@ -246,8 +263,15 @@ async function loadDeals() {
   isLoading.value = true
   error.value = ''
   try {
-    const result = await dealsService.findAll({ status: 'active', limit: 100 })
-    deals.value = result.deals || []
+    const first = await dealsService.findAll({ status: 'active', limit: 100, page: 1 })
+    let loaded: Deal[] = first.deals || []
+    if (first.totalPages > 1) {
+      for (let p = 2; p <= first.totalPages; p++) {
+        const next = await dealsService.findAll({ status: 'active', limit: 100, page: p })
+        loaded = loaded.concat(next.deals || [])
+      }
+    }
+    deals.value = loaded
   } catch {
     deals.value = []
   } finally {
@@ -793,7 +817,7 @@ function handleRecentered() {
             <button class="btn btn-outline btn-sm" @click="resetFilters()">Reset filters</button>
           </div>
           <div v-else class="row g-3">
-            <div v-for="deal in filteredDeals" :key="deal.id" class="col-12 col-sm-6 col-lg-4">
+            <div v-for="deal in pagedDeals" :key="deal.id" class="col-12 col-sm-6 col-lg-4">
               <router-link :to="'/deals/' + deal.id" class="deal-card h-100">
               <div class="deal-card-img">
                 <img
@@ -826,6 +850,15 @@ function handleRecentered() {
               </div>
               </router-link>
             </div>
+          </div>
+          <div v-if="filteredDeals.length > PAGE_SIZE" class="load-more-row">
+            <p class="showing-text">
+              Showing {{ showingCount }} of {{ filteredDeals.length }} deals
+            </p>
+            <button v-if="hasMore" class="btn btn-primary load-more-btn" @click="loadMore">
+              Load more
+            </button>
+            <p v-else class="all-shown-text">All deals shown</p>
           </div>
         </div>
       </main>
@@ -1242,6 +1275,28 @@ function handleRecentered() {
 
 .deals-grid {
   min-height: 60vh;
+}
+.load-more-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+}
+.load-more-row .showing-text {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+.load-more-row .all-shown-text {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+.load-more-btn {
+  min-width: 180px;
 }
 .deal-card {
   display: flex;
