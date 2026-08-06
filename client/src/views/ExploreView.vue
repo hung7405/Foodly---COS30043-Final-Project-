@@ -9,8 +9,19 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import { getSocket } from '../services/socket/socket'
 import { dealsService } from '../services/api'
 import { freeApis } from '../services/freeApis'
+import { useLocation } from '../composables/useLocation'
 import type { Deal } from '../types'
 import { formatVND } from '../utils/currency'
+
+const {
+  userLocation,
+  permission,
+  isWatching,
+  startWatching,
+  getOnce,
+  resolvePermission,
+  setDefault,
+} = useLocation()
 
 const mapContainer = ref<HTMLDivElement | null>(null)
 const map = shallowRef<L.Map | null>(null)
@@ -31,9 +42,9 @@ const showFilters = ref(false)
 const routeMode = ref<'walking' | 'driving' | 'cycling'>('walking')
 const route = useRoute()
 const routeInfo = ref<{ distanceKm: number; durationMin: number } | null>(null)
-const userLocation = ref<{ lat: number; lng: number } | null>(null)
 const routeLine = shallowRef<any>(null)
 const showLocationPrompt = ref(true)
+const followLocation = ref(true)
 
 const selectedStore = ref('')
 const selectedRating = ref(0)
@@ -175,16 +186,7 @@ function leaveAllDealRooms() {
 onMounted(async () => {
   const c = route.query.category as string | undefined
   if (c) category.value = normalizeCategoryQuery(c)
-  const saved = localStorage.getItem('foodly_location')
-  if (saved) {
-    try {
-      const loc = JSON.parse(saved)
-      userLocation.value = loc
-      showLocationPrompt.value = false
-    } catch {
-      /* noop */
-    }
-  }
+  showLocationPrompt.value = !userLocation.value
   await loadDeals()
   await nextTick()
   if (showMap.value) await nextTick(initMap)
@@ -192,7 +194,7 @@ onMounted(async () => {
     drawUserMarker()
     centerMap(userLocation.value.lat, userLocation.value.lng, 13)
   }
-  refreshLocationSilently()
+  initLocationTracking()
 
   const socket = getSocket()
   socket.on('deal:created', (deal: Deal) => {
@@ -278,6 +280,10 @@ function initMap() {
   })
   map.value.addLayer(markerCluster.value)
   map.value.on('click', () => deselectDeal())
+  // Stop following the live position once the user starts dragging the map.
+  map.value.on('dragstart', () => {
+    followLocation.value = false
+  })
   rebuildMarkers()
 }
 
@@ -333,56 +339,70 @@ async function locateUser() {
   isLocating.value = true
   error.value = ''
   try {
-    if (!navigator.geolocation) throw new Error('')
-    const pos = await new Promise<GeolocationPosition>((res, rej) =>
-      navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 10000 })
-    )
-    userLocation.value = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-    localStorage.setItem('foodly_location', JSON.stringify(userLocation.value))
-    showLocationPrompt.value = false
-    if (!map.value) await nextTick(initMap)
-    drawUserMarker()
-    centerMap(userLocation.value.lat, userLocation.value.lng)
-  } catch {
-    const ip = await freeApis.detectLocation()
-    if (ip) {
-      userLocation.value = { lat: ip.lat, lng: ip.lng }
-      localStorage.setItem('foodly_location', JSON.stringify(userLocation.value))
+    const loc = await getOnce()
+    if (loc) {
       showLocationPrompt.value = false
       if (!map.value) await nextTick(initMap)
       drawUserMarker()
-      centerMap(userLocation.value.lat, userLocation.value.lng)
+      centerMap(loc.lat, loc.lng)
+      // Keep it live: subscribe to position changes after the first fix.
+      if (permission.value !== 'denied') startWatching(onLivePosition)
     } else {
-      error.value = 'Could not determine location. Please try again.'
+      const ip = await freeApis.detectLocation()
+      if (ip) {
+        setDefault()
+        userLocation.value = { lat: ip.lat, lng: ip.lng }
+        showLocationPrompt.value = false
+        if (!map.value) await nextTick(initMap)
+        drawUserMarker()
+        centerMap(userLocation.value.lat, userLocation.value.lng)
+      } else if (permission.value === 'denied') {
+        error.value = 'Location access is blocked. Enable it in your browser, then try again.'
+      } else {
+        error.value = 'Could not determine location. Please try again.'
+      }
     }
+  } catch {
+    error.value = 'Could not locate you. Please try again.'
   } finally {
     isLocating.value = false
   }
 }
-async function refreshLocationSilently() {
-  if (!navigator.geolocation) return
-  let granted = false
-  try {
-    if (navigator.permissions?.query) {
-      const p = await navigator.permissions.query({ name: 'geolocation' })
-      granted = p.state === 'granted'
-    }
-  } catch {
-    granted = false
+
+/** Move (or create) the user marker and optional re-center on live updates. */
+function onLivePosition(loc: { lat: number; lng: number }) {
+  if (!map.value) return
+  if (userMarker.value) userMarker.value.setLatLng([loc.lat, loc.lng])
+  else drawUserMarker()
+  if (followLocation.value) {
+    centerMap(loc.lat, loc.lng, Math.max(map.value.getZoom(), 13))
   }
-  if (!granted) return
-  try {
-    const pos = await new Promise<GeolocationPosition>((res, rej) =>
-      navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, maximumAge: 30000, timeout: 8000 })
-    )
-    userLocation.value = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-    localStorage.setItem('foodly_location', JSON.stringify(userLocation.value))
-    if (map.value) {
-      drawUserMarker()
-      centerMap(userLocation.value.lat, userLocation.value.lng, Math.max(map.value.getZoom(), 13))
+}
+
+/**
+ * Resolve permission and, if already granted, begin continuous tracking so the
+ * marker follows the user as they move — no cache-clear or reload required.
+ * A "prompt"/denied state leaves the enable dialog to the user.
+ */
+async function initLocationTracking() {
+  const state = await resolvePermission()
+  if (state === 'granted') {
+    showLocationPrompt.value = false
+    // Always fetch a fresh, current position — even when a (possibly stale)
+    // cached location exists — so the marker converges on where the user
+    // actually is right now instead of where they were last time.
+    const fresh = await getOnce()
+    if (!map.value) await nextTick(initMap)
+    drawUserMarker()
+    if (fresh) centerMap(fresh.lat, fresh.lng, Math.max(map.value?.getZoom() || 0, 13))
+    startWatching(onLivePosition)
+  } else if (state === 'denied' && !userLocation.value) {
+    // Fall back to IP so the map is still useful; message steers to settings.
+    const ip = await freeApis.detectLocation()
+    if (ip) {
+      userLocation.value = { lat: ip.lat, lng: ip.lng }
+      showLocationPrompt.value = false
     }
-  } catch {
-    /* keep cached location */
   }
 }
 function formatDist(v?: number) {
@@ -450,11 +470,18 @@ function handleAllowLocation() {
 }
 function handleSkipLocation() {
   showLocationPrompt.value = false
-  userLocation.value = { lat: 10.8231, lng: 106.6297 }
-  localStorage.setItem('foodly_location', JSON.stringify(userLocation.value))
+  setDefault()
   if (!map.value) return
   drawUserMarker()
-  centerMap(userLocation.value.lat, userLocation.value.lng, 13)
+  centerMap(userLocation.value!.lat, userLocation.value!.lng, 13)
+}
+
+/** Re-enable live following and snap the view back to the user's position. */
+function handleRecentered() {
+  if (!userLocation.value) return
+  followLocation.value = true
+  if (!map.value) return
+  centerMap(userLocation.value.lat, userLocation.value.lng, Math.max(map.value.getZoom(), 14))
 }
 </script>
 
@@ -522,7 +549,9 @@ function handleSkipLocation() {
                 <option :value="0">All distances</option>
                 <option v-for="r in radiusOptions" :key="r" :value="r">{{ r }} km</option>
               </select>
-              <div class="location-hint">Location set</div>
+              <div class="location-hint" :class="{ live: isWatching }">
+                {{ isWatching ? 'Live · tracking your position' : 'Location set' }}
+              </div>
             </div>
           </div>
 
@@ -618,7 +647,7 @@ function handleSkipLocation() {
       <main class="explore-main">
         <div v-if="showMap" class="map-section">
           <div v-if="showLocationPrompt" class="location-overlay">
-            <div class="location-dialog">
+            <div class="location-dialog" role="dialog" aria-label="Enable location?" aria-modal="true" v-focus-trap>
               <svg
                 width="48"
                 height="48"
@@ -632,6 +661,10 @@ function handleSkipLocation() {
               </svg>
               <h3>Enable location?</h3>
               <p>Find the best deals near you with location access.</p>
+              <div v-if="permission === 'denied'" class="location-denied">
+                Location is blocked in your browser. Allow access for this site, then try again — your position will
+                then update automatically as you move.
+              </div>
               <div class="location-actions">
                 <button class="btn btn-primary" @click="handleAllowLocation">
                   {{ isLocating ? 'Locating...' : 'Enable' }}
@@ -655,6 +688,24 @@ function handleSkipLocation() {
               <line x1="12" y1="18" x2="12" y2="22" />
               <line x1="2" y1="12" x2="6" y2="12" />
               <line x1="18" y1="12" x2="22" y2="12" />
+            </svg>
+          </button>
+          <button
+            v-if="userLocation"
+            class="btn-locate btn-follow"
+            @click="handleRecentered"
+            :class="{ active: followLocation }"
+            :title="followLocation ? 'Following your live location' : 'Follow my location'"
+            :aria-label="followLocation ? 'Following your live location' : 'Follow my location'"
+            :aria-pressed="followLocation"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <circle cx="12" cy="12" r="2.5" />
+              <circle cx="12" cy="12" r="8" />
+              <line x1="12" y1="2" x2="12" y2="5" />
+              <line x1="12" y1="19" x2="12" y2="22" />
+              <line x1="2" y1="12" x2="5" y2="12" />
+              <line x1="19" y1="12" x2="22" y2="12" />
             </svg>
           </button>
           <div v-if="selectedDeal" class="map-info-panel">
@@ -731,16 +782,19 @@ function handleSkipLocation() {
         </div>
 
         <div v-else class="deals-grid">
-          <div v-if="isLoading" class="grid-skeleton">
-            <div v-for="n in 6" :key="n" class="skeleton-card"></div>
+          <div v-if="isLoading" class="row g-3">
+            <div v-for="n in 6" :key="n" class="col-12 col-sm-6 col-lg-4">
+              <div class="skeleton-card"></div>
+            </div>
           </div>
           <div v-else-if="filteredDeals.length === 0" class="empty-state">
             <h3>No deals found</h3>
             <p>Try adjusting your filters.</p>
             <button class="btn btn-outline btn-sm" @click="resetFilters()">Reset filters</button>
           </div>
-          <div v-else class="deal-grid">
-            <router-link v-for="deal in filteredDeals" :key="deal.id" :to="'/deals/' + deal.id" class="deal-card">
+          <div v-else class="row g-3">
+            <div v-for="deal in filteredDeals" :key="deal.id" class="col-12 col-sm-6 col-lg-4">
+              <router-link :to="'/deals/' + deal.id" class="deal-card h-100">
               <div class="deal-card-img">
                 <img
                   :src="deal.images?.[0] || 'https://images.unsplash.com/photo-1586999768265-24af89630739?w=200&q=80'"
@@ -770,7 +824,8 @@ function handleSkipLocation() {
                   }}</span>
                 </div>
               </div>
-            </router-link>
+              </router-link>
+            </div>
           </div>
         </div>
       </main>
@@ -953,6 +1008,20 @@ function handleSkipLocation() {
   font-size: 12px;
   color: var(--color-text-tertiary);
 }
+.location-hint.live {
+  color: var(--color-rating);
+  font-weight: 600;
+}
+.location-denied {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-bg, rgba(220, 38, 38, 0.08));
+  color: var(--color-danger, #dc2626);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  text-align: left;
+}
 
 .explore-main {
   min-width: 0;
@@ -991,6 +1060,14 @@ function handleSkipLocation() {
 .btn-locate:disabled {
   opacity: 0.5;
   cursor: default;
+}
+.btn-follow {
+  right: 62px;
+}
+.btn-follow.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
 }
 
 .location-overlay {
@@ -1166,11 +1243,6 @@ function handleSkipLocation() {
 .deals-grid {
   min-height: 60vh;
 }
-.deal-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
 .deal-card {
   display: flex;
   flex-direction: column;
@@ -1312,11 +1384,6 @@ function handleSkipLocation() {
   color: var(--color-text-tertiary);
 }
 
-.grid-skeleton {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
 .skeleton-card {
   height: 300px;
   border-radius: var(--radius-lg);
@@ -1420,18 +1487,7 @@ function handleSkipLocation() {
   }
 }
 
-@media (max-width: 768px) {
-  .deal-grid,
-  .grid-skeleton {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
 @media (max-width: 560px) {
-  .deal-grid,
-  .grid-skeleton {
-    grid-template-columns: 1fr;
-  }
   .explore-toolbar {
     flex-wrap: wrap;
   }
