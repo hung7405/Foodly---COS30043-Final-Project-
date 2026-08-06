@@ -1,0 +1,2194 @@
+{
+  "project": "Foodly",
+  "generated_at": 1786004237.9686112,
+  "stack": {
+    "total_files": 232,
+    "by_language": {
+      "typescript": 106,
+      "vue": 34,
+      "png": 22,
+      "markdown": 18,
+      "json": 13,
+      "python": 10,
+      "text": 8,
+      "docx": 5,
+      "svg": 3,
+      "yaml": 2,
+      "ps1": 2,
+      "tsbuildinfo": 2,
+      "javascript": 1,
+      "html": 1,
+      "conf": 1,
+      "css": 1,
+      "zip": 1,
+      "log": 1,
+      "sql": 1
+    },
+    "total_bytes": 5890406
+  },
+  "entrypoints": {
+    "server": [
+      "server/src/main.ts",
+      "server/src/app.module.ts"
+    ],
+    "client": [
+      "client/src/main.ts",
+      "client/src/router/index.ts",
+      "client/src/App.vue"
+    ]
+  },
+  "modules": [
+    {
+      "name": "client/app",
+      "files": [
+        "client/eslint.config.js",
+        "client/src/App.vue",
+        "client/src/main.ts",
+        "client/src/vite-env.d.ts",
+        "client/vite.config.ts"
+      ],
+      "functions": [
+        "showBottomTab"
+      ],
+      "methods": [],
+      "classes": [],
+      "apis": [],
+      "dependencies": [
+        "client/stores"
+      ],
+      "file_count": 5
+    },
+    {
+      "name": "client/components",
+      "files": [
+        "client/src/components/BannerCarousel.vue",
+        "client/src/components/common/AppFooter.vue",
+        "client/src/components/common/AppNavBar.vue",
+        "client/src/components/common/BottomTabBar.vue",
+        "client/src/components/common/EmptyState.vue",
+        "client/src/components/common/ErrorBoundary.vue",
+        "client/src/components/common/PwaInstallPrompt.vue",
+        "client/src/components/common/RatingStars.vue",
+        "client/src/components/common/RealtimeOrderTimeline.vue",
+        "client/src/components/common/SkeletonLoader.vue",
+        "client/src/components/map/RoutesPanel.vue",
+        "client/src/components/merchant/MerchantNavBar.vue"
+      ],
+      "functions": [
+        "prefersReducedMotion",
+        "next",
+        "prev",
+        "goTo",
+        "tick",
+        "endOfDay",
+        "formatted",
+        "handleSearch",
+        "go",
+        "tabs",
+        "activeTab",
+        "visible",
+        "reload",
+        "install",
+        "dismiss",
+        "countdownText",
+        "countdownCritical",
+        "getLeaflet",
+        "initMiniMap",
+        "drawMarkers",
+        "drawRoutes",
+        "redraw",
+        "formatDuration",
+        "points",
+        "bounds",
+        "isActive"
+      ],
+      "methods": [],
+      "classes": [],
+      "apis": [],
+      "dependencies": [
+        "client/composables",
+        "client/stores",
+        "client/utils"
+      ],
+      "file_count": 12
+    },
+    {
+      "name": "client/composables",
+      "files": [
+        "client/src/composables/useDirections.ts",
+        "client/src/composables/useLocation.ts"
+      ],
+      "functions": [
+        "generateMockRoutes",
+        "generatePolyline",
+        "useDirections",
+        "getUserLocation",
+        "calculateRoutes",
+        "setProfile",
+        "selectedRoute",
+        "pos",
+        "readCache",
+        "persist",
+        "useLocation",
+        "updatePosition",
+        "stopWatching",
+        "startWatching",
+        "getOnce",
+        "resolvePermission",
+        "setDefault",
+        "handleChange"
+      ],
+      "methods": [],
+      "classes": [],
+      "apis": [],
+      "dependencies": [
+        "client/services"
+      ],
+      "file_count": 2
+    },
+    {
+      "name": "client/directives",
+      "files": [
+        "client/src/directives/index.ts"
+      ],
+      "functions": [
+        "getFocusable",
+        "vClickOutside",
+        "handler",
+        "vFocusTrap",
+        "onKeydown"
+      ],
+      "methods": [],
+      "classes": [],
+      "apis": [],
+      "dependencies": [],
+      "file_count": 1
+    },
+    {
+      "name": "client/router",
+      "files": [
+        "client/src/router/index.ts"
+      ],
+      "functions": [
+        "routes"
+      ],
+      "methods": [],
+      "classes": [],
+      "apis": [],
+      "dependencies": [
+        "client/stores"
+      ],
+      "file_count": 1
+    },
+    {
+      "name": "client/services",
+      "files": [
+        "client/src/services/api/axios.ts",
+        "client/src/services/api/index.ts",
+        "client/src/services/freeApis.ts",
+        "client/src/services/socket/socket.ts"
+      ],
+      "functions": [
+        "fetchOSRM",
+        "toRoute",
+        "mapKeys",
+        "pickUrl",
+        "toCamel",
+        "currentToken",
+        "makeOptions",
+        "getSocket",
+        "getAnalyticsSocket",
+        "refreshSocketAuth",
+        "disconnectSocket"
+      ],
+      "methods": [],
+      "classes": [],
+      "apis": [],
+      "dependencies": [
+        "client/stores"
+      ],
+      "file_count": 4
+    },
+    {
+      "name": "client/stores",
+      "files": [
+        "client/src/stores/auth.store.ts",
+        "client/src/stores/ui.store.ts"
+      ],
+      "functions": [
+        "login",
+        "register",
+        "fetchProfile",
+        "logout",
+        "setUser",
+        "useAuthStore",
+        "isAuthenticated",
+        "isModerator",
+        "isAdmin",
+        "isMerchant",
+        "toggleTheme",
+        "applyTheme",
+        "addToast",
+        "removeToast",
+        "toggleMobileNav",
+        "closeMobileNav",
+        "useUiStore",
+        "isDark"
+      ],
+      "methods": [],
+      "classes": [],
+      "apis": [],
+      "dependencies": [
+        "client/services"
+      ],
+      "file_count": 2
+    },
+    {
+      "name": "client/types",
+      "files": [
+        "client/src/types/index.ts",
+        "client/src/types/news.types.ts"
+      ],
+      "functions": [],
+      "methods": [],
+      "classes": [],
+      "apis": [],
+      "dependencies": [],
+      "file_count": 2
+    },
+    {
+      "name": "client/utils",
+      "files": [
+        "client/src/utils/constants.ts",
+        "client/src/utils/currency.ts"
+      ],
+      "functions": [
+        "formatVND",
+        "formatVNDCompact"
+      ],
+      "methods": [],
+      "classes": [],
+      "apis": [],
+      "dependencies": [],
+      "file_count": 2
+    },
+    {
+      "name": "client/views",
+      "files": [
+        "client/src/views/AISearchView.vue",
+        "client/src/views/AboutView.vue",
+        "client/src/views/AdminView.vue",
+        "client/src/views/CommunityFeedView.vue",
+        "client/src/views/CreateDealView.vue",
+        "client/src/views/DashboardView.vue",
+        "client/src/views/DealDetailView.vue",
+        "client/src/views/ExploreView.vue",
+        "client/src/views/HomeView.vue",
+        "client/src/views/LoginView.vue",
+        "client/src/views/MyDealsView.vue",
+        "client/src/views/MyReservationsView.vue",
+        "client/src/views/NewsDetailView.vue",
+        "client/src/views/NewsView.vue",
+        "client/src/views/PaymentView.vue",
+        "client/src/views/ProfileView.vue",
+        "client/src/views/RegisterView.vue",
+        "client/src/views/SpinView.vue"
+      ],
+      "functions": [
+        "onFileChange",
+        "handleSearch",
+        "discountPct",
+        "reset",
+        "fullName",
+        "currentImage",
+        "loadAdminData",
+        "toggleBan",
+        "changeRole",
+        "verifyDeal",
+        "iconInnerHtml",
+        "hydrateForm",
+        "useMyLocation",
+        "clearFieldError",
+        "handleSubmit",
+        "isEdit",
+        "tags",
+        "position",
+        "store",
+        "trendPct",
+        "trends",
+        "getBootstrapCarousel",
+        "loadUpsells",
+        "loadDeal",
+        "loadComments",
+        "loadReservation",
+        "startCountdownFromReservation",
+        "handleReserve",
+        "addComment",
+        "formatCountdown",
+        "openRouteFromExplore",
+        "toggleLike",
+        "toggleBookmark",
+        "isSurprise",
+        "carouselImages",
+        "expiresInText",
+        "tick",
+        "others",
+        "sameStore",
+        "isSurpriseDeal",
+        "dealMatchesCategory",
+        "normalizeCategoryQuery",
+        "loadMore",
+        "joinDealRooms",
+        "leaveAllDealRooms",
+        "scheduleMarkerUpdate",
+        "loadDeals",
+        "resetFilters",
+        "initMap",
+        "createDealIcon",
+        "rebuildMarkers",
+        "drawUserMarker",
+        "centerMap",
+        "locateUser",
+        "onLivePosition",
+        "initLocationTracking",
+        "formatDist",
+        "calcDistance",
+        "selectDeal",
+        "deselectDeal",
+        "resolveDealAddress",
+        "buildRoute",
+        "drawRoute",
+        "handleAllowLocation",
+        "handleSkipLocation",
+        "handleRecentered",
+        "dealRating",
+        "stores",
+        "activeFiltersCount",
+        "filteredDeals",
+        "withDistance",
+        "result",
+        "pagedDeals",
+        "showingCount",
+        "hasMore",
+        "found",
+        "r",
+        "coords",
+        "selectCategory",
+        "distanceLabel",
+        "discountPercent",
+        "flashCountdown",
+        "editDeal",
+        "deleteDeal",
+        "timelineFor",
+        "onReservationConfirmed",
+        "onReservationExpired",
+        "loadReservations",
+        "isPaid",
+        "cancel",
+        "confirm",
+        "res",
+        "resList",
+        "loadNews",
+        "goToPage",
+        "setCategory",
+        "filteredArticles",
+        "totalPages",
+        "paginatedArticles",
+        "startCountdown",
+        "initiatePayment",
+        "completeMockPayment",
+        "retry",
+        "logout",
+        "validate",
+        "clearPasswordErrors",
+        "load",
+        "angleForIndex",
+        "spin",
+        "sliceIndex",
+        "remainingMs",
+        "countdownText",
+        "idx"
+      ],
+      "methods": [],
+      "classes": [],
+      "apis": [],
+      "dependencies": [
+        "client/composables",
+        "client/services",
+        "client/stores",
+        "client/types",
+        "client/utils"
+      ],
+      "file_count": 18
+    },
+    {
+      "name": "client/views-merchant",
+      "files": [
+        "client/src/views/merchant/MerchantDashboardView.vue",
+        "client/src/views/merchant/MerchantDealsView.vue",
+        "client/src/views/merchant/MerchantOrdersView.vue"
+      ],
+      "functions": [
+        "load",
+        "formatDate",
+        "stats",
+        "maxTrend",
+        "loadDeals",
+        "toggleDeal",
+        "onReservationConfirmed",
+        "onReservationExpired",
+        "loadOrders",
+        "confirmPickup",
+        "timelineFor",
+        "filteredOrders",
+        "order"
+      ],
+      "methods": [],
+      "classes": [],
+      "apis": [],
+      "dependencies": [
+        "client/services",
+        "client/stores",
+        "client/utils"
+      ],
+      "file_count": 3
+    },
+    {
+      "name": "docs",
+      "files": [
+        "docs/build_report.py",
+        "docs/figures/generate_placeholders.py"
+      ],
+      "functions": [
+        "add_runs",
+        "flush_table",
+        "flush_code",
+        "split_inline",
+        "_font",
+        "make_figure",
+        "main"
+      ],
+      "methods": [
+        "F.__init__",
+        "F.render",
+        "H.__init__",
+        "H.render",
+        "T.__init__",
+        "T.render",
+        "C.__init__",
+        "C.render",
+        "L.__init__",
+        "L.render",
+        "P.__init__",
+        "P.render"
+      ],
+      "classes": [
+        "F",
+        "H",
+        "T",
+        "C",
+        "L",
+        "P"
+      ],
+      "apis": [],
+      "dependencies": [],
+      "file_count": 2
+    },
+    {
+      "name": "server",
+      "files": [
+        "server/jest.config.ts",
+        "server/jest.e2e.ts",
+        "server/scripts/stress-reserve.ts",
+        "server/scripts/test-concurrency.ts",
+        "server/test/app.e2e-spec.ts"
+      ],
+      "functions": [
+        "login",
+        "createDeal",
+        "fetchActiveDeal",
+        "resetStock",
+        "delay",
+        "main",
+        "results",
+        "succeeded",
+        "conflicts",
+        "failed",
+        "deal",
+        "db",
+        "check",
+        "api",
+        "emailFor",
+        "registerUser",
+        "loginAs",
+        "deleteDeal",
+        "testReserve",
+        "testConfirmPayment",
+        "testDailySpin",
+        "testRedeem",
+        "testLike",
+        "testRealtime",
+        "RUN",
+        "users",
+        "rejected",
+        "reservation",
+        "confirms",
+        "ok",
+        "allSuccessStatus",
+        "spins",
+        "winners",
+        "alreadyUsed",
+        "redeems",
+        "likes",
+        "gotQuantity",
+        "t",
+        "gotReservation",
+        "mockAnalytics"
+      ],
+      "methods": [],
+      "classes": [],
+      "apis": [],
+      "dependencies": [
+        "server/analytics",
+        "server/app",
+        "server/socket"
+      ],
+      "file_count": 5
+    },
+    {
+      "name": "server/admin",
+      "files": [
+        "server/src/admin/admin.controller.ts",
+        "server/src/admin/admin.module.ts",
+        "server/src/admin/admin.service.ts"
+      ],
+      "functions": [],
+      "methods": [
+        "AdminController.constructor",
+        "AdminController.getDashboard",
+        "AdminController.getReviewDeals",
+        "AdminController.banUser",
+        "AdminController.changeRole",
+        "AdminService.constructor",
+        "AdminService.getDashboard",
+        "AdminService.getReviewDeals",
+        "AdminService.banUser",
+        "AdminService.changeUserRole"
+      ],
+      "classes": [
+        "AdminController",
+        "AdminModule",
+        "AdminService"
+      ],
+      "apis": [
+        "GET /admin/dashboard",
+        "GET /admin/deals/review",
+        "PUT /admin/users/:id/ban",
+        "PUT /admin/users/:id/role"
+      ],
+      "dependencies": [
+        "server/common",
+        "server/deals",
+        "server/users"
+      ],
+      "file_count": 3
+    },
+    {
+      "name": "server/ai",
+      "files": [
+        "server/src/ai/ai.controller.ts",
+        "server/src/ai/ai.module.ts",
+        "server/src/ai/ai.service.ts"
+      ],
+      "functions": [
+        "all",
+        "scored"
+      ],
+      "methods": [
+        "AiController.constructor",
+        "AiController.search",
+        "AiService.logger",
+        "AiService.constructor",
+        "AiService.supabase",
+        "AiService.searchByImage",
+        "AiService.detectWithVision",
+        "AiService.geminiVision",
+        "AiService.openaiVision",
+        "AiService.parseVisionJson",
+        "AiService.detectHeuristic",
+        "AiService.foodNameFromFilename",
+        "AiService.matchCategoryKey",
+        "AiService.findMatchingDeals",
+        "AiService.mimeFromFilename"
+      ],
+      "classes": [
+        "AiController",
+        "AiModule",
+        "AiService"
+      ],
+      "apis": [
+        "POST /ai/search"
+      ],
+      "dependencies": [
+        "server/deals",
+        "server/supabase"
+      ],
+      "file_count": 3
+    },
+    {
+      "name": "server/analytics",
+      "files": [
+        "server/src/analytics/analytics.controller.ts",
+        "server/src/analytics/analytics.gateway.ts",
+        "server/src/analytics/analytics.module.ts",
+        "server/src/analytics/analytics.service.ts"
+      ],
+      "functions": [
+        "uniqueUserIds",
+        "metrics"
+      ],
+      "methods": [
+        "AnalyticsController.constructor",
+        "AnalyticsController.getLive",
+        "AnalyticsController.getHistory",
+        "AnalyticsGateway.logger",
+        "AnalyticsGateway.server",
+        "AnalyticsGateway.interval",
+        "AnalyticsGateway.constructor",
+        "AnalyticsGateway.afterInit",
+        "AnalyticsGateway.handleConnection",
+        "AnalyticsGateway.handleDisconnect",
+        "AnalyticsGateway.onModuleDestroy",
+        "AnalyticsService.eventBuffer",
+        "AnalyticsService.constructor",
+        "AnalyticsService.recordEvent",
+        "AnalyticsService.computeLiveMetrics",
+        "AnalyticsService.recordSnapshot",
+        "AnalyticsService.getRecentSnapshot",
+        "AnalyticsService.getActivityLog",
+        "AnalyticsService.getHistory"
+      ],
+      "classes": [
+        "AnalyticsController",
+        "AnalyticsGateway",
+        "AnalyticsModule",
+        "AnalyticsService"
+      ],
+      "apis": [
+        "GET /analytics/live",
+        "GET /analytics/history"
+      ],
+      "dependencies": [
+        "server/app",
+        "server/common",
+        "server/supabase"
+      ],
+      "file_count": 4
+    },
+    {
+      "name": "server/app",
+      "files": [
+        "server/src/app.module.ts",
+        "server/src/config.ts",
+        "server/src/main.ts",
+        "server/src/refresh-deal-images.ts",
+        "server/src/seed-merchant.ts",
+        "server/src/seed-supabase.ts",
+        "server/src/seed-surprise.ts"
+      ],
+      "functions": [
+        "required",
+        "corsOrigin",
+        "bootstrap",
+        "chat",
+        "translateQuery",
+        "searchOpenFoodFacts",
+        "searchCommons",
+        "verifyImages",
+        "main",
+        "LIMIT",
+        "ensureMerchantUser",
+        "assignStores",
+        "seedReservations",
+        "ids",
+        "storeIds",
+        "dealIds",
+        "customers",
+        "makeCode",
+        "store",
+        "stripVnDiacritics",
+        "pickImages",
+        "resetDatabase",
+        "seed",
+        "IMG",
+        "dealInserts",
+        "verifiedDeals",
+        "merchantStoreIds",
+        "merchantDeals",
+        "customerUsers",
+        "verRecords"
+      ],
+      "methods": [],
+      "classes": [
+        "AppModule"
+      ],
+      "apis": [],
+      "dependencies": [
+        "server/admin",
+        "server/ai",
+        "server/analytics",
+        "server/auth",
+        "server/comments",
+        "server/common",
+        "server/deals",
+        "server/embedding",
+        "server/geo",
+        "server/health",
+        "server/interactions",
+        "server/merchant",
+        "server/news",
+        "server/payment",
+        "server/recommendation",
+        "server/reservations",
+        "server/rewards",
+        "server/socket",
+        "server/stores",
+        "server/supabase",
+        "server/users"
+      ],
+      "file_count": 7
+    },
+    {
+      "name": "server/auth",
+      "files": [
+        "server/src/auth/auth.controller.ts",
+        "server/src/auth/auth.module.ts",
+        "server/src/auth/auth.service.ts",
+        "server/src/auth/dto/login.dto.ts",
+        "server/src/auth/dto/register.dto.ts",
+        "server/src/auth/jwt.strategy.ts"
+      ],
+      "functions": [],
+      "methods": [
+        "AuthController.constructor",
+        "AuthController.register",
+        "AuthController.login",
+        "AuthController.getProfile",
+        "AuthController.updateProfile",
+        "AuthService.constructor",
+        "AuthService.register",
+        "AuthService.login",
+        "AuthService.getProfile",
+        "AuthService.updateProfile",
+        "AuthService.sanitizeUser",
+        "JwtStrategy.constructor",
+        "JwtStrategy.supabase",
+        "JwtStrategy.validate",
+        "LoginDto.email",
+        "LoginDto.password",
+        "RegisterDto.email",
+        "RegisterDto.username",
+        "RegisterDto.password",
+        "RegisterDto.firstName",
+        "RegisterDto.lastName"
+      ],
+      "classes": [
+        "AuthController",
+        "AuthModule",
+        "AuthService",
+        "JwtStrategy",
+        "LoginDto",
+        "RegisterDto"
+      ],
+      "apis": [
+        "POST /auth/register",
+        "POST /auth/login",
+        "GET /auth/me",
+        "PUT /auth/me"
+      ],
+      "dependencies": [
+        "server/app",
+        "server/common",
+        "server/supabase",
+        "server/users"
+      ],
+      "file_count": 6
+    },
+    {
+      "name": "server/comments",
+      "files": [
+        "server/src/comments/comments.controller.ts",
+        "server/src/comments/comments.module.ts",
+        "server/src/comments/comments.service.ts",
+        "server/src/comments/entities/comment.entity.ts"
+      ],
+      "functions": [],
+      "methods": [
+        "CommentsController.constructor",
+        "CommentsController.findByDeal",
+        "CommentsController.create",
+        "CommentsController.update",
+        "CommentsController.remove",
+        "CommentsService.constructor",
+        "CommentsService.findByDeal",
+        "CommentsService.create",
+        "CommentsService.update",
+        "CommentsService.remove",
+        "CommentsService.sanitizeComment",
+        "Comment.id",
+        "Comment.dealId",
+        "Comment.deal",
+        "Comment.userId",
+        "Comment.user",
+        "Comment.parentId",
+        "Comment.parent",
+        "Comment.replies",
+        "Comment.content",
+        "Comment.likeCount",
+        "Comment.status",
+        "Comment.createdAt",
+        "Comment.updatedAt"
+      ],
+      "classes": [
+        "CommentsController",
+        "CommentsModule",
+        "CommentsService",
+        "Comment"
+      ],
+      "apis": [
+        "GET /deals/:dealId/comments",
+        "POST /deals/:dealId/comments",
+        "PUT /comments/:id",
+        "DELETE /comments/:id"
+      ],
+      "dependencies": [
+        "server/analytics",
+        "server/common",
+        "server/deals",
+        "server/socket",
+        "server/supabase",
+        "server/users"
+      ],
+      "file_count": 4
+    },
+    {
+      "name": "server/common",
+      "files": [
+        "server/src/common/decorators/current-user.decorator.ts",
+        "server/src/common/decorators/roles.decorator.ts",
+        "server/src/common/filters/global-exception.filter.ts",
+        "server/src/common/guards/owner.guard.ts",
+        "server/src/common/guards/roles.guard.ts"
+      ],
+      "functions": [
+        "CurrentUser",
+        "Roles"
+      ],
+      "methods": [
+        "GlobalExceptionFilter.logger",
+        "GlobalExceptionFilter.catch",
+        "OwnerGuard.constructor",
+        "OwnerGuard.canActivate",
+        "RolesGuard.constructor",
+        "RolesGuard.canActivate"
+      ],
+      "classes": [
+        "GlobalExceptionFilter",
+        "OwnerGuard",
+        "RolesGuard"
+      ],
+      "apis": [],
+      "dependencies": [],
+      "file_count": 5
+    },
+    {
+      "name": "server/deals",
+      "files": [
+        "server/src/deals/deals.controller.ts",
+        "server/src/deals/deals.module.ts",
+        "server/src/deals/deals.service.ts",
+        "server/src/deals/dto/create-deal.dto.ts",
+        "server/src/deals/dto/update-deal.dto.ts",
+        "server/src/deals/entities/deal.entity.ts",
+        "server/src/deals/entities/verification-event.entity.ts"
+      ],
+      "functions": [
+        "dealMatchesCategory",
+        "paged",
+        "toRad"
+      ],
+      "methods": [
+        "DealsController.constructor",
+        "DealsController.findAll",
+        "DealsController.findMapDeals",
+        "DealsController.findMine",
+        "DealsController.findOne",
+        "DealsController.create",
+        "DealsController.update",
+        "DealsController.remove",
+        "DealsController.verify",
+        "DealsController.toggleLike",
+        "DealsController.toggleBookmark",
+        "DealsService.constructor",
+        "DealsService.supabase",
+        "DealsService.findAll",
+        "DealsService.findMapDeals",
+        "DealsService.findById",
+        "DealsService.findMine",
+        "DealsService.create",
+        "DealsService.update",
+        "DealsService.remove",
+        "DealsService.verify",
+        "DealsService.toggleLike",
+        "DealsService.toggleBookmark",
+        "DealsService.incrementCounter",
+        "DealsService.decrementCounter",
+        "DealsService.distanceKm",
+        "DealsService.sanitizeDeal",
+        "CreateDealDto.title",
+        "CreateDealDto.description",
+        "CreateDealDto.originalPrice",
+        "CreateDealDto.discountPrice",
+        "CreateDealDto.latitude",
+        "CreateDealDto.longitude",
+        "CreateDealDto.address",
+        "CreateDealDto.tags",
+        "CreateDealDto.remainingQuantity",
+        "CreateDealDto.images",
+        "CreateDealDto.metadata",
+        "Deal.id",
+        "Deal.userId",
+        "Deal.user",
+        "Deal.storeId",
+        "Deal.store",
+        "Deal.title",
+        "Deal.description",
+        "Deal.originalPrice",
+        "Deal.discountPrice",
+        "Deal.currency",
+        "Deal.remainingQuantity",
+        "Deal.originalQuantity",
+        "Deal.status",
+        "Deal.verified",
+        "Deal.verifiedById",
+        "Deal.latitude",
+        "Deal.longitude",
+        "Deal.address",
+        "Deal.images",
+        "Deal.expiresAt",
+        "Deal.tags",
+        "Deal.metadata",
+        "Deal.version",
+        "Deal.likeCount",
+        "Deal.bookmarkCount",
+        "Deal.commentCount",
+        "Deal.createdAt",
+        "Deal.updatedAt",
+        "Deal.reservations",
+        "Deal.comments",
+        "Deal.verificationEvents",
+        "VerificationEvent.id",
+        "VerificationEvent.dealId",
+        "VerificationEvent.deal",
+        "VerificationEvent.moderatorId",
+        "VerificationEvent.moderator",
+        "VerificationEvent.action",
+        "VerificationEvent.notes",
+        "VerificationEvent.createdAt"
+      ],
+      "classes": [
+        "DealsController",
+        "DealsModule",
+        "DealsService",
+        "CreateDealDto",
+        "UpdateDealDto",
+        "Deal",
+        "VerificationEvent"
+      ],
+      "apis": [
+        "GET /deals",
+        "GET /deals/map",
+        "GET /deals/mine",
+        "GET /deals/:id",
+        "POST /deals",
+        "PUT /deals/:id",
+        "DELETE /deals/:id",
+        "POST /deals/:id/verify",
+        "POST /deals/:id/like",
+        "POST /deals/:id/bookmark"
+      ],
+      "dependencies": [
+        "server/analytics",
+        "server/comments",
+        "server/common",
+        "server/interactions",
+        "server/reservations",
+        "server/socket",
+        "server/stores",
+        "server/supabase",
+        "server/users"
+      ],
+      "file_count": 7
+    },
+    {
+      "name": "server/embedding",
+      "files": [
+        "server/src/embedding/embedding.controller.ts",
+        "server/src/embedding/embedding.module.ts",
+        "server/src/embedding/embedding.service.ts"
+      ],
+      "functions": [],
+      "methods": [
+        "EmbeddingController.constructor",
+        "EmbeddingController.status",
+        "EmbeddingController.backfill",
+        "EmbeddingService.logger",
+        "EmbeddingService.enabled",
+        "EmbeddingService.constructor",
+        "EmbeddingService.supabase",
+        "EmbeddingService.isEnabled",
+        "EmbeddingService.generateEmbedding",
+        "EmbeddingService.dealContent",
+        "EmbeddingService.backfill",
+        "EmbeddingService.searchVector",
+        "EmbeddingService.backfillJob"
+      ],
+      "classes": [
+        "EmbeddingController",
+        "EmbeddingModule",
+        "EmbeddingService"
+      ],
+      "apis": [
+        "GET /ai/embeddings/status",
+        "POST /ai/embeddings/backfill"
+      ],
+      "dependencies": [
+        "server/common",
+        "server/deals",
+        "server/supabase"
+      ],
+      "file_count": 3
+    },
+    {
+      "name": "server/geo",
+      "files": [
+        "server/src/geo/geo.controller.ts",
+        "server/src/geo/geo.module.ts"
+      ],
+      "functions": [],
+      "methods": [
+        "GeoController.locate"
+      ],
+      "classes": [
+        "GeoController",
+        "GeoModule"
+      ],
+      "apis": [
+        "GET /geo"
+      ],
+      "dependencies": [],
+      "file_count": 2
+    },
+    {
+      "name": "server/health",
+      "files": [
+        "server/src/health/health.controller.ts",
+        "server/src/health/health.module.ts"
+      ],
+      "functions": [],
+      "methods": [
+        "HealthController.check"
+      ],
+      "classes": [
+        "HealthController",
+        "HealthModule"
+      ],
+      "apis": [
+        "GET /health"
+      ],
+      "dependencies": [],
+      "file_count": 2
+    },
+    {
+      "name": "server/interactions",
+      "files": [
+        "server/src/interactions/entities/interaction.entity.ts",
+        "server/src/interactions/interactions.controller.ts",
+        "server/src/interactions/interactions.module.ts",
+        "server/src/interactions/interactions.service.ts"
+      ],
+      "functions": [],
+      "methods": [
+        "InteractionsController.constructor",
+        "InteractionsController.record",
+        "InteractionsController.recordAnonymous",
+        "InteractionsService.constructor",
+        "InteractionsService.record",
+        "InteractionsService.getUserInteractions",
+        "InteractionsService.getDealInteractions",
+        "InteractionsService.getViewCount",
+        "UserInteraction.id",
+        "UserInteraction.userId",
+        "UserInteraction.dealId",
+        "UserInteraction.action",
+        "UserInteraction.weight",
+        "UserInteraction.createdAt"
+      ],
+      "classes": [
+        "InteractionsController",
+        "InteractionsModule",
+        "InteractionsService",
+        "UserInteraction"
+      ],
+      "apis": [
+        "POST /interactions",
+        "POST /interactions/anonymous"
+      ],
+      "dependencies": [
+        "server/supabase"
+      ],
+      "file_count": 4
+    },
+    {
+      "name": "server/merchant",
+      "files": [
+        "server/src/merchant/merchant.controller.ts",
+        "server/src/merchant/merchant.module.ts",
+        "server/src/merchant/merchant.service.ts"
+      ],
+      "functions": [
+        "dealIds",
+        "isToday",
+        "confirmed",
+        "confirmedToday",
+        "revenueOf",
+        "sumRevenue",
+        "itemsSold",
+        "lowStockDeals",
+        "recentOrders",
+        "topProducts",
+        "pendingPickups",
+        "dayOrders"
+      ],
+      "methods": [
+        "MerchantController.constructor",
+        "MerchantController.getProfile",
+        "MerchantController.getDashboard",
+        "MerchantController.getOrders",
+        "MerchantController.confirmPickup",
+        "MerchantController.getDeals",
+        "MerchantController.setDealActive",
+        "MerchantService.constructor",
+        "MerchantService.getStoreIds",
+        "MerchantService.getProfile",
+        "MerchantService.getDashboard",
+        "MerchantService.getOrders",
+        "MerchantService.confirmPickup",
+        "MerchantService.getDeals",
+        "MerchantService.setDealActive",
+        "MerchantService.emptyDashboard"
+      ],
+      "classes": [
+        "MerchantController",
+        "MerchantModule",
+        "MerchantService"
+      ],
+      "apis": [
+        "GET /merchant/profile",
+        "GET /merchant/dashboard",
+        "GET /merchant/orders",
+        "PUT /merchant/orders/:id/confirm",
+        "GET /merchant/deals",
+        "PUT /merchant/deals/:id/status"
+      ],
+      "dependencies": [
+        "server/common",
+        "server/socket",
+        "server/supabase",
+        "server/users"
+      ],
+      "file_count": 3
+    },
+    {
+      "name": "server/news",
+      "files": [
+        "server/src/news/news.controller.ts",
+        "server/src/news/news.module.ts",
+        "server/src/news/news.service.ts"
+      ],
+      "functions": [
+        "cats"
+      ],
+      "methods": [
+        "NewsController.constructor",
+        "NewsController.findAll",
+        "NewsController.getCategories",
+        "NewsController.findOne",
+        "NewsService.articles",
+        "NewsService.findAll",
+        "NewsService.findById",
+        "NewsService.getCategories"
+      ],
+      "classes": [
+        "NewsController",
+        "NewsModule",
+        "NewsService"
+      ],
+      "apis": [
+        "GET /news",
+        "GET /news/categories",
+        "GET /news/:id"
+      ],
+      "dependencies": [],
+      "file_count": 3
+    },
+    {
+      "name": "server/payment",
+      "files": [
+        "server/src/payment/dto/create-payment.dto.ts",
+        "server/src/payment/entities/payment.entity.ts",
+        "server/src/payment/payment.controller.ts",
+        "server/src/payment/payment.module.ts",
+        "server/src/payment/payment.service.ts"
+      ],
+      "functions": [],
+      "methods": [
+        "PaymentController.constructor",
+        "PaymentController.createPayment",
+        "PaymentController.confirmPayment",
+        "PaymentController.failPayment",
+        "PaymentController.refundPayment",
+        "PaymentController.myPayments",
+        "PaymentController.getPayment",
+        "PaymentController.getStats",
+        "PaymentController.completeMockPayment",
+        "PaymentService.constructor",
+        "PaymentService.createPayment",
+        "PaymentService.processPayment",
+        "PaymentService.processMockPayment",
+        "PaymentService.createMoMoPayment",
+        "PaymentService.createVNPayPayment",
+        "PaymentService.confirmPayment",
+        "PaymentService.awardLoyaltyPoints",
+        "PaymentService.failPayment",
+        "PaymentService.refundPayment",
+        "PaymentService.findByUser",
+        "PaymentService.findById",
+        "PaymentService.expirePendingPayments",
+        "PaymentService.getPaymentStats",
+        "CreatePaymentDto.reservationId",
+        "CreatePaymentDto.amount",
+        "CreatePaymentDto.provider",
+        "Payment.id",
+        "Payment.userId",
+        "Payment.user",
+        "Payment.reservationId",
+        "Payment.reservation",
+        "Payment.amount",
+        "Payment.currency",
+        "Payment.provider",
+        "Payment.status",
+        "Payment.providerTransactionId",
+        "Payment.providerReferenceId",
+        "Payment.paymentUrl",
+        "Payment.qrCodeUrl",
+        "Payment.paidAt",
+        "Payment.providerResponse",
+        "Payment.failureReason",
+        "Payment.refundedAt",
+        "Payment.createdAt",
+        "Payment.updatedAt"
+      ],
+      "classes": [
+        "PaymentController",
+        "PaymentModule",
+        "PaymentService",
+        "CreatePaymentDto",
+        "Payment"
+      ],
+      "apis": [
+        "POST /payments/reservations/:reservationId/pay",
+        "PUT /payments/:id/confirm",
+        "PUT /payments/:id/fail",
+        "PUT /payments/:id/refund",
+        "GET /payments",
+        "GET /payments/:id",
+        "GET /payments/stats/all",
+        "PUT /payments/:id/complete-mock"
+      ],
+      "dependencies": [
+        "server/common",
+        "server/reservations",
+        "server/socket",
+        "server/supabase",
+        "server/users"
+      ],
+      "file_count": 5
+    },
+    {
+      "name": "server/recommendation",
+      "files": [
+        "server/src/recommendation/recommendation.controller.ts",
+        "server/src/recommendation/recommendation.module.ts",
+        "server/src/recommendation/recommendation.service.spec.ts",
+        "server/src/recommendation/recommendation.service.ts"
+      ],
+      "functions": [
+        "topTags",
+        "likeDealIds",
+        "bookmarkDealIds",
+        "viewedDealIds",
+        "maxViewCount",
+        "scored",
+        "toRad"
+      ],
+      "methods": [
+        "RecommendationController.constructor",
+        "RecommendationController.getFlashSale",
+        "RecommendationController.getRecommendations",
+        "RecommendationService.constructor",
+        "RecommendationService.supabase",
+        "RecommendationService.getRecommendations",
+        "RecommendationService.buildVectorSimilarity",
+        "RecommendationService.buildUserTagProfile",
+        "RecommendationService.scoreAndRank",
+        "RecommendationService.calcDistanceScore",
+        "RecommendationService.calcHistoryScore",
+        "RecommendationService.calcPopularityScore",
+        "RecommendationService.calcFreshnessScore",
+        "RecommendationService.calcInteractionScore",
+        "RecommendationService.distanceKm"
+      ],
+      "classes": [
+        "RecommendationController",
+        "RecommendationModule",
+        "RecommendationService"
+      ],
+      "apis": [
+        "GET /recommendations/flash-sale",
+        "GET /recommendations"
+      ],
+      "dependencies": [
+        "server/deals",
+        "server/embedding",
+        "server/interactions",
+        "server/supabase"
+      ],
+      "file_count": 4
+    },
+    {
+      "name": "server/reservations",
+      "files": [
+        "server/src/reservations/entities/reservation.entity.ts",
+        "server/src/reservations/reservations.controller.ts",
+        "server/src/reservations/reservations.module.ts",
+        "server/src/reservations/reservations.service.ts"
+      ],
+      "functions": [],
+      "methods": [
+        "ReservationsController.constructor",
+        "ReservationsController.reserve",
+        "ReservationsController.myReservations",
+        "ReservationsController.confirm",
+        "ReservationsController.cancel",
+        "ReservationsService.constructor",
+        "ReservationsService.reserve",
+        "ReservationsService.findByUser",
+        "ReservationsService.confirm",
+        "ReservationsService.cancel",
+        "ReservationsService.expireReservations",
+        "ReservationsService.expireReservationsJob",
+        "ReservationsService.expireReservation",
+        "ReservationsService.restoreQuantity",
+        "Reservation.id",
+        "Reservation.dealId",
+        "Reservation.deal",
+        "Reservation.userId",
+        "Reservation.user",
+        "Reservation.status",
+        "Reservation.reservedAt",
+        "Reservation.expiresAt",
+        "Reservation.confirmedAt",
+        "Reservation.reservationCode",
+        "Reservation.quantityReserved"
+      ],
+      "classes": [
+        "ReservationsController",
+        "ReservationsModule",
+        "ReservationsService",
+        "Reservation"
+      ],
+      "apis": [
+        "POST /deals/:dealId/reserve",
+        "GET /reservations",
+        "PUT /reservations/:id/confirm",
+        "DELETE /reservations/:id"
+      ],
+      "dependencies": [
+        "server/analytics",
+        "server/common",
+        "server/deals",
+        "server/payment",
+        "server/socket",
+        "server/supabase",
+        "server/users"
+      ],
+      "file_count": 4
+    },
+    {
+      "name": "server/rewards",
+      "files": [
+        "server/src/rewards/rewards.controller.ts",
+        "server/src/rewards/rewards.module.ts",
+        "server/src/rewards/rewards.service.ts"
+      ],
+      "functions": [
+        "bags",
+        "moneySaved"
+      ],
+      "methods": [
+        "RewardsController.constructor",
+        "RewardsController.impact",
+        "RewardsController.balance",
+        "RewardsController.spinStatus",
+        "RewardsController.dailySpin",
+        "RewardsController.redeem",
+        "RewardsService.constructor",
+        "RewardsService.getImpact",
+        "RewardsService.getBalance",
+        "RewardsService.dailySpin",
+        "RewardsService.getSpinStatus",
+        "RewardsService.spinDaysSet",
+        "RewardsService.consecutiveStreak",
+        "RewardsService.streakBonus",
+        "RewardsService.localDayKey",
+        "RewardsService.nextLocalMidnight",
+        "RewardsService.redeem",
+        "RewardsService.awardPoints",
+        "RewardsService.escalateDiscounts",
+        "RewardsService.dailySpinEventId",
+        "RewardsService.randomPrize",
+        "RewardsService.handleEscalateDiscounts"
+      ],
+      "classes": [
+        "RewardsController",
+        "RewardsModule",
+        "RewardsService"
+      ],
+      "apis": [
+        "GET /rewards/impact",
+        "GET /rewards/balance",
+        "GET /rewards/daily-spin/status",
+        "POST /rewards/daily-spin",
+        "POST /rewards/redeem"
+      ],
+      "dependencies": [
+        "server/socket",
+        "server/supabase"
+      ],
+      "file_count": 3
+    },
+    {
+      "name": "server/socket",
+      "files": [
+        "server/src/socket/socket.gateway.ts",
+        "server/src/socket/socket.module.ts"
+      ],
+      "functions": [],
+      "methods": [
+        "SocketGateway.logger",
+        "SocketGateway.server",
+        "SocketGateway.afterInit",
+        "SocketGateway.handleConnection",
+        "SocketGateway.handleDisconnect",
+        "SocketGateway.verifyToken",
+        "SocketGateway.handleDealJoin",
+        "SocketGateway.handleDealLeave",
+        "SocketGateway.handleMapViewport",
+        "SocketGateway.handleMapLeave",
+        "SocketGateway.handleFeedJoin",
+        "SocketGateway.handleFeedLeave",
+        "SocketGateway.handleDashboardJoin",
+        "SocketGateway.handleDashboardLeave",
+        "SocketGateway.emitDealCreated",
+        "SocketGateway.emitDealUpdated",
+        "SocketGateway.emitDealQuantity",
+        "SocketGateway.emitDealVerified",
+        "SocketGateway.emitReservationCreated",
+        "SocketGateway.emitReservationConfirmed",
+        "SocketGateway.emitReservationExpired",
+        "SocketGateway.emitCommentAdded",
+        "SocketGateway.emitFeedActivity",
+        "SocketGateway.hashBounds"
+      ],
+      "classes": [
+        "SocketGateway",
+        "SocketModule"
+      ],
+      "apis": [],
+      "dependencies": [
+        "server/app"
+      ],
+      "file_count": 2
+    },
+    {
+      "name": "server/stores",
+      "files": [
+        "server/src/stores/entities/store.entity.ts",
+        "server/src/stores/stores.controller.ts",
+        "server/src/stores/stores.module.ts",
+        "server/src/stores/stores.service.ts"
+      ],
+      "functions": [],
+      "methods": [
+        "StoresController.constructor",
+        "StoresController.findAll",
+        "StoresController.findOne",
+        "StoresController.create",
+        "StoresController.update",
+        "StoresService.constructor",
+        "StoresService.findAll",
+        "StoresService.findById",
+        "StoresService.EDITABLE_FIELDS",
+        "StoresService.create",
+        "StoresService.update",
+        "Store.id",
+        "Store.name",
+        "Store.address",
+        "Store.latitude",
+        "Store.longitude",
+        "Store.category",
+        "Store.avgTrustScore",
+        "Store.totalDeals",
+        "Store.isActive",
+        "Store.createdAt",
+        "Store.updatedAt",
+        "Store.deals"
+      ],
+      "classes": [
+        "StoresController",
+        "StoresModule",
+        "StoresService",
+        "Store"
+      ],
+      "apis": [
+        "GET /stores",
+        "GET /stores/:id",
+        "POST /stores",
+        "PUT /stores/:id"
+      ],
+      "dependencies": [
+        "server/common",
+        "server/deals",
+        "server/supabase"
+      ],
+      "file_count": 4
+    },
+    {
+      "name": "server/supabase",
+      "files": [
+        "server/src/supabase/supabase.module.ts",
+        "server/src/supabase/supabase.service.ts"
+      ],
+      "functions": [],
+      "methods": [
+        "SupabaseService.supabase",
+        "SupabaseService.logger",
+        "SupabaseService.onModuleInit",
+        "SupabaseService.client"
+      ],
+      "classes": [
+        "SupabaseModule",
+        "SupabaseService"
+      ],
+      "apis": [],
+      "dependencies": [],
+      "file_count": 2
+    },
+    {
+      "name": "server/users",
+      "files": [
+        "server/src/users/entities/user.entity.ts",
+        "server/src/users/users.controller.ts",
+        "server/src/users/users.module.ts",
+        "server/src/users/users.service.ts"
+      ],
+      "functions": [],
+      "methods": [
+        "UsersController.constructor",
+        "UsersController.findAll",
+        "UsersController.findOne",
+        "UsersService.constructor",
+        "UsersService.findById",
+        "UsersService.findAll",
+        "UsersService.updateRole",
+        "UsersService.toggleBan",
+        "UsersService.sanitizeUser",
+        "User.id",
+        "User.email",
+        "User.username",
+        "User.passwordHash",
+        "User.firstName",
+        "User.lastName",
+        "User.role",
+        "User.trustScore",
+        "User.reputationPoints",
+        "User.avatarUrl",
+        "User.isActive",
+        "User.createdAt",
+        "User.updatedAt",
+        "User.lastLogin",
+        "User.deals",
+        "User.reservations",
+        "User.comments",
+        "User.verifications"
+      ],
+      "classes": [
+        "UsersController",
+        "UsersModule",
+        "UsersService",
+        "User"
+      ],
+      "apis": [
+        "GET /users",
+        "GET /users/:id"
+      ],
+      "dependencies": [
+        "server/comments",
+        "server/common",
+        "server/deals",
+        "server/reservations",
+        "server/supabase"
+      ],
+      "file_count": 4
+    },
+    {
+      "name": "tools",
+      "files": [
+        "tools/code-intelligence/__init__.py",
+        "tools/code-intelligence/ast_parser.py",
+        "tools/code-intelligence/config.py",
+        "tools/code-intelligence/context_query.py",
+        "tools/code-intelligence/exporter.py",
+        "tools/code-intelligence/graph_builder.py",
+        "tools/code-intelligence/run.py",
+        "tools/code-intelligence/scanner.py"
+      ],
+      "functions": [
+        "_text",
+        "_find",
+        "_first",
+        "_line",
+        "_import_path",
+        "_named_imports",
+        "_python_imports",
+        "_decorator_info",
+        "_class_decorators",
+        "_controller_prefix",
+        "_join_path",
+        "_parse_js_ts",
+        "_nearest_symbol",
+        "_parse_python",
+        "_is_method",
+        "_class_parent",
+        "_parse_vue",
+        "parse_file",
+        "load_map",
+        "load_graph",
+        "_matches",
+        "query",
+        "_map_exists",
+        "_graph_exists",
+        "main",
+        "_write_json",
+        "build_module_map",
+        "_dedupe",
+        "build_api_overview",
+        "_markdown_table",
+        "build_architecture_md",
+        "export",
+        "module_of",
+        "_norm",
+        "parse_many",
+        "_matches_any",
+        "scan",
+        "summary"
+      ],
+      "methods": [
+        "GraphBuilder.__init__",
+        "GraphBuilder._resolve_import",
+        "GraphBuilder.build",
+        "GraphBuilder.to_records",
+        "GraphBuilder._norm",
+        "GraphBuilder._real"
+      ],
+      "classes": [
+        "Symbol",
+        "FileAst",
+        "GraphBuilder"
+      ],
+      "apis": [],
+      "dependencies": [
+        "server/app"
+      ],
+      "file_count": 8
+    }
+  ],
+  "api_overview": [
+    {
+      "method": "DELETE",
+      "path": "/comments/:id",
+      "implemented_in": [
+        "server/src/comments/comments.controller.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/deals/:id",
+      "implemented_in": [
+        "server/src/deals/deals.controller.ts"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/reservations/:id",
+      "implemented_in": [
+        "server/src/reservations/reservations.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/dashboard",
+      "implemented_in": [
+        "server/src/admin/admin.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/deals/review",
+      "implemented_in": [
+        "server/src/admin/admin.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/live",
+      "implemented_in": [
+        "server/src/analytics/analytics.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/analytics/history",
+      "implemented_in": [
+        "server/src/analytics/analytics.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/auth/me",
+      "implemented_in": [
+        "server/src/auth/auth.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/deals/:dealId/comments",
+      "implemented_in": [
+        "server/src/comments/comments.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/deals",
+      "implemented_in": [
+        "server/src/deals/deals.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/deals/map",
+      "implemented_in": [
+        "server/src/deals/deals.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/deals/mine",
+      "implemented_in": [
+        "server/src/deals/deals.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/deals/:id",
+      "implemented_in": [
+        "server/src/deals/deals.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/ai/embeddings/status",
+      "implemented_in": [
+        "server/src/embedding/embedding.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/geo",
+      "implemented_in": [
+        "server/src/geo/geo.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "implemented_in": [
+        "server/src/health/health.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/merchant/profile",
+      "implemented_in": [
+        "server/src/merchant/merchant.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/merchant/dashboard",
+      "implemented_in": [
+        "server/src/merchant/merchant.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/merchant/orders",
+      "implemented_in": [
+        "server/src/merchant/merchant.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/merchant/deals",
+      "implemented_in": [
+        "server/src/merchant/merchant.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/news",
+      "implemented_in": [
+        "server/src/news/news.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/news/categories",
+      "implemented_in": [
+        "server/src/news/news.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/news/:id",
+      "implemented_in": [
+        "server/src/news/news.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/payments",
+      "implemented_in": [
+        "server/src/payment/payment.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/payments/:id",
+      "implemented_in": [
+        "server/src/payment/payment.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/payments/stats/all",
+      "implemented_in": [
+        "server/src/payment/payment.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/recommendations/flash-sale",
+      "implemented_in": [
+        "server/src/recommendation/recommendation.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/recommendations",
+      "implemented_in": [
+        "server/src/recommendation/recommendation.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/reservations",
+      "implemented_in": [
+        "server/src/reservations/reservations.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/rewards/impact",
+      "implemented_in": [
+        "server/src/rewards/rewards.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/rewards/balance",
+      "implemented_in": [
+        "server/src/rewards/rewards.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/rewards/daily-spin/status",
+      "implemented_in": [
+        "server/src/rewards/rewards.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/stores",
+      "implemented_in": [
+        "server/src/stores/stores.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/stores/:id",
+      "implemented_in": [
+        "server/src/stores/stores.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/users",
+      "implemented_in": [
+        "server/src/users/users.controller.ts"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/users/:id",
+      "implemented_in": [
+        "server/src/users/users.controller.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/ai/search",
+      "implemented_in": [
+        "server/src/ai/ai.controller.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/auth/register",
+      "implemented_in": [
+        "server/src/auth/auth.controller.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/auth/login",
+      "implemented_in": [
+        "server/src/auth/auth.controller.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/deals/:dealId/comments",
+      "implemented_in": [
+        "server/src/comments/comments.controller.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/deals",
+      "implemented_in": [
+        "server/src/deals/deals.controller.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/deals/:id/verify",
+      "implemented_in": [
+        "server/src/deals/deals.controller.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/deals/:id/like",
+      "implemented_in": [
+        "server/src/deals/deals.controller.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/deals/:id/bookmark",
+      "implemented_in": [
+        "server/src/deals/deals.controller.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/ai/embeddings/backfill",
+      "implemented_in": [
+        "server/src/embedding/embedding.controller.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/interactions",
+      "implemented_in": [
+        "server/src/interactions/interactions.controller.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/interactions/anonymous",
+      "implemented_in": [
+        "server/src/interactions/interactions.controller.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/payments/reservations/:reservationId/pay",
+      "implemented_in": [
+        "server/src/payment/payment.controller.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/deals/:dealId/reserve",
+      "implemented_in": [
+        "server/src/reservations/reservations.controller.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/rewards/daily-spin",
+      "implemented_in": [
+        "server/src/rewards/rewards.controller.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/rewards/redeem",
+      "implemented_in": [
+        "server/src/rewards/rewards.controller.ts"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/stores",
+      "implemented_in": [
+        "server/src/stores/stores.controller.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/users/:id/ban",
+      "implemented_in": [
+        "server/src/admin/admin.controller.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/users/:id/role",
+      "implemented_in": [
+        "server/src/admin/admin.controller.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/auth/me",
+      "implemented_in": [
+        "server/src/auth/auth.controller.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/comments/:id",
+      "implemented_in": [
+        "server/src/comments/comments.controller.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/deals/:id",
+      "implemented_in": [
+        "server/src/deals/deals.controller.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/merchant/orders/:id/confirm",
+      "implemented_in": [
+        "server/src/merchant/merchant.controller.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/merchant/deals/:id/status",
+      "implemented_in": [
+        "server/src/merchant/merchant.controller.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/payments/:id/confirm",
+      "implemented_in": [
+        "server/src/payment/payment.controller.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/payments/:id/fail",
+      "implemented_in": [
+        "server/src/payment/payment.controller.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/payments/:id/refund",
+      "implemented_in": [
+        "server/src/payment/payment.controller.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/payments/:id/complete-mock",
+      "implemented_in": [
+        "server/src/payment/payment.controller.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/reservations/:id/confirm",
+      "implemented_in": [
+        "server/src/reservations/reservations.controller.ts"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/stores/:id",
+      "implemented_in": [
+        "server/src/stores/stores.controller.ts"
+      ]
+    }
+  ]
+}
