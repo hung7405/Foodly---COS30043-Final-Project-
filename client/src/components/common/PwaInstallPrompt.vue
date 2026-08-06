@@ -45,7 +45,7 @@ function dismiss() {
 
 <template>
   <Transition name="install-slide">
-    <div v-if="showPrompt" class="pwa-install-banner" role="dialog" aria-label="Install Foodly">
+    <div v-if="showPrompt" v-focus-trap class="pwa-install-banner" role="dialog" aria-label="Install Foodly" aria-modal="true">
       <div class="pwa-install-info">
         <img src="/pwa/icon-192.png" alt="Foodly" class="pwa-install-icon" width="40" height="40" />
         <div class="pwa-install-text">

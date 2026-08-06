@@ -60,6 +60,10 @@ const interval = 5000
 let timer: number | undefined
 let countdownTimer: number | undefined
 
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
 const endOfDay = computed(() => {
   const d = new Date()
   d.setHours(23, 59, 59, 999)
@@ -100,9 +104,11 @@ watch(current, () => {
 })
 
 onMounted(() => {
-  timer = window.setInterval(() => {
-    if (!hover.value) next()
-  }, interval)
+  if (!prefersReducedMotion()) {
+    timer = window.setInterval(() => {
+      if (!hover.value) next()
+    }, interval)
+  }
   if (banners[current.value].countdown) {
     tick()
     countdownTimer = window.setInterval(tick, 1000)

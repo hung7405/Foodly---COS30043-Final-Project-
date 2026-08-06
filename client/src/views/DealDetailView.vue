@@ -462,7 +462,9 @@ async function toggleBookmark() {
           <h3>Community comments</h3>
 
           <div class="comment-form">
+            <label class="sr-only" for="commentText">Add a comment</label>
             <textarea
+              id="commentText"
               v-model="commentText"
               rows="3"
               placeholder="Share pickup tips, freshness notes, or confirmation..."

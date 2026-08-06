@@ -82,9 +82,11 @@ async function handleSubmit() {
               type="text"
               placeholder="John"
               :class="{ invalid: fieldErrors.firstName }"
+              :aria-invalid="fieldErrors.firstName ? 'true' : undefined"
+              aria-describedby="firstName-error"
               @input="clearFieldError('firstName')"
             />
-            <span v-if="fieldErrors.firstName" class="field-error">{{ fieldErrors.firstName }}</span>
+            <span v-if="fieldErrors.firstName" id="firstName-error" class="field-error">{{ fieldErrors.firstName }}</span>
           </div>
           <div class="field">
             <label for="lastName">Last Name</label>
@@ -94,38 +96,44 @@ async function handleSubmit() {
               type="text"
               placeholder="Smith"
               :class="{ invalid: fieldErrors.lastName }"
+              :aria-invalid="fieldErrors.lastName ? 'true' : undefined"
+              aria-describedby="lastName-error"
               @input="clearFieldError('lastName')"
             />
-            <span v-if="fieldErrors.lastName" class="field-error">{{ fieldErrors.lastName }}</span>
+            <span v-if="fieldErrors.lastName" id="lastName-error" class="field-error">{{ fieldErrors.lastName }}</span>
           </div>
         </div>
 
         <div class="field">
           <label for="email">Email</label>
-          <input
-            id="email"
-            v-model="form.email"
-            type="email"
-            placeholder="you@example.com"
-            required
-            :class="{ invalid: fieldErrors.email }"
-            @input="clearFieldError('email')"
-          />
-          <span v-if="fieldErrors.email" class="field-error">{{ fieldErrors.email }}</span>
+            <input
+              id="email"
+              v-model="form.email"
+              type="email"
+              placeholder="you@example.com"
+              required
+              :class="{ invalid: fieldErrors.email }"
+              :aria-invalid="fieldErrors.email ? 'true' : undefined"
+              aria-describedby="email-error"
+              @input="clearFieldError('email')"
+            />
+            <span v-if="fieldErrors.email" id="email-error" class="field-error">{{ fieldErrors.email }}</span>
         </div>
 
         <div class="field">
           <label for="username">Username</label>
-          <input
-            id="username"
-            v-model="form.username"
-            type="text"
-            placeholder="yourusername"
-            required
-            :class="{ invalid: fieldErrors.username }"
-            @input="clearFieldError('username')"
-          />
-          <span v-if="fieldErrors.username" class="field-error">{{ fieldErrors.username }}</span>
+            <input
+              id="username"
+              v-model="form.username"
+              type="text"
+              placeholder="yourusername"
+              required
+              :class="{ invalid: fieldErrors.username }"
+              :aria-invalid="fieldErrors.username ? 'true' : undefined"
+              aria-describedby="username-error"
+              @input="clearFieldError('username')"
+            />
+            <span v-if="fieldErrors.username" id="username-error" class="field-error">{{ fieldErrors.username }}</span>
         </div>
 
         <div class="field-row">
@@ -139,9 +147,11 @@ async function handleSubmit() {
               required
               minlength="8"
               :class="{ invalid: fieldErrors.password }"
+              :aria-invalid="fieldErrors.password ? 'true' : undefined"
+              aria-describedby="password-error"
               @input="clearPasswordErrors"
             />
-            <span v-if="fieldErrors.password" class="field-error">{{ fieldErrors.password }}</span>
+            <span v-if="fieldErrors.password" id="password-error" class="field-error">{{ fieldErrors.password }}</span>
           </div>
           <div class="field">
             <label for="confirmPassword">Confirm</label>
@@ -152,9 +162,13 @@ async function handleSubmit() {
               placeholder="Repeat password"
               required
               :class="{ invalid: fieldErrors.confirmPassword }"
+              :aria-invalid="fieldErrors.confirmPassword ? 'true' : undefined"
+              aria-describedby="confirmPassword-error"
               @input="clearFieldError('confirmPassword')"
             />
-            <span v-if="fieldErrors.confirmPassword" class="field-error">{{ fieldErrors.confirmPassword }}</span>
+            <span v-if="fieldErrors.confirmPassword" id="confirmPassword-error" class="field-error">{{
+              fieldErrors.confirmPassword
+            }}</span>
           </div>
         </div>
 

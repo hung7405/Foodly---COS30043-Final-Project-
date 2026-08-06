@@ -37,7 +37,7 @@ async function handleSubmit() {
       </div>
 
       <form @submit.prevent="handleSubmit" class="auth-form">
-        <div v-if="error" class="auth-error" role="alert">
+        <div v-if="error" id="login-error" class="auth-error" role="alert">
           {{ error }}
         </div>
 
@@ -50,6 +50,8 @@ async function handleSubmit() {
             placeholder="you@example.com"
             required
             autocomplete="email"
+            aria-describedby="login-error"
+            :aria-invalid="error ? 'true' : undefined"
             v-focus
           />
         </div>
@@ -63,6 +65,8 @@ async function handleSubmit() {
             placeholder="Your password"
             required
             autocomplete="current-password"
+            aria-describedby="login-error"
+            :aria-invalid="error ? 'true' : undefined"
           />
         </div>
 

@@ -166,7 +166,7 @@ function formatDuration(seconds: number): string {
 
 <template>
   <transition name="slide-up">
-    <div v-if="visible" class="routes-panel" role="dialog" aria-label="Directions">
+    <div v-if="visible" v-focus-trap class="routes-panel" role="dialog" aria-label="Directions" aria-modal="true">
       <div class="routes-header">
         <h3>
           <svg

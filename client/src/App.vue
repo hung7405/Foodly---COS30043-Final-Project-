@@ -25,8 +25,9 @@ const showBottomTab = computed(() => {
 
 <template>
   <div class="app-wrapper" :class="{ 'dark-mode': uiStore.isDark }">
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <AppNavBar />
-    <main class="main-content" :class="{ 'has-bottom-tab': showBottomTab }">
+    <main id="main-content" class="main-content" :class="{ 'has-bottom-tab': showBottomTab }">
       <ErrorBoundary>
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">

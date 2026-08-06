@@ -7,7 +7,7 @@ import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import 'leaflet/dist/leaflet.css'
 import './assets/styles/main.css'
-import { vClickOutside, vFocus } from './directives'
+import { vClickOutside, vFocus, vFocusTrap } from './directives'
 
 registerSW({ immediate: true })
 
@@ -16,4 +16,5 @@ app.use(createPinia())
 app.use(router)
 app.directive('click-outside', vClickOutside)
 app.directive('focus', vFocus)
+app.directive('focus-trap', vFocusTrap)
 app.mount('#app')

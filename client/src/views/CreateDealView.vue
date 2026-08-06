@@ -188,9 +188,11 @@ async function handleSubmit() {
               min="1"
               max="24"
               :class="{ invalid: fieldErrors.expiresIn }"
+              :aria-invalid="fieldErrors.expiresIn ? 'true' : undefined"
+              aria-describedby="expires-error"
               @input="clearFieldError('expiresIn')"
             />
-            <span v-if="fieldErrors.expiresIn" class="field-error">{{ fieldErrors.expiresIn }}</span>
+            <span v-if="fieldErrors.expiresIn" id="expires-error" class="field-error">{{ fieldErrors.expiresIn }}</span>
           </div>
         </div>
 
@@ -203,9 +205,11 @@ async function handleSubmit() {
             placeholder="e.g. Rescue Veggie Box"
             required
             :class="{ invalid: fieldErrors.title }"
+            :aria-invalid="fieldErrors.title ? 'true' : undefined"
+            aria-describedby="title-error"
             @input="clearFieldError('title')"
           />
-          <span v-if="fieldErrors.title" class="field-error">{{ fieldErrors.title }}</span>
+          <span v-if="fieldErrors.title" id="title-error" class="field-error">{{ fieldErrors.title }}</span>
         </div>
 
         <div class="form-group">
@@ -228,9 +232,11 @@ async function handleSubmit() {
               step="0.01"
               min="0"
               :class="{ invalid: fieldErrors.originalPrice }"
+              :aria-invalid="fieldErrors.originalPrice ? 'true' : undefined"
+              aria-describedby="origPrice-error"
               @input="clearFieldError('originalPrice')"
             />
-            <span v-if="fieldErrors.originalPrice" class="field-error">{{ fieldErrors.originalPrice }}</span>
+            <span v-if="fieldErrors.originalPrice" id="origPrice-error" class="field-error">{{ fieldErrors.originalPrice }}</span>
           </div>
           <div class="form-group">
             <label for="discPrice">Discounted Price</label>
@@ -241,9 +247,11 @@ async function handleSubmit() {
               step="0.01"
               min="0"
               :class="{ invalid: fieldErrors.discountPrice }"
+              :aria-invalid="fieldErrors.discountPrice ? 'true' : undefined"
+              aria-describedby="discPrice-error"
               @input="clearFieldError('discountPrice')"
             />
-            <span v-if="fieldErrors.discountPrice" class="field-error">{{ fieldErrors.discountPrice }}</span>
+            <span v-if="fieldErrors.discountPrice" id="discPrice-error" class="field-error">{{ fieldErrors.discountPrice }}</span>
           </div>
           <div class="form-group">
             <label for="qty">Quantity</label>
@@ -253,9 +261,11 @@ async function handleSubmit() {
               type="number"
               min="1"
               :class="{ invalid: fieldErrors.remainingQuantity }"
+              :aria-invalid="fieldErrors.remainingQuantity ? 'true' : undefined"
+              aria-describedby="qty-error"
               @input="clearFieldError('remainingQuantity')"
             />
-            <span v-if="fieldErrors.remainingQuantity" class="field-error">{{ fieldErrors.remainingQuantity }}</span>
+            <span v-if="fieldErrors.remainingQuantity" id="qty-error" class="field-error">{{ fieldErrors.remainingQuantity }}</span>
           </div>
         </div>
 
@@ -287,9 +297,11 @@ async function handleSubmit() {
             type="text"
             placeholder="123 Collins St, Melbourne"
             :class="{ invalid: fieldErrors.address }"
+            :aria-invalid="fieldErrors.address ? 'true' : undefined"
+            aria-describedby="address-error"
             @input="clearFieldError('address')"
           />
-          <span v-if="fieldErrors.address" class="field-error">{{ fieldErrors.address }}</span>
+          <span v-if="fieldErrors.address" id="address-error" class="field-error">{{ fieldErrors.address }}</span>
         </div>
 
         <div class="form-row three-col">
@@ -301,9 +313,11 @@ async function handleSubmit() {
               type="number"
               step="0.000001"
               :class="{ invalid: fieldErrors.latitude }"
+              :aria-invalid="fieldErrors.latitude ? 'true' : undefined"
+              aria-describedby="lat-error"
               @input="clearFieldError('latitude')"
             />
-            <span v-if="fieldErrors.latitude" class="field-error">{{ fieldErrors.latitude }}</span>
+            <span v-if="fieldErrors.latitude" id="lat-error" class="field-error">{{ fieldErrors.latitude }}</span>
           </div>
           <div class="form-group">
             <label for="lng">Longitude</label>
@@ -313,9 +327,11 @@ async function handleSubmit() {
               type="number"
               step="0.000001"
               :class="{ invalid: fieldErrors.longitude }"
+              :aria-invalid="fieldErrors.longitude ? 'true' : undefined"
+              aria-describedby="lng-error"
               @input="clearFieldError('longitude')"
             />
-            <span v-if="fieldErrors.longitude" class="field-error">{{ fieldErrors.longitude }}</span>
+            <span v-if="fieldErrors.longitude" id="lng-error" class="field-error">{{ fieldErrors.longitude }}</span>
           </div>
           <div class="form-group locate-group">
             <label>&nbsp;</label>

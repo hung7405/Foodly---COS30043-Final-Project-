@@ -113,6 +113,25 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Honour reduced-motion preference: kill CSS animations/transitions */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .skeleton {
+    background-image: none;
+    background-color: var(--color-bg-secondary);
+  }
+}
+
 body {
   font-family: var(--font-family);
   font: var(--font-body);
@@ -434,6 +453,31 @@ img {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Skip-to-content link: hidden until keyboard focus */
+.skip-link {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10000;
+  padding: 12px 20px;
+  background: var(--color-accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  border-bottom-right-radius: var(--radius-sm);
+  text-decoration: none;
+  transform: translateY(-200%);
+  transition: transform var(--transition-fast);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
 }
 
 .empty-state {
