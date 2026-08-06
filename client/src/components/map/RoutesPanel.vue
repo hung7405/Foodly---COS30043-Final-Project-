@@ -1,8 +1,17 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch, shallowRef, nextTick } from 'vue'
 import { useDirections } from '../../composables/useDirections'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
+import type * as LeafletNs from 'leaflet'
+
+let leafletLib: typeof LeafletNs | null = null
+async function getLeaflet(): Promise<typeof LeafletNs> {
+  if (!leafletLib) {
+    const mod = await import('leaflet')
+    await import('leaflet/dist/leaflet.css')
+    leafletLib = mod
+  }
+  return leafletLib
+}
 
 const props = defineProps<{
   destinationLat: number
@@ -29,10 +38,10 @@ const {
 } = useDirections()
 
 const mapContainer = ref<HTMLDivElement | null>(null)
-const miniMap = shallowRef<L.Map | null>(null)
-const routeLayers = shallowRef<L.Polyline[]>([])
-const originMarker = shallowRef<L.CircleMarker | null>(null)
-const destMarker = shallowRef<L.Marker | null>(null)
+const miniMap = shallowRef<LeafletNs.Map | null>(null)
+const routeLayers = shallowRef<LeafletNs.Polyline[]>([])
+const originMarker = shallowRef<LeafletNs.CircleMarker | null>(null)
+const destMarker = shallowRef<LeafletNs.Marker | null>(null)
 
 const profileOptions = [
   { id: 'driving', label: 'Drive', icon: '🚗' },
@@ -43,7 +52,7 @@ const profileOptions = [
 onMounted(async () => {
   if (props.visible) {
     await nextTick()
-    initMiniMap()
+    await initMiniMap()
     await getUserLocation()
     await calculateRoutes(props.destinationLat, props.destinationLng)
   }
@@ -54,7 +63,7 @@ watch(
   async (val) => {
     if (val) {
       await nextTick()
-      initMiniMap()
+      await initMiniMap()
       await getUserLocation()
       await calculateRoutes(props.destinationLat, props.destinationLng)
     }
@@ -75,8 +84,9 @@ watch(
   }
 )
 
-function initMiniMap() {
+async function initMiniMap() {
   if (!mapContainer.value || miniMap.value) return
+  const L = await getLeaflet()
   miniMap.value = L.map(mapContainer.value, {
     center: [10.8231, 106.6297],
     zoom: 13,
@@ -93,6 +103,8 @@ function initMiniMap() {
 
 function drawMarkers() {
   if (!miniMap.value) return
+  const L = leafletLib
+  if (!L) return
   if (originMarker.value) {
     miniMap.value.removeLayer(originMarker.value)
     originMarker.value = null
@@ -119,6 +131,8 @@ function drawMarkers() {
 
 function drawRoutes() {
   if (!miniMap.value) return
+  const L = leafletLib
+  if (!L) return
   routeLayers.value.forEach((l) => {
     miniMap.value?.removeLayer(l)
   })
