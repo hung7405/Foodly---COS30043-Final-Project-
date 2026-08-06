@@ -10,12 +10,14 @@ const auth = useAuthStore()
 const uiStore = useUiStore()
 
 const balance = ref(0)
-const result = ref<{ prize: number; alreadyUsed: boolean } | null>(null)
+const result = ref<{ prize: number; alreadyUsed: boolean; streak?: number; streakBonus?: number } | null>(null)
 const isSpinning = ref(false)
 const rotation = ref(0)
 const spinningTo = ref(0)
 const isUsed = ref(false)
 const nextSpinAt = ref<string | null>(null)
+const streak = ref(0)
+const streakBonus = ref(0)
 const nowTs = ref(Date.now())
 let countdownTimer: number | undefined
 
@@ -50,6 +52,8 @@ async function load() {
     isUsed.value = st.usedToday
     nextSpinAt.value = st.nextSpinAt
     balance.value = st.balance
+    streak.value = st.streak || 0
+    streakBonus.value = st.streakBonus || 0
   } catch {
     try {
       const bal = await rewardsService.getBalance()
@@ -102,7 +106,9 @@ async function spin() {
     if (res.alreadyUsed) {
       isUsed.value = true
       nextSpinAt.value = res.nextSpinAt
-      result.value = { prize: 0, alreadyUsed: true }
+      result.value = { prize: 0, alreadyUsed: true, streak: res.streak }
+      streak.value = res.streak || 0
+      streakBonus.value = 0
       balance.value = res.balance
       startCountdown()
       return
@@ -114,11 +120,14 @@ async function spin() {
     rotation.value += spins
     result.value = res
     balance.value = res.balance
+    streak.value = res.streak || 0
+    streakBonus.value = res.streakBonus || 0
     isUsed.value = true
     nextSpinAt.value = res.nextSpinAt
     startCountdown()
     setTimeout(() => {
-      uiStore.addToast(`You won +${res.prize} xu!`, 'success')
+      const msg = res.streakBonus > 0 ? `You won +${res.prize} xu (+${res.streakBonus} streak bonus)!` : `You won +${res.prize} xu!`
+      uiStore.addToast(msg, 'success')
     }, 3600)
   } catch (err: any) {
     uiStore.addToast(err.response?.data?.message || 'Could not spin. Try again tomorrow.', 'error')
@@ -155,6 +164,20 @@ async function spin() {
         </div>
 
         <div class="spin-side">
+          <div class="streak-card">
+            <div class="streak-emoji" aria-hidden="true">🔥</div>
+            <div class="streak-body">
+              <div class="streak-title">
+                {{ streak >= 1 ? streak + '-day streak' : 'Start your daily streak' }}
+              </div>
+              <div v-if="!isUsed && streak > 0" class="streak-sub">
+                Spin today for +{{ streakBonus }} bonus
+              </div>
+              <div v-else-if="isUsed" class="streak-sub">Come back tomorrow to keep it alive</div>
+              <div v-else class="streak-sub">Spin daily — bonus up to +100</div>
+            </div>
+          </div>
+
           <div class="balance-card">
             <div class="balance-label">Your balance</div>
             <div class="balance-value">{{ balance }} <span>xu</span></div>
@@ -177,6 +200,9 @@ async function spin() {
             <template v-else>
               <h3>You won!</h3>
               <p class="result-prize">+{{ result.prize }} xu added to your balance</p>
+              <p v-if="result.streakBonus && result.streakBonus > 0" class="result-streak">
+                +{{ result.streakBonus }} xu streak bonus (day {{ result.streak }})
+              </p>
             </template>
           </div>
 
@@ -197,6 +223,8 @@ async function spin() {
               <span class="prize-chance">{{ p.weight }}%</span>
             </div>
           </div>
+
+          <p class="bonus-ladder">Streak bonus: D2 +10 · D3 +20 · D4 +30 · D5 +50 · D6 +75 · D7+ +100</p>
 
           <router-link to="/profile" class="btn btn-outline back-btn">Back to profile</router-link>
         </div>
@@ -291,6 +319,39 @@ async function spin() {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+.streak-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #fff7ed, #ffedd5);
+  border: 1px solid #fed7aa;
+}
+.streak-emoji {
+  font-size: 1.6rem;
+}
+.streak-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #7c2d12;
+}
+.streak-sub {
+  font-size: 0.8125rem;
+  color: #9a3412;
+}
+.bonus-ladder {
+  font-size: 0.75rem;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  margin: 4px 0 0;
+}
+.result-streak {
+  margin-top: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #166534;
 }
 .balance-card {
   padding: 20px;

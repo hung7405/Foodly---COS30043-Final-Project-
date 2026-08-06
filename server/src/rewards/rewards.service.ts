@@ -61,17 +61,32 @@ export class RewardsService {
       .select('id')
     if (claimError) throw claimError
 
+    const days = await this.spinDaysSet(userId, tzOffsetMinutes)
+
     if (!claimed || claimed.length === 0) {
       const { data: user } = await this.supabase.client
         .from('users')
         .select('reputation_points')
         .eq('id', userId)
         .single()
-      return { alreadyUsed: true, prize: 0, balance: user?.reputation_points ?? 0, nextSpinAt }
+      // Streak "at risk": consecutive days ending yesterday — today has not been spun yet.
+      const streak = this.consecutiveStreak(days, tzOffsetMinutes, 1)
+      return {
+        alreadyUsed: true,
+        prize: 0,
+        balance: user?.reputation_points ?? 0,
+        nextSpinAt,
+        streak,
+        streakBonus: 0,
+      }
     }
 
-    const balance = await this.awardPoints(userId, prize)
-    return { alreadyUsed: false, prize, balance, nextSpinAt }
+    // Winner: today's spin extends the streak carried from yesterday by one.
+    const carry = this.consecutiveStreak(days, tzOffsetMinutes, 1)
+    const streak = carry + 1
+    const streakBonus = this.streakBonus(streak)
+    const balance = await this.awardPoints(userId, prize + streakBonus)
+    return { alreadyUsed: false, prize, streak, streakBonus, balance, nextSpinAt }
   }
 
   async getSpinStatus(userId: string, tzOffsetMinutes = 0) {
@@ -85,8 +100,58 @@ export class RewardsService {
       .eq('id', eventId)
       .maybeSingle()
     const usedToday = !!data
+
+    const days = await this.spinDaysSet(userId, tzOffsetMinutes)
+    // usedToday -> active streak includes today; otherwise the streak that is at
+    // risk plus the bonus they would unlock by spinning today.
+    const streak = usedToday
+      ? this.consecutiveStreak(days, tzOffsetMinutes, 1) + 1
+      : this.consecutiveStreak(days, tzOffsetMinutes, 1)
     const balance = (await this.getBalance(userId)).balance
-    return { usedToday, nextSpinAt: usedToday ? nextSpinAt : null, balance }
+    return {
+      usedToday,
+      nextSpinAt: usedToday ? nextSpinAt : null,
+      balance,
+      streak,
+      streakBonus: usedToday ? this.streakBonus(streak) : this.streakBonus(streak + 1),
+    }
+  }
+
+  // All local-day keys (YYYY-MM-DD) on which the user has a daily_spin event.
+  // One query, then streak length is derived locally — no per-day round trips.
+  private async spinDaysSet(userId: string, tzOffsetMinutes: number): Promise<Set<string>> {
+    const { data, error } = await this.supabase.client
+      .from('activity_events')
+      .select('created_at')
+      .eq('user_id', userId)
+      .eq('event_type', 'daily_spin')
+    if (error) throw error
+    const days = new Set<string>()
+    for (const row of data || []) {
+      days.add(
+        new Date(new Date(row.created_at).getTime() - tzOffsetMinutes * 60000).toISOString().slice(0, 10),
+      )
+    }
+    return days
+  }
+
+  // Number of consecutive days ending at the local day `startOffset` days ago
+  // (0 = today). Stops at the first missing day.
+  private consecutiveStreak(days: Set<string>, tzOffsetMinutes: number, startOffset: number): number {
+    const localNowMs = Date.now() - tzOffsetMinutes * 60000
+    let streak = 0
+    for (let offset = startOffset; ; offset++) {
+      const day = new Date(localNowMs - offset * 86400000).toISOString().slice(0, 10)
+      if (!days.has(day)) break
+      streak++
+    }
+    return streak
+  }
+
+  // Escalating bonus for consecutive daily spins, capping after day 7.
+  private streakBonus(streak: number): number {
+    const table = [0, 0, 10, 20, 30, 50, 75, 100]
+    return table[Math.min(Math.max(Math.floor(streak), 0), table.length - 1)]
   }
 
   // Calendar date (YYYY-MM-DD) in the caller's local timezone.
