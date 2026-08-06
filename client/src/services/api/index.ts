@@ -253,8 +253,14 @@ export const rewardsService = {
     const { data } = await api.get('/rewards/balance')
     return data
   },
+  async getSpinStatus() {
+    const tzOffsetMinutes = new Date().getTimezoneOffset()
+    const { data } = await api.get('/rewards/daily-spin/status', { params: { tzOffsetMinutes } })
+    return data
+  },
   async dailySpin() {
-    const { data } = await api.post('/rewards/daily-spin')
+    const tzOffsetMinutes = new Date().getTimezoneOffset()
+    const { data } = await api.post('/rewards/daily-spin', { tzOffsetMinutes })
     return data
   },
   async redeem(points: number) {

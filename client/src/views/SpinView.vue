@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { rewardsService } from '../services/api'
 import { useAuthStore } from '../stores/auth.store'
@@ -14,6 +14,10 @@ const result = ref<{ prize: number; alreadyUsed: boolean } | null>(null)
 const isSpinning = ref(false)
 const rotation = ref(0)
 const spinningTo = ref(0)
+const isUsed = ref(false)
+const nextSpinAt = ref<string | null>(null)
+const nowTs = ref(Date.now())
+let countdownTimer: number | undefined
 
 const PRIZES = [
   { label: '10 xu', weight: 40, points: 10 },
@@ -27,16 +31,58 @@ const PRIZES = [
 const sliceAngle = 360 / PRIZES.length
 const sliceIndex = computed(() => Math.floor(((360 - (spinningTo.value % 360)) % 360) / sliceAngle))
 
+const remainingMs = computed(() => {
+  if (!nextSpinAt.value) return 0
+  return Math.max(0, new Date(nextSpinAt.value).getTime() - nowTs.value)
+})
+const countdownText = computed(() => {
+  if (remainingMs.value <= 0) return ''
+  const total = Math.floor(remainingMs.value / 1000)
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const s = total % 60
+  return [h, m, s].map((n) => String(n).padStart(2, '0')).join(':')
+})
+
 async function load() {
   try {
-    const bal = await rewardsService.getBalance()
-    balance.value = bal.balance
+    const st = await rewardsService.getSpinStatus()
+    isUsed.value = st.usedToday
+    nextSpinAt.value = st.nextSpinAt
+    balance.value = st.balance
   } catch {
-    balance.value = 0
+    try {
+      const bal = await rewardsService.getBalance()
+      balance.value = bal.balance
+    } catch {
+      balance.value = 0
+    }
   }
+  startCountdown()
+}
+
+function startCountdown() {
+  if (countdownTimer) window.clearInterval(countdownTimer)
+  countdownTimer = undefined
+  if (!nextSpinAt.value) return
+  nowTs.value = Date.now()
+  countdownTimer = window.setInterval(() => {
+    nowTs.value = Date.now()
+    if (remainingMs.value > 0) return
+    window.clearInterval(countdownTimer)
+    countdownTimer = undefined
+    isUsed.value = false
+    nextSpinAt.value = null
+    load()
+  }, 1000)
 }
 
 onMounted(load)
+
+onUnmounted(() => {
+  if (countdownTimer) window.clearInterval(countdownTimer)
+  countdownTimer = undefined
+})
 
 function angleForIndex(i: number) {
   return (360 - (i * sliceAngle + sliceAngle / 2)) % 360
@@ -48,14 +94,17 @@ async function spin() {
     router.push({ path: '/login', query: { redirect: '/spin' } })
     return
   }
-  if (isSpinning.value) return
+  if (isSpinning.value || isUsed.value) return
   isSpinning.value = true
   result.value = null
   try {
     const res = await rewardsService.dailySpin()
     if (res.alreadyUsed) {
+      isUsed.value = true
+      nextSpinAt.value = res.nextSpinAt
       result.value = { prize: 0, alreadyUsed: true }
       balance.value = res.balance
+      startCountdown()
       return
     }
     const idx = PRIZES.findIndex((p) => p.points === res.prize)
@@ -65,6 +114,9 @@ async function spin() {
     rotation.value += spins
     result.value = res
     balance.value = res.balance
+    isUsed.value = true
+    nextSpinAt.value = res.nextSpinAt
+    startCountdown()
     setTimeout(() => {
       uiStore.addToast(`You won +${res.prize} xu!`, 'success')
     }, 3600)
@@ -108,9 +160,14 @@ async function spin() {
             <div class="balance-value">{{ balance }} <span>xu</span></div>
           </div>
 
-          <button class="btn btn-primary btn-lg spin-btn" :disabled="isSpinning" @click="spin">
+          <button class="btn btn-primary btn-lg spin-btn" :disabled="isSpinning || isUsed" @click="spin">
             {{ isSpinning ? 'Spinning...' : 'Spin for free' }}
           </button>
+
+          <div v-if="isUsed && countdownText" class="next-spin" role="status" aria-live="polite">
+            <span class="next-spin-label">Next free spin in</span>
+            <span class="next-spin-timer">{{ countdownText }}</span>
+          </div>
 
           <div v-if="result" class="result-card" :class="{ used: result.alreadyUsed }">
             <template v-if="result.alreadyUsed">
@@ -257,6 +314,27 @@ async function spin() {
 .spin-btn {
   justify-content: center;
   padding: 14px;
+}
+.next-spin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+}
+.next-spin-label {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+.next-spin-timer {
+  font-family: var(--font-mono, monospace);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  letter-spacing: 0.04em;
 }
 .result-card {
   padding: 16px;

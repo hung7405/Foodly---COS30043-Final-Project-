@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Req } from '@nestjs/common'
+import { Controller, Get, Post, Body, Query, UseGuards, Req } from '@nestjs/common'
 import { AuthGuard } from '@nestjs/passport'
 import { RewardsService } from './rewards.service'
 
@@ -19,9 +19,15 @@ export class RewardsController {
   }
 
   @UseGuards(AuthGuard('jwt'))
+  @Get('daily-spin/status')
+  spinStatus(@Req() req: any, @Query('tzOffsetMinutes') tz?: string) {
+    return this.rewardsService.getSpinStatus(req.user.id, tz ? Number(tz) : 0)
+  }
+
+  @UseGuards(AuthGuard('jwt'))
   @Post('daily-spin')
-  dailySpin(@Req() req: any) {
-    return this.rewardsService.dailySpin(req.user.id)
+  dailySpin(@Req() req: any, @Body() body: { tzOffsetMinutes?: number }) {
+    return this.rewardsService.dailySpin(req.user.id, Number(body?.tzOffsetMinutes) || 0)
   }
 
   @UseGuards(AuthGuard('jwt'))

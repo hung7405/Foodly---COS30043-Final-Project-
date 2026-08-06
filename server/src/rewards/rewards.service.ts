@@ -43,8 +43,9 @@ export class RewardsService {
     return { balance: user?.reputation_points ?? 0 }
   }
 
-  async dailySpin(userId: string) {
-    const today = new Date().toISOString().slice(0, 10)
+  async dailySpin(userId: string, tzOffsetMinutes = 0) {
+    const today = this.localDayKey(Date.now(), tzOffsetMinutes)
+    const nextSpinAt = this.nextLocalMidnight(Date.now(), tzOffsetMinutes)
     const eventId = this.dailySpinEventId(userId, today)
 
     const prize = this.randomPrize()
@@ -66,11 +67,41 @@ export class RewardsService {
         .select('reputation_points')
         .eq('id', userId)
         .single()
-      return { alreadyUsed: true, prize: 0, balance: user?.reputation_points ?? 0 }
+      return { alreadyUsed: true, prize: 0, balance: user?.reputation_points ?? 0, nextSpinAt }
     }
 
     const balance = await this.awardPoints(userId, prize)
-    return { alreadyUsed: false, prize, balance }
+    return { alreadyUsed: false, prize, balance, nextSpinAt }
+  }
+
+  async getSpinStatus(userId: string, tzOffsetMinutes = 0) {
+    const today = this.localDayKey(Date.now(), tzOffsetMinutes)
+    const nextSpinAt = this.nextLocalMidnight(Date.now(), tzOffsetMinutes)
+    const eventId = this.dailySpinEventId(userId, today)
+
+    const { data } = await this.supabase.client
+      .from('activity_events')
+      .select('id')
+      .eq('id', eventId)
+      .maybeSingle()
+    const usedToday = !!data
+    const balance = (await this.getBalance(userId)).balance
+    return { usedToday, nextSpinAt: usedToday ? nextSpinAt : null, balance }
+  }
+
+  // Calendar date (YYYY-MM-DD) in the caller's local timezone.
+  // tzOffsetMinutes is what Date#getTimezoneOffset() returns: UTC minus local, so
+  // local = UTC - offset. Default 0 keeps UTC behaviour for callers without a tz.
+  private localDayKey(ts: number, tzOffsetMinutes: number): string {
+    return new Date(ts - tzOffsetMinutes * 60000).toISOString().slice(0, 10)
+  }
+
+  // Start of the *next* local calendar day as an absolute UTC instant, so the
+  // client can render a countdown and flip the button on exactly midnight local.
+  private nextLocalMidnight(ts: number, tzOffsetMinutes: number): string {
+    const localMs = ts - tzOffsetMinutes * 60000
+    const startOfNextLocalDay = (Math.floor(localMs / 86400000) + 1) * 86400000
+    return new Date(startOfNextLocalDay + tzOffsetMinutes * 60000).toISOString()
   }
 
   async redeem(userId: string, points: number) {
