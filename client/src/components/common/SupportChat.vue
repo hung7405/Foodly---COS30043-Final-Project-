@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, nextTick, onMounted } from 'vue'
-import { getBotReply, greetingSuggestions, type BotReply } from '../../services/support/rules'
+import { getBotReply, greetingSuggestions, CHAT_SUGGESTIONS, type BotReply } from '../../services/support/rules'
 import { supportService } from '../../services/api'
 import { useAuthStore } from '../../stores/auth.store'
 
@@ -102,7 +102,7 @@ async function send(text?: string) {
     return
   }
 
-  const already = activeTickets.get(result.category)
+  const already = result.category ? activeTickets.get(result.category) : undefined
   if (already) {
     await botSay("We've already opened ticket #" + already + ' for this — a human will follow up. Anything else I can help with?', CHAT_SUGGESTIONS)
     return
@@ -110,7 +110,7 @@ async function send(text?: string) {
 
   pending.value = {
     step: 0,
-    category: result.category,
+    category: result.category ?? 'chat',
     refCode: 'FLY-' + Math.random().toString(36).slice(2, 7).toUpperCase(),
     orderRef: '',
     issue: '',
