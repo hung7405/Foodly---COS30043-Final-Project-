@@ -30,4 +30,19 @@ export class SupportService {
     if (error) throw error
     return data ?? []
   }
+
+  async createFeedback(userId: string | null, data: { rating: number; category?: string; refCode?: string }) {
+    const { data: saved, error } = await this.supabase.client
+      .from('support_feedback')
+      .insert({
+        user_id: userId,
+        rating: data.rating,
+        category: data.category ?? null,
+        ref_code: data.refCode ?? null,
+      })
+      .select()
+      .single()
+    if (error) throw error
+    return saved
+  }
 }

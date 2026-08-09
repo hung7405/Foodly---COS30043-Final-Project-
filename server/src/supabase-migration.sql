@@ -334,3 +334,16 @@ CREATE TABLE IF NOT EXISTS support_tickets (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON support_tickets (user_id);
+
+-- �������������������������������������������������������������
+-- Chat satisfaction feedback (post-chat star rating)
+-- �������������������������������������������������������������
+CREATE TABLE IF NOT EXISTS support_feedback (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID REFERENCES users(id) ON DELETE SET NULL,
+  rating     SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  category   VARCHAR(50),
+  ref_code   VARCHAR(30),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_support_feedback_user_id ON support_feedback (user_id);
