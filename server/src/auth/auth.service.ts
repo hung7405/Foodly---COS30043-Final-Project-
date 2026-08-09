@@ -74,6 +74,7 @@ export class AuthService {
     if (data.firstName !== undefined) updateData.first_name = data.firstName
     if (data.lastName !== undefined) updateData.last_name = data.lastName
     if (data.avatarUrl !== undefined) updateData.avatar_url = data.avatarUrl
+    if (data.deliveryAddress !== undefined) updateData.delivery_address = data.deliveryAddress
     if (data.password) updateData.password_hash = await bcrypt.hash(data.password, 12)
     if (Object.keys(updateData).length > 0) {
       await this.supabase.client.from('users').update(updateData).eq('id', id)

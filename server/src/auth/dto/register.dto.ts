@@ -23,4 +23,9 @@ export class RegisterDto {
   @IsString()
   @MaxLength(50)
   lastName?: string
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  deliveryAddress?: string
 }
