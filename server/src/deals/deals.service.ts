@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common'
 import { SupabaseService } from '../supabase/supabase.service'
+import { assertUuid } from '../common/uuid'
 import { Deal, DealStatus } from './entities/deal.entity'
 import { CommentStatus } from '../comments/entities/comment.entity'
 import { VerificationAction } from './entities/verification-event.entity'
@@ -152,6 +153,8 @@ export class DealsService {
   }
 
   async findById(id: string) {
+    assertUuid(id, 'Deal not found')
+
     const { data: deal, error } = await this.supabase
       .from('deals')
       .select('*, user:user_id(id,email,username,first_name,last_name,role,avatar_url,trust_score,reputation_points,is_active,created_at,updated_at,last_login), store:stores(*), comments:comments(*, user:user_id(id,email,username,first_name,last_name,role,avatar_url,trust_score,reputation_points,is_active,created_at,updated_at,last_login))')

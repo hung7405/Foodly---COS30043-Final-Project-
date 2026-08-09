@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common'
 import { SupabaseService } from '../supabase/supabase.service'
+import { assertUuid } from '../common/uuid'
 import { SocketGateway } from '../socket/socket.gateway'
 import { AnalyticsService } from '../analytics/analytics.service'
 
@@ -12,6 +13,8 @@ export class CommentsService {
   ) {}
 
   async findByDeal(dealId: string) {
+    assertUuid(dealId, 'Deal not found')
+
     const { data: comments, error } = await this.supabaseService.client
       .from('comments')
       .select('*, user:user_id(id,email,username,first_name,last_name,role,avatar_url,trust_score,reputation_points,is_active,created_at,updated_at,last_login), replies:comments!parent_id(*, user:user_id(id,email,username,first_name,last_name,role,avatar_url,trust_score,reputation_points,is_active,created_at,updated_at,last_login)))')
@@ -56,6 +59,7 @@ export class CommentsService {
   }
 
   async update(id: string, content: string, userId: string) {
+    assertUuid(id, 'Comment not found')
     const { data: comment, error: findError } = await this.supabaseService.client
       .from('comments')
       .select('*')
@@ -76,6 +80,7 @@ export class CommentsService {
   }
 
   async remove(id: string, userId: string, userRole: string) {
+    assertUuid(id, 'Comment not found')
     const { data: comment, error: findError } = await this.supabaseService.client
       .from('comments')
       .select('*')

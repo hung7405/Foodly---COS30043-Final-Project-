@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { SupabaseService } from '../supabase/supabase.service'
+import { assertUuid } from '../common/uuid'
 import { InteractionAction } from './entities/interaction.entity'
 
 @Injectable()
@@ -12,6 +13,7 @@ export class InteractionsService {
     action: InteractionAction
     weight?: number
   }) {
+    assertUuid(params.dealId, 'Deal not found')
     const { data, error } = await this.supabase.client
       .from('user_interactions')
       .insert({
@@ -38,6 +40,7 @@ export class InteractionsService {
   }
 
   async getDealInteractions(dealId: string, days = 30) {
+    assertUuid(dealId, 'Deal not found')
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
     const { data } = await this.supabase.client
       .from('user_interactions')
@@ -49,6 +52,7 @@ export class InteractionsService {
   }
 
   async getViewCount(dealId: string): Promise<number> {
+    assertUuid(dealId, 'Deal not found')
     const { count } = await this.supabase.client
       .from('user_interactions')
       .select('*', { count: 'exact', head: true })
