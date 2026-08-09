@@ -19,8 +19,16 @@ export const greetingSuggestions = ['Track my order', 'Request a refund', 'My de
 
 const RULES: Rule[] = [
   {
+    category: 'rewards',
+    keywords: ['reward', 'rewards', 'spin', 'spin wheel', 'coins', 'points', 'diem', 'điểm'],
+    replies: [
+      'Rewards live in the Spin page — earn points, spin for bonus, and check your streak anytime.',
+      'Check the Rewards/Spin section in your account: spins refresh daily and points never expire.',
+    ],
+  },
+  {
     category: 'human',
-    keywords: ['human', 'agent', 'person', 'staff', 'talk to someone', 'real person', 'live agent', 'reward', 'escalate', 'nguoi', 'nhan vien'],
+    keywords: ['human', 'agent', 'person', 'staff', 'talk to someone', 'real person', 'live agent', 'escalate', 'nguoi', 'nhan vien'],
     replies: [
       "I can log you with our support team. One second, I'm opening a ticket for you.",
       'I understand — some things need a person. I’ll raise a ticket for the team right away.',
@@ -65,11 +73,19 @@ const RULES: Rule[] = [
     escalate: true,
   },
   {
+    category: 'address',
+    keywords: ['address', 'deliver to', 'delivery address', 'change address', 'home', 'drop off', 'dia chi', 'địa chỉ'],
+    replies: [
+      'Your delivery address is saved on your Profile and shown at the top of Home. Edit it anytime and it updates instantly.',
+      'You can change your "Deliver to" location from Profile > Delivery address. I’ll use the latest one on pickup.',
+    ],
+  },
+  {
     category: 'delivery',
-    keywords: ['where is my order', 'where is my food', 'delivery', 'delay', 'late', 'stuck', 'shipping', 'still not here', 'giao', 'chua toi', 'chậm'],
+    keywords: ['where is my order', 'where is my food', 'where is my delivery', 'my delivery', 'delivery is late', 'my delivery is late', 'delay', 'late delivery', 'stuck', 'shipping', 'still not here', 'giao', 'chua toi', 'chậm'],
     replies: [
       'Let me check — most pickups in a radius of 5 km under 45 minutes. If it’s past the window I can raise it to our logistics team for you.',
-      'A late delivery is tracked in real time. I can not follow up directly.',
+      'A late delivery is tracked in real time. If it’s past the window, I can raise it to logistics for you now.',
     ],
     escalate: true,
   },
@@ -104,14 +120,6 @@ const RULES: Rule[] = [
     replies: [
       'Deals are live on Home and the real-time Map. Best sellers refresh every minute as stores mark down surplus.',
       'Head to Explore to sort deals by category, distance, and discount — verified deals are flagged automatically.',
-    ],
-  },
-  {
-    category: 'address',
-    keywords: ['address', 'deliver to', 'delivery address', 'change address', 'home', 'drop off', 'dia chi', 'địa chỉ'],
-    replies: [
-      'Your delivery address is saved on your Profile and shown at the top of Home. Edit it anytime and it updates instantly.',
-      'You can change your "Deliver to" location from Profile > Delivery address. I’ll use the latest one on pickup.',
     ],
   },
   {
@@ -152,8 +160,13 @@ const RULES: Rule[] = [
 
 export function getBotReply(input: string): BotReply {
   const text = input.toLowerCase().trim()
+  const tokens = new Set(text.split(/[^a-z0-9àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]+/).filter(Boolean))
+  const matches = (kw: string) => {
+    const k = kw.toLowerCase()
+    return k.includes(' ') ? text.includes(k) : tokens.has(k)
+  }
   for (const rule of RULES) {
-    if (rule.keywords.some((kw) => text.includes(kw))) {
+    if (rule.keywords.some(matches)) {
       return {
         reply: pick(rule.replies),
         category: rule.category,

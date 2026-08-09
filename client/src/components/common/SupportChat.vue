@@ -81,15 +81,15 @@ async function send(text?: string) {
 
   if (result.escalate) {
     const refCode = 'FLY-' + Math.random().toString(36).slice(2, 7).toUpperCase()
-    const ticketText = auth.isAuthenticated ? await persistedTicket(refCode) : 'Your issue is stored as ticket ' + refCode + ' with our team.'
+    const ticketText = auth.isAuthenticated ? await persistedTicket(refCode, raw, result.category) : 'Your issue is stored as ticket ' + refCode + ' with our team.'
     await new Promise((r) => setTimeout(r, 400))
     push('bot', ticketText)
   }
 }
 
-async function persistedTicket(refCode: string): Promise<string> {
+async function persistedTicket(refCode: string, userText: string, category?: string): Promise<string> {
   try {
-    await supportService.createTicket({ category: 'chat', subject: 'Chat escalation', message: 'Escalated from chat -> ' + refCode })
+    await supportService.createTicket({ category: category ?? 'chat', subject: 'Chat escalation ' + refCode, message: 'Escalated from chat (' + refCode + ')\n' + (category ? 'Topic: ' + category + '\n' : '') + 'User: ' + userText })
     return "raised ticket #" + refCode + " with our team. You'll hear back via email."
   } catch {
     return 'Your issue is logged as ticket #' + refCode + ' — our team will follow up.'
