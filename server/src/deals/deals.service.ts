@@ -49,6 +49,7 @@ export class DealsService {
     const limit = Math.min(Math.max(Number(query.limit) || 20, 1), 100)
     const sort = ['created_at', 'expires_at', 'discount_price', 'remaining_quantity', 'like_count', 'discount', 'price-asc', 'price-desc'].includes(String(query.sort)) ? String(query.sort) : 'created_at'
     const order = String(query.order).toUpperCase() === 'ASC' ? 'ASC' : 'DESC'
+    const dbSort = ['created_at', 'expires_at', 'discount_price', 'remaining_quantity', 'like_count'].includes(sort) ? sort : null
 
     let supabaseQuery = this.supabase
       .from('deals')
@@ -59,7 +60,7 @@ export class DealsService {
     if (query.verified !== undefined) supabaseQuery = supabaseQuery.eq('verified', query.verified === 'true')
     if (query.userId) supabaseQuery = supabaseQuery.eq('user_id', query.userId)
 
-    supabaseQuery = supabaseQuery.order(sort, { ascending: order === 'ASC' })
+    if (dbSort) supabaseQuery = supabaseQuery.order(dbSort, { ascending: order === 'ASC' })
 
     const { data: deals, error } = await supabaseQuery
 
