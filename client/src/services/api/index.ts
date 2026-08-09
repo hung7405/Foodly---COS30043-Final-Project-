@@ -25,6 +25,13 @@ export const authService = {
   },
 }
 
+export const supportService = {
+  async createTicket(payload: { category?: string; subject?: string; message: string }) {
+    const { data } = await api.post('/support/tickets', payload)
+    return data
+  },
+}
+
 export const dealsService = {
   async findAll(params?: any) {
     const { data } = await api.get('/deals', { params })

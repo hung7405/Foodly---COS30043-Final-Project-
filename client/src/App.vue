@@ -6,6 +6,7 @@ import AppFooter from './components/common/AppFooter.vue'
 import BottomTabBar from './components/common/BottomTabBar.vue'
 import ErrorBoundary from './components/common/ErrorBoundary.vue'
 import PwaInstallPrompt from './components/common/PwaInstallPrompt.vue'
+import SupportChat from './components/common/SupportChat.vue'
 import { useUiStore } from './stores/ui.store'
 import { useAuthStore } from './stores/auth.store'
 
@@ -39,6 +40,7 @@ const showBottomTab = computed(() => {
     <AppFooter />
     <BottomTabBar />
     <PwaInstallPrompt />
+    <SupportChat />
 
     <div class="toast-container" aria-live="polite">
       <transition-group name="toast">
