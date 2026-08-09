@@ -22,6 +22,7 @@ import { InteractionsModule } from './interactions/interactions.module'
 import { EmbeddingModule } from './embedding/embedding.module'
 import { MerchantModule } from './merchant/merchant.module'
 import { RewardsModule } from './rewards/rewards.module'
+import { SupportModule } from './support/support.module'
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { RewardsModule } from './rewards/rewards.module'
     EmbeddingModule,
     MerchantModule,
     RewardsModule,
+    SupportModule,
     HealthModule,
   ],
   providers: [
