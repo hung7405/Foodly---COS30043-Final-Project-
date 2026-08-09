@@ -10,6 +10,29 @@ const router = useRouter()
 const impact = ref<{ bags: number; foodKg: number; co2Kg: number; moneySaved: number } | null>(null)
 const balance = ref(0)
 
+const editingAddress = ref(false)
+const addressInput = ref('')
+const savingAddress = ref(false)
+const addressNote = ref('')
+
+function startEditing() {
+  addressInput.value = auth.deliveryAddress || ''
+  editingAddress.value = true
+  addressNote.value = ''
+}
+
+async function saveAddress() {
+  if (!addressInput.value.trim()) {
+    addressNote.value = 'Enter an address to save.'
+    return
+  }
+  savingAddress.value = true
+  const synced = await auth.saveDeliveryAddress(addressInput.value)
+  savingAddress.value = false
+  editingAddress.value = false
+  addressNote.value = synced ? '' : 'Saved on this device. Server sync is unavailable.'
+}
+
 onMounted(async () => {
   try {
     const [imp, bal] = await Promise.all([rewardsService.getImpact(), rewardsService.getBalance()])
@@ -59,6 +82,37 @@ function logout() {
             </svg>
             {{ auth.user?.role }}
           </span>
+        </div>
+      </div>
+
+      <div class="profile-card" id="delivery">
+        <div class="delivery-header">
+          <span class="delivery-icon">📍</span>
+          <div>
+            <h2 class="delivery-title">Delivery address</h2>
+            <small class="delivery-sub">Where should Foodly drop off your orders?</small>
+          </div>
+        </div>
+        <div v-if="!editingAddress" class="delivery-preview">
+          <span class="delivery-value">{{ auth.deliveryAddress || 'Home' }}</span>
+          <button type="button" class="btn btn-outline btn-sm" @click="startEditing">Edit</button>
+        </div>
+        <div v-else class="delivery-form">
+          <input
+            v-model="addressInput"
+            class="delivery-input"
+            type="text"
+            maxlength="255"
+            placeholder="e.g. 123 Nguyen Hue, District 1, HCMC"
+            @keyup.enter="saveAddress"
+          />
+          <div class="delivery-actions">
+            <button type="button" class="btn btn-outline btn-sm" @click="editingAddress = false">Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" :disabled="savingAddress" @click="saveAddress">
+              {{ savingAddress ? 'Saving…' : 'Save address' }}
+            </button>
+          </div>
+          <small v-if="addressNote" class="delivery-note">{{ addressNote }}</small>
         </div>
       </div>
 
@@ -204,6 +258,76 @@ function logout() {
   display: flex;
   gap: 8px;
   justify-content: center;
+}
+.delivery-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+.delivery-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--color-accent-light);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+.delivery-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.delivery-sub {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+}
+.delivery-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  text-align: left;
+}
+.delivery-value {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.delivery-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.delivery-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  font-size: 0.9375rem;
+}
+.delivery-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 4px rgba(238, 77, 45, 0.08);
+}
+.delivery-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.delivery-note {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  text-align: left;
 }
 .meta-badge {
   padding: 4px 12px;

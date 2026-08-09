@@ -8,6 +8,7 @@ export interface User {
   trustScore: number
   reputationPoints: number
   avatarUrl?: string
+  deliveryAddress?: string
   isActive: boolean
   createdAt: string
   lastLogin?: string
