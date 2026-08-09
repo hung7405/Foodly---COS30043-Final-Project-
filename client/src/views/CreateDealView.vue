@@ -27,10 +27,56 @@ const form = ref({
   longitude: 106.6297,
   expiresIn: 2,
   tags: 'food, rescue',
-  imageUrl: 'https://images.unsplash.com/photo-1586999768265-24af89630739?w=900&q=80',
   isSurprise: false,
   isFlash: false,
 })
+
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1586999768265-24af89630739?w=900&q=80'
+const MAX_IMAGES = 5
+const images = ref<string[]>([])
+const fileInput = ref<HTMLInputElement | null>(null)
+
+async function fileToDataUrl(file: File): Promise<string> {
+  const url = URL.createObjectURL(file)
+  try {
+    const imgEl = new Image()
+    await new Promise<void>((resolve, reject) => {
+      imgEl.onload = () => resolve()
+      imgEl.onerror = () => reject(new Error('Could not read image'))
+      imgEl.src = url
+    })
+    const scale = Math.min(1, 640 / Math.max(imgEl.width, imgEl.height))
+    const width = Math.max(1, Math.round(imgEl.width * scale))
+    const height = Math.max(1, Math.round(imgEl.height * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Canvas unsupported')
+    ctx.drawImage(imgEl, 0, 0, width, height)
+    return canvas.toDataURL('image/jpeg', 0.75)
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+async function handleFiles(event: Event) {
+  const files = (event.target as HTMLInputElement).files
+  if (!files) return
+  const room = MAX_IMAGES - images.value.length
+  for (const file of Array.from(files).filter((f) => f.type.startsWith('image/')).slice(0, room)) {
+    try {
+      images.value.push(await fileToDataUrl(file))
+    } catch {
+      // skip unreadable image
+    }
+  }
+  if (event.target) (event.target as HTMLInputElement).value = ''
+}
+
+function removeImage(index: number) {
+  images.value.splice(index, 1)
+}
 
 onMounted(async () => {
   stores.value = await storesService.findAll()
@@ -64,11 +110,11 @@ function hydrateForm(deal: Deal) {
     longitude: Number(deal.longitude),
     expiresIn: Math.max(Math.round((new Date(deal.expiresAt).getTime() - Date.now()) / 3600000), 1),
     tags: deal.tags.join(', '),
-    imageUrl: deal.images?.[0] || form.value.imageUrl,
     isSurprise:
       deal.tags.includes('surprise') || deal.metadata?.surprise_bag === true || deal.metadata?.surpriseBag === true,
     isFlash: deal.tags.includes('flash') || deal.metadata?.flash === true,
   }
+  images.value = deal.images?.length ? [...deal.images] : []
 }
 
 async function useMyLocation() {
@@ -138,7 +184,7 @@ async function handleSubmit() {
     longitude: form.value.longitude,
     expiresAt: new Date(Date.now() + form.value.expiresIn * 60 * 60 * 1000).toISOString(),
     tags,
-    images: form.value.imageUrl ? [form.value.imageUrl.trim()] : [],
+    images: images.value.length ? images.value : [FALLBACK_IMAGE],
   }
 
   isSubmitting.value = true
@@ -347,8 +393,29 @@ async function handleSubmit() {
         </div>
 
         <div class="form-group">
-          <label for="imageUrl">Image URL</label>
-          <input id="imageUrl" v-model="form.imageUrl" type="url" placeholder="https://..." />
+          <label for="imageUpload">Photos ({{ images.length }}/5)</label>
+          <input
+            id="imageUpload"
+            ref="fileInput"
+            type="file"
+            class="upload-input"
+            accept="image/*"
+            multiple
+            aria-label="Deal photos, select up to 5 images from your device"
+            @change="handleFiles"
+          />
+          <button type="button" class="btn btn-outline upload-trigger" @click="fileInput?.click()">
+            Upload from device (up to 5)
+          </button>
+          <div v-if="images.length" class="img-grid">
+            <div v-for="(img, i) in images" :key="i" class="img-cell">
+              <img :src="img" :alt="'Uploaded photo ' + (i + 1)" />
+              <button type="button" class="img-remove" :aria-label="'Remove photo ' + (i + 1)" @click="removeImage(i)">
+                &times;
+              </button>
+            </div>
+          </div>
+          <p class="img-hint">JPG / PNG / WEBP. Photos are compressed automatically.</p>
         </div>
 
         <div class="form-actions">
@@ -489,6 +556,58 @@ async function handleSubmit() {
 }
 .locate-btn {
   width: 100%;
+}
+.upload-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.upload-trigger {
+  margin-top: 6px;
+}
+.img-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.img-cell {
+  position: relative;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  border: 1px solid var(--color-border);
+}
+.img-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.img-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.img-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-tertiary);
+  margin-top: 6px;
 }
 .form-actions {
   display: flex;
