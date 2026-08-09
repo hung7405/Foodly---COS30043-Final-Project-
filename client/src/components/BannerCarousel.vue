@@ -19,7 +19,7 @@ const banners: Banner[] = [
     title: 'Big Discounts Today',
     subtitle: 'Up to 70% off on grocery items',
     cta: 'Shop Now',
-    image: 'https://images.unsplash.com/photo-1588964895597-cfccd6e2dbf9?w=1200&q=80',
+    image: '/img/banner-1.jpg',
     color: 'linear-gradient(135deg, #ee4d2d, #ff6f00)',
     promo: '70% OFF',
   },
@@ -28,7 +28,7 @@ const banners: Banner[] = [
     title: 'Fresh Food, Fast',
     subtitle: 'Same-day delivery on groceries & meals',
     cta: 'Order Now',
-    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1200&q=80',
+    image: '/img/banner-2.jpg',
     color: 'linear-gradient(135deg, #16a34a, #22c55e)',
     promo: 'FREE SHIPPING',
   },
@@ -37,7 +37,7 @@ const banners: Banner[] = [
     title: 'Snack Deals',
     subtitle: 'Stock up on your favorites',
     cta: 'View Snacks',
-    image: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=1200&q=80',
+    image: '/img/banner-3.jpg',
     color: 'linear-gradient(135deg, #2563eb, #4f46e5)',
     promo: 'HOT',
   },
@@ -46,7 +46,7 @@ const banners: Banner[] = [
     title: 'Drinks & Beverages',
     subtitle: 'Cool down with great offers',
     cta: 'Shop Drinks',
-    image: 'https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=1200&q=80',
+    image: '/img/banner-4.jpg',
     color: 'linear-gradient(135deg, #0ea5e9, #06b6d4)',
     countdown: true,
     promo: 'FLASH',
@@ -140,7 +140,7 @@ onUnmounted(() => {
 
         <div class="banner-image-wrapper">
           <div class="banner-image-outer" :style="{ background: banner.color }">
-            <img :src="banner.image" :alt="banner.title" class="banner-image" loading="eager" fetchpriority="high" />
+            <img :src="banner.image" :alt="banner.title" class="banner-image" loading="eager" fetchpriority="high" width="448" height="220" />
             <div class="banner-glow"></div>
           </div>
         </div>
@@ -184,7 +184,7 @@ onUnmounted(() => {
       </button>
     </div>
 
-    <div class="banner-dots" role="tablist" aria-label="Carousel navigation">
+    <div class="banner-dots" role="group" aria-label="Carousel navigation">
       <button
         v-for="(_, i) in banners"
         :key="banners[i].id"
@@ -246,13 +246,15 @@ onUnmounted(() => {
 
 .banner-progress-inner {
   block-size: 100%;
-  inline-size: 0%;
+  inline-size: 100%;
   background: var(--color-accent);
-  transition: inline-size 5000ms linear;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 5000ms linear;
 }
 
 .banner-progress.active .banner-progress-inner {
-  inline-size: 100%;
+  transform: scaleX(1);
 }
 
 .banner-image-wrapper {
@@ -448,18 +450,30 @@ onUnmounted(() => {
 }
 
 .banner-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
+  width: 24px;
+  height: 24px;
   border: none;
-  background: var(--color-banner-indicator);
+  background: transparent;
   cursor: pointer;
   padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all var(--transition-fast);
 }
 
-.banner-dot.active {
-  width: 26px;
+.banner-dot::after {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-banner-indicator);
+  transition: all var(--transition-fast);
+}
+
+.banner-dot.active::after {
+  width: 24px;
   border-radius: var(--radius-sm);
   background: var(--color-accent);
 }

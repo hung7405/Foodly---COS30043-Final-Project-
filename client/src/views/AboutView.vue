@@ -42,28 +42,32 @@ const currentImage = computed(() => {
     <section class="section greeting-section" aria-label="Dynamic greeting">
       <div class="container-narrow">
         <div class="greeting-card">
-          <div class="greeting-inputs">
-            <div class="input-group">
-              <label for="firstName" class="input-label">First Name</label>
-              <input
-                id="firstName"
-                v-model="firstName"
-                type="text"
-                class="form-input"
-                placeholder="Enter your first name"
-                aria-describedby="greeting-message"
-              />
+          <div class="row g-3 greeting-inputs">
+            <div class="col-12 col-sm-6">
+              <div class="input-group">
+                <label for="firstName" class="input-label">First Name</label>
+                <input
+                  id="firstName"
+                  v-model="firstName"
+                  type="text"
+                  class="form-input"
+                  placeholder="Enter your first name"
+                  aria-describedby="greeting-message"
+                />
+              </div>
             </div>
-            <div class="input-group">
-              <label for="lastName" class="input-label">Last Name</label>
-              <input
-                id="lastName"
-                v-model="lastName"
-                type="text"
-                class="form-input"
-                placeholder="Enter your last name"
-                aria-describedby="greeting-message"
-              />
+            <div class="col-12 col-sm-6">
+              <div class="input-group">
+                <label for="lastName" class="input-label">Last Name</label>
+                <input
+                  id="lastName"
+                  v-model="lastName"
+                  type="text"
+                  class="form-input"
+                  placeholder="Enter your last name"
+                  aria-describedby="greeting-message"
+                />
+              </div>
             </div>
           </div>
           <div id="greeting-message" class="greeting-message" :class="{ 'has-name': fullName }" aria-live="polite">
@@ -192,9 +196,6 @@ const currentImage = computed(() => {
 }
 
 .greeting-inputs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
   margin-bottom: 24px;
 }
 
@@ -353,9 +354,6 @@ const currentImage = computed(() => {
 }
 
 @media (max-width: 768px) {
-  .greeting-inputs {
-    grid-template-columns: 1fr;
-  }
   .radio-group {
     flex-direction: column;
     align-items: center;

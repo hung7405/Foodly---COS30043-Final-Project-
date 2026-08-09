@@ -4,6 +4,8 @@ dist/
 *.db
 *.sqlite
 coverage/
+__pycache__/
+*.pyc
 .DS_Store
 *.log
 server/*.txt

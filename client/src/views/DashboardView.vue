@@ -67,7 +67,7 @@ onUnmounted(() => {
         <div class="live-badge">● LIVE</div>
       </div>
 
-      <div class="row g-3">
+      <div class="row g-3 mb-4">
         <div class="col-12 col-sm-6 col-lg-3">
           <div class="metric-card">
             <div class="metric-value">{{ metrics.activeUsers }}</div>
@@ -113,7 +113,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div class="row g-3">
+      <div class="row g-3 mb-4">
         <div class="col-12 col-md-6">
           <div class="chart-card">
             <h3>Reservations Per Minute</h3>
@@ -193,12 +193,6 @@ onUnmounted(() => {
     opacity: 0.6;
   }
 }
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 32px;
-}
 .metric-card {
   padding: 24px;
   background: var(--color-card-bg);
@@ -228,12 +222,6 @@ onUnmounted(() => {
 }
 .metric-trend.neutral {
   color: var(--color-text-tertiary);
-}
-.charts-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 32px;
 }
 .chart-card {
   padding: 24px;
@@ -291,13 +279,5 @@ onUnmounted(() => {
   padding: 24px;
   text-align: center;
   color: var(--color-text-tertiary);
-}
-@media (max-width: 768px) {
-  .metrics-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-  .charts-grid {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

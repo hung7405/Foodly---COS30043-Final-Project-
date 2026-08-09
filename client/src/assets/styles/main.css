@@ -7,11 +7,11 @@
   --color-surface-container: #f8f8f8;
   --color-text: #1a1a2e;
   --color-text-secondary: #666687;
-  --color-text-tertiary: #9ca3af;
+  --color-text-tertiary: #6b7280;
   --color-border: #e8e8e8;
   --color-border-light: #f3f4f6;
-  --color-accent: #ee4d2d;
-  --color-accent-hover: #d73211;
+  --color-accent: #d73211;
+  --color-accent-hover: #b73211;
   --color-accent-light: #fef2e9;
   --color-accent-dark: #b73211;
   --color-success: #00b14f;
@@ -25,8 +25,8 @@
   --color-glass-bg: rgba(255, 255, 255, 0.85);
   --color-glass-border: rgba(255, 255, 255, 0.2);
   --color-bottom-nav-bg: #ffffff;
-  --color-bottom-nav-active: #ee4d2d;
-  --color-bottom-nav-inactive: #9ca3af;
+  --color-bottom-nav-active: #d73211;
+  --color-bottom-nav-inactive: #6b7280;
   --color-flash-sale-from: #ee4d2d;
   --color-flash-sale-to: #ff6f00;
   --color-countdown-bg: #1a1a2e;
@@ -70,7 +70,7 @@
   --color-surface-container: #151528;
   --color-text: #f5f5f5;
   --color-text-secondary: #9ca3af;
-  --color-text-tertiary: #6b7280;
+  --color-text-tertiary: #a1a1aa;
   --color-border: #2a2a45;
   --color-border-light: #3a3a55;
   --color-accent: #ff6b4a;
@@ -84,7 +84,7 @@
   --color-glass-border: rgba(255, 255, 255, 0.06);
   --color-bottom-nav-bg: #1a1a2e;
   --color-bottom-nav-active: #ff6b4a;
-  --color-bottom-nav-inactive: #6b7280;
+  --color-bottom-nav-inactive: #9ca3af;
   --color-flash-sale-from: #ee4d2d;
   --color-flash-sale-to: #ff6f00;
   --color-countdown-bg: #0f0f1a;

@@ -161,46 +161,46 @@ function setCategory(category: string) {
               class="col-12 col-sm-6 col-lg-4 d-flex news-col"
             >
               <article class="article-card card h-100">
-              <div class="article-image">
-                <img :src="article.imageUrl" :alt="article.title" loading="lazy" />
-                <span class="article-category">{{ article.category }}</span>
-              </div>
-              <div class="card-body">
-                <time class="article-date" :datetime="article.publishedDate">
-                  {{
-                    new Date(article.publishedDate).toLocaleDateString('en-AU', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })
-                  }}
-                </time>
-                <h2 class="article-title">
-                  <router-link :to="`/news/${article.id}`">
-                    {{ article.title }}
+                <div class="article-image">
+                  <img :src="article.imageUrl" :alt="article.title" loading="lazy" />
+                  <span class="article-category">{{ article.category }}</span>
+                </div>
+                <div class="card-body">
+                  <time class="article-date" :datetime="article.publishedDate">
+                    {{
+                      new Date(article.publishedDate).toLocaleDateString('en-AU', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })
+                    }}
+                  </time>
+                  <h2 class="article-title">
+                    <router-link :to="`/news/${article.id}`">
+                      {{ article.title }}
+                    </router-link>
+                  </h2>
+                  <p class="article-excerpt">
+                    {{ article.content.length > 150 ? article.content.substring(0, 150) + '...' : article.content }}
+                  </p>
+                  <router-link :to="`/news/${article.id}`" class="article-read-more">
+                    Read more
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
                   </router-link>
-                </h2>
-                <p class="article-excerpt">
-                  {{ article.content.length > 150 ? article.content.substring(0, 150) + '...' : article.content }}
-                </p>
-                <router-link :to="`/news/${article.id}`" class="article-read-more">
-                  Read more
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                    <polyline points="12 5 19 12 12 19" />
-                  </svg>
-                </router-link>
-              </div>
+                </div>
               </article>
             </div>
           </div>

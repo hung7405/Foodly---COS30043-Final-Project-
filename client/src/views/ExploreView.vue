@@ -517,7 +517,13 @@ function handleRecentered() {
           <circle cx="11" cy="11" r="8" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
-        <input v-model="searchQuery" type="search" placeholder="Search deals, stores..." class="toolbar-search" />
+        <input
+          v-model="searchQuery"
+          type="search"
+          placeholder="Search deals, stores..."
+          class="toolbar-search"
+          aria-label="Search deals, stores"
+        />
       </div>
       <div class="toolbar-actions">
         <select v-model="sortBy" class="input input-sm sort-select" aria-label="Sort deals">

@@ -43,6 +43,7 @@ function go(path: string) {
       :key="tab.id"
       class="tab-item"
       :class="{ active: activeTab === tab.id, 'tab-home': tab.id === 'home' }"
+      :aria-current="activeTab === tab.id ? 'page' : undefined"
       @click="go(tab.path)"
     >
       <svg

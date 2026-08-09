@@ -62,20 +62,24 @@ function logout() {
         </div>
       </div>
 
-      <div class="rewards-row">
-        <router-link to="/spin" class="reward-card coins-card">
-          <div class="reward-icon">🪙</div>
-          <div>
-            <strong class="reward-value">{{ balance }} <span class="reward-unit">xu</span></strong>
-            <small>Earn on every purchase · spin daily</small>
-          </div>
-          <span class="link-arrow">→</span>
-        </router-link>
-        <div v-if="impact" class="reward-card impact-card">
-          <div class="reward-icon">🍀</div>
-          <div>
-            <strong class="reward-value">{{ impact.foodKg }} kg</strong>
-            <small>food saved · {{ impact.co2Kg }} kg CO₂e</small>
+      <div class="row g-3 rewards-row">
+        <div class="col-12 col-md-6">
+          <router-link to="/spin" class="reward-card coins-card h-100">
+            <div class="reward-icon">🪙</div>
+            <div>
+              <strong class="reward-value">{{ balance }} <span class="reward-unit">xu</span></strong>
+              <small>Earn on every purchase · spin daily</small>
+            </div>
+            <span class="link-arrow">→</span>
+          </router-link>
+        </div>
+        <div class="col-12 col-md-6">
+          <div v-if="impact" class="reward-card impact-card h-100">
+            <div class="reward-icon">🍀</div>
+            <div>
+              <strong class="reward-value">{{ impact.foodKg }} kg</strong>
+              <small>food saved · {{ impact.co2Kg }} kg CO₂e</small>
+            </div>
           </div>
         </div>
       </div>
@@ -217,9 +221,6 @@ function logout() {
   margin-bottom: 24px;
 }
 .rewards-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
   margin-bottom: 24px;
 }
 .reward-card {
@@ -263,11 +264,6 @@ a.reward-card:hover {
 }
 .impact-card .reward-value {
   color: #166534;
-}
-@media (max-width: 640px) {
-  .rewards-row {
-    grid-template-columns: 1fr;
-  }
 }
 .profile-link-card {
   display: flex;

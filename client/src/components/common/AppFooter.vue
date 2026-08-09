@@ -117,7 +117,7 @@ import { SITE_NAME } from '../../utils/constants'
 
 .footer-bottom p {
   font-size: 0.75rem;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 
 @media (min-width: 768px) {

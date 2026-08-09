@@ -40,6 +40,7 @@ function handleSearch() {
           v-model="searchQuery"
           class="search-input"
           type="search"
+          aria-label="Search deals, stores"
           placeholder="Search deals, stores..."
           @keyup.enter="handleSearch"
         />

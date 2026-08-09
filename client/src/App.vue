@@ -40,7 +40,7 @@ const showBottomTab = computed(() => {
     <BottomTabBar />
     <PwaInstallPrompt />
 
-    <div class="toast-container">
+    <div class="toast-container" aria-live="polite">
       <transition-group name="toast">
         <div
           v-for="toast in uiStore.toasts"

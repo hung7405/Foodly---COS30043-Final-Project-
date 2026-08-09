@@ -1,74 +1,59 @@
-# Deploy Foodly — Mercury (WinSCP) + Vercel
+# Deploy Foodly — Vercel (frontend) + Render (backend) + Supabase
 
-## Kiến trúc
+## Architecture
 
 ```
-┌─ Mercury (trường Úc chấm) ─────────────────────┐
-│  frontend tĩnh (client/dist)  ← upload qua      │
-│  WinSCP (SFTP, qua Cisco VPN)                   │
-└─────────────────────────────────────────────────┘
-        ▲                         ▲ (API + socket)
-┌───────┴────────────┐            │
-│  Vercel (thầy VN)  │────────────┘
-│  frontend (vercel) │   cùng 1 backend
-└─────────────────────────────────────────────────┘
+Browser ──> Vercel (static/PWA, client/dist) ──> Render (NestJS API + Socket.IO) ──> Supabase (PostgreSQL + pgvector)
 ```
 
-- **Mercury** là web space tĩnh của Swinburne — CHỈ chạy file HTML/JS/CSS.
-  Không chạy được backend NestJS + Socket.IO (realtime), không có Docker.
-- **Backend** phải chạy ở nơi có Node (Vercel serverless, hoặc 1 host Node).
+- **Vercel** hosts the built frontend (`client/` → `dist/`). SPA rewrites and cache
+  headers are configured in `client/vercel.json`.
+- **Render** hosts the NestJS backend (`server/`). It is a **persistent** Node host, so
+  Socket.IO rooms and the 5-second analytics tick stay alive (no serverless polling).
+- **Supabase** is the database: PostgreSQL + PostgREST + pgvector (HNSW) for the AI search.
 
-## Các file có sẵn
+## Files
 
-| File | Mục đích |
-|------|----------|
-| `client/vercel.json` | Cấu hình deploy frontend lên Vercel (điền URL Mercury/backend vào 3 chỗ `your-mercury-api-host`) |
-| `mercury.yml` | Manifest deploy Mercury (nếu trường dùng CI thay vì WinSCP) |
-| `client/nginx.conf`, `client/Dockerfile` | Dùng khi chạy Docker local |
-| `deploy/foodly-frontend.zip` | Gói frontend đã build sẵn để kéo lên WinSCP |
-| `client/.env` | URL API/socket mà `npm run build` đọc (đổi trước khi build) |
+| File | Purpose |
+|------|---------|
+| `client/vercel.json` | Vercel build config: `vite` framework, `npm run build`, `dist`, SPA rewrite, `sw.js`/`assets` cache headers |
+| `client/.env` | Build-time API/socket URLs (`VITE_API_URL`, `VITE_SOCKET_URL`, `VITE_ANALYTICS_SOCKET_URL`) — override on Vercel too |
+| `deploy/build-for-mercury.ps1` | Optional utility that builds the client with a sub-path base for a static/mercury-style host |
+| `server/src/config.ts` | Fail-fast env validation (throws on missing vars unless `NODE_ENV=test`) |
 
-## Cách deploy
+## How to deploy
 
-### 1. Deploy frontend lên Mercury (bằng WinSCP)
+### 1. Backend → Render
 
-- **Trang web root của COS30043:** `https://mercury.swin.edu.au/cos30043/s104775470/`
-  (map tới thư mục server `/home/students/accounts/s104775470/cos30043/www/htdocs`)
-- **Foodly nằm trong subfolder `foodly`** để không đụng A1/A2:
-  `https://mercury.swin.edu.au/cos30043/s104775470/foodly/`
+1. Push `server/` to a Render service (web service, Node).
+2. Set env vars: `JWT_SECRET`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, and AI model keys.
+3. Render start command: `npm run start:prod` (or `npm run build && npm run start`).
+4. Health check: `https://<service>.onrender.com/api/health`.
 
-Các bước:
+### 2. Database → Supabase
 
-1. Kết nối **Cisco AnyConnect** vào Swinburne VPN.
-2. Mở **WinSCP** → đăng nhập host Mercury (SFTP port 22, theo thông tin trường cấp).
-3. Vào thư mục `htdocs/foodly` (tạo folder `foodly` nếu chưa có).
-4. Upload **toàn bộ nội dung bên trong** `deploy/foodly-frontend` (index.html,
-   assets/, data/, pwa/, favicon.svg, icons.svg, manifest.webmanifest, sw.js,
-   workbox-bdb082da.js) vào `htdocs/foodly` — KHÔNG kéo cả folder `foodly-frontend`.
-5. Mở URL `.../cos30043/s104775470/foodly/` → xem app.
+1. Run `supabase-migration.sql` against the target project.
+2. Run the seed scripts to load users, stores, deals, and comments.
 
-> **Lưu ý build:** chạy script một lệnh để build + đóng gói với base path Mercury:
-> ```
-> powershell -ExecutionPolicy Bypass -File deploy/build-for-mercury.ps1 `
->   -BackendUrl "https://BACKEND-URL" `
->   -BasePath "/cos30043/s104775470/foodly/"
-> ```
-> Script tự backup/khôi phục `client/.env` nên bản local (localhost) vẫn dùng được
-> để quay video. Bản build đã có sẵn nằm ở `deploy/foodly-frontend/` + zip.
+### 3. Frontend → Vercel
 
-### 2. Deploy backend + frontend lên Vercel (cho thầy VN)
+1. In `client/`, point `VITE_API_URL`, `VITE_SOCKET_URL`, `VITE_ANALYTICS_SOCKET_URL`
+   at the Render host (`.env` or Vercel project env).
+2. `npm run build` — type-checks with `vue-tsc` and bundles to `dist/`.
+3. `vercel --prod` (or push to the Vercel-connected repo). `vercel.json` handles the
+   SPA rewrite `/(.*)` → `/index.html` and immutable cache headers for `assets/`.
 
-```powershell
-# backend (serverless)
-cd server
-vercel login
-vercel --prod
+### 4. Verify
 
-# frontend (sau khi đã sửa vercel.json)
-cd ../client
-vercel --prod
-```
+- Home loads, the map shows seeded deals, login works.
+- WebSocket events flow: create a deal in window A and confirm the marker appears in
+  window B without a refresh; watch the merchant dashboard KPI update within 5 s.
+- PWA: install prompt appears; `sw.js` revalidates on each deploy.
 
-- `client/vercel.json` đã có sẵn env trỏ backend (điền URL backend vào
-  `your-mercury-api-host`).
-- Backend serverless: realtime qua Socket.IO sẽ hoạt động dạng polling.
+## Notes
+
+- The backend CORS policy reflects the request origin (`server/src/config.ts`), so
+  Vercel preview URLs need no per-deploy edits.
+- For a pure static host (e.g., a Mercury-style folder), use
+  `deploy/build-for-mercury.ps1` to emit a sub-path build — but realtime features
+  require the persistent backend above.
