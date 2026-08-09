@@ -4,9 +4,12 @@ import { useRouter } from 'vue-router'
 import { recommendationsService, dealsService, http } from '../services/api'
 import BannerCarousel from '../components/BannerCarousel.vue'
 import { formatVND } from '../utils/currency'
+import { useAuthStore } from '../stores/auth.store'
 import type { Deal } from '../types'
 
 const router = useRouter()
+const auth = useAuthStore()
+const homeAddress = computed(() => auth.deliveryAddress || 'Home')
 
 const recommendedDeals = ref<Deal[]>([])
 const flashDeals = ref<Deal[]>([])
@@ -336,16 +339,31 @@ function dealRating(deal: any) {
             <circle cx="12" cy="10" r="3" />
           </svg>
           <span class="location-text">Deliver to</span>
-          <span class="location-addr">Home</span>
+          <span class="location-addr" :title="homeAddress">{{ homeAddress }}</span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z" /></svg>
         </router-link>
       </div>
-      <div class="search-bar" @click="router.push('/explore')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        <span class="search-placeholder">Search food, stores near you...</span>
+      <div class="top-search-row">
+        <div class="search-bar" @click="router.push('/explore')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <span class="search-placeholder">Search food, stores near you...</span>
+        </div>
+        <button
+          type="button"
+          class="ai-camera-btn"
+          title="AI vision search"
+          :aria-label="'AI vision search'"
+          @click="router.push('/ai-search')"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+            <circle cx="12" cy="13" r="4" />
+            <path d="M12 9v8M8 13h8" />
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -626,7 +644,13 @@ function dealRating(deal: any) {
 .location-addr {
   font-weight: 600;
 }
+.top-search-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .search-bar {
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -648,6 +672,24 @@ function dealRating(deal: any) {
 .search-placeholder {
   color: var(--color-text-secondary);
   font-size: 0.875rem;
+}
+.ai-camera-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-secondary);
+  color: var(--color-accent);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.ai-camera-btn:hover {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 4px rgba(238, 77, 45, 0.06);
 }
 
 /* ── Categories ─────────────────────────────────────── */
