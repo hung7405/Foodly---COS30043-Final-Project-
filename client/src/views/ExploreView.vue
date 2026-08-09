@@ -35,12 +35,16 @@ const isLoading = ref(true)
 const isLocating = ref(false)
 const isRouting = ref(false)
 const error = ref('')
-const searchQuery = ref('')
-const category = ref('All')
+const route = useRoute()
+const searchQuery = ref(typeof route.query.search === 'string' ? route.query.search : '')
+const category = ref<string>(
+  typeof route.query.category === 'string' && route.query.category.toLowerCase() !== 'all'
+    ? route.query.category.toLowerCase()
+    : 'All'
+)
 const showMap = ref(false)
 const showFilters = ref(false)
 const routeMode = ref<'walking' | 'driving' | 'cycling'>('walking')
-const route = useRoute()
 const routeInfo = ref<{ distanceKm: number; durationMin: number } | null>(null)
 const routeLine = shallowRef<any>(null)
 const showLocationPrompt = ref(true)
@@ -66,15 +70,13 @@ function discountPct(d: any) {
 function isSurpriseDeal(d: any) {
   return (d.tags || []).includes('surprise') || d.metadata?.surpriseBag === true || d.metadata?.surprise_bag === true
 }
-const dealRating = (d: Deal) => Math.round((d.store?.avgTrustScore ?? 0) / 20)
 
 const stores = computed(() => {
   const s = new Set<string>()
   deals.value.forEach((d) => d.store?.name && s.add(d.store.name))
   return [...s].sort()
 })
-const categories = ['Food', 'Drinks', 'Bakery', 'Grocery', 'Asian', 'Western', 'Dessert', 'Healthy']
-const categoryOptions = [
+const categories = [
   { id: 'food', name: 'Food' },
   { id: 'drinks', name: 'Drinks' },
   { id: 'bakery', name: 'Bakery' },
@@ -84,41 +86,6 @@ const categoryOptions = [
   { id: 'dessert', name: 'Dessert' },
   { id: 'healthy', name: 'Healthy' },
 ]
-const categoryKeywords: Record<string, Array<string> | undefined> = {
-  Food: [
-    'com',
-    'ga',
-    'bento',
-    'banh mi',
-    'sandwich',
-    'pizza',
-    'dimsum',
-    'tokbokki',
-    'kimbap',
-    'ramen',
-    'takoyaki',
-    'xuc xich',
-    'chao',
-    'xoi',
-  ],
-  Drinks: ['uong', 'ca phe', 'tra', 'nuoc', 'bia', 'sua chua', 'yen sao', 'tra dao', 'sua'],
-  Bakery: ['banh', 'baguette', 'flan'],
-  Grocery: ['thuc pham', 'rau', 'thit', 'ca', 'tom', 'trung', 'gao', 'trai cay', 'pho mai', 'dau olive', 'pasta'],
-  Asian: ['han', 'nhat', 'hoa', 'viet', 'kim chi', 'kim bap', 'taiyaki', 'mochi'],
-  Western: ['nhap khau', 'phap', 'duc', 'tay', 'bit tet', 'ruou', 'pasta'],
-  Dessert: ['trang mieng', 'kem', 'ngot', 'mochi', 'che', 'flan', 'taiyaki'],
-  Healthy: ['healthy', 'suc khoe', 'khong duong', 'rau', 'salad', 'nguyen cam', 'tuoi song'],
-}
-function dealMatchesCategory(d: Deal, name: string) {
-  const keywords = categoryKeywords[name]
-  if (!keywords) return true
-  const tags = (d.tags || []).map((t) => (t || '').toLowerCase().replace(/_/g, ' '))
-  return tags.some((t) => keywords.some((k) => t.includes(k)))
-}
-function normalizeCategoryQuery(value: string) {
-  const found = categoryOptions.find((o) => o.id === value.toLowerCase())
-  return found ? found.name : value
-}
 const activeFiltersCount = computed(
   () =>
     [selectedStore.value, selectedRating.value, minDiscount.value, radiusKm.value].filter(Boolean).length +
@@ -127,47 +94,9 @@ const activeFiltersCount = computed(
     (searchQuery.value.trim() ? 1 : 0)
 )
 
-const filteredDeals = computed(() => {
-  const withDistance: Array<Deal & { distanceKm?: number }> = deals.value.map((d) => ({
-    ...d,
-    distanceKm: userLocation.value
-      ? calcDistance(userLocation.value.lat, userLocation.value.lng, Number(d.latitude), Number(d.longitude))
-      : undefined,
-  }))
-  let result = withDistance.filter((d) => {
-    if (selectedStore.value && d.store?.name !== selectedStore.value) return false
-    if (verifiedOnly.value && !d.verified) return false
-    if (minDiscount.value && discountPct(d) < minDiscount.value) return false
-    if (selectedRating.value && dealRating(d) < selectedRating.value) return false
-    if (radiusKm.value && d.distanceKm !== undefined && d.distanceKm > radiusKm.value) return false
-    return true
-  })
-  if (searchQuery.value.trim()) {
-    const q = searchQuery.value.toLowerCase()
-    result = result.filter((d) => d.title.toLowerCase().includes(q) || d.store?.name?.toLowerCase().includes(q))
-  }
-  if (category.value && category.value !== 'All') {
-    result = result.filter((d) => dealMatchesCategory(d, category.value))
-  }
-  switch (sortBy.value) {
-    case 'discount':
-      result.sort((a, b) => discountPct(b) - discountPct(a))
-      break
-    case 'price-asc':
-      result.sort((a, b) => (a.discountPrice || 0) - (b.discountPrice || 0))
-      break
-    case 'price-desc':
-      result.sort((a, b) => (b.discountPrice || 0) - (a.discountPrice || 0))
-      break
-    default:
-      if (userLocation.value) result.sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0))
-  }
-  return result
-})
-
-const pagedDeals = computed(() => filteredDeals.value.slice(0, visibleCount.value))
-const showingCount = computed(() => Math.min(visibleCount.value, filteredDeals.value.length))
-const hasMore = computed(() => filteredDeals.value.length > visibleCount.value)
+const pagedDeals = computed(() => deals.value.slice(0, visibleCount.value))
+const showingCount = computed(() => Math.min(visibleCount.value, deals.value.length))
+const hasMore = computed(() => deals.value.length > visibleCount.value)
 
 function loadMore() {
   visibleCount.value += PAGE_SIZE
@@ -195,10 +124,7 @@ function leaveAllDealRooms() {
 }
 
 onMounted(async () => {
-  const c = route.query.category as string | undefined
-  if (c) category.value = normalizeCategoryQuery(c)
   showLocationPrompt.value = !userLocation.value
-  await loadDeals()
   await nextTick()
   if (showMap.value) await nextTick(initMap)
   if (userLocation.value) {
@@ -230,20 +156,29 @@ onUnmounted(() => {
   map.value?.remove()
 })
 
-watch([() => route.query.category, () => route.query.search], ([nextCategory, nextSearch]) => {
+watch([() => route.query.category, () => route.query.search, () => route.query.sort], ([nextCategory, nextSearch, nextSort]) => {
   if (typeof nextSearch === 'string' && searchQuery.value !== nextSearch) searchQuery.value = nextSearch
-  if (typeof nextCategory === 'string' && category.value !== normalizeCategoryQuery(nextCategory))
-    category.value = normalizeCategoryQuery(nextCategory)
+  if (typeof nextCategory === 'string' && nextCategory.toLowerCase() !== category.value)
+    category.value = nextCategory.toLowerCase()
+  if (typeof nextSort === 'string' && ['discount', 'price-asc', 'price-desc'].includes(nextSort) && sortBy.value !== nextSort)
+    sortBy.value = nextSort as any
 })
+let refreshTimer: number | undefined
+function scheduleRefresh() {
+  window.clearTimeout(refreshTimer)
+  refreshTimer = window.setTimeout(loadDeals, 300)
+}
 watch(
   [selectedStore, selectedRating, verifiedOnly, minDiscount, radiusKm, searchQuery, category, sortBy],
   () => {
     visibleCount.value = PAGE_SIZE
-  }
+    scheduleRefresh()
+  },
+  { immediate: true }
 )
-watch(filteredDeals, () => {
+watch(deals, () => {
   scheduleMarkerUpdate()
-  joinDealRooms(filteredDeals.value)
+  joinDealRooms(deals.value)
 })
 watch(showMap, (v: boolean) => {
   if (v) nextTick(initMap)
@@ -262,12 +197,25 @@ function scheduleMarkerUpdate() {
 async function loadDeals() {
   isLoading.value = true
   error.value = ''
+  const params: Record<string, any> = { status: 'active', page: 1, limit: 100 }
+  if (searchQuery.value.trim()) params.search = searchQuery.value.trim()
+  if (category.value && category.value !== 'All') params.category = category.value
+  if (selectedStore.value) params.store = selectedStore.value
+  if (selectedRating.value) params.minRating = selectedRating.value
+  if (minDiscount.value) params.minDiscount = minDiscount.value
+  if (verifiedOnly.value) params.verified = true
+  if (radiusKm.value && userLocation.value) {
+    params.lat = userLocation.value.lat
+    params.lng = userLocation.value.lng
+    params.radius = radiusKm.value
+  }
+  if (sortBy.value !== 'default') params.sort = sortBy.value
   try {
-    const first = await dealsService.findAll({ status: 'active', limit: 100, page: 1 })
+    const first = await dealsService.findAll(params)
     let loaded: Deal[] = first.deals || []
     if (first.totalPages > 1) {
       for (let p = 2; p <= first.totalPages; p++) {
-        const next = await dealsService.findAll({ status: 'active', limit: 100, page: p })
+        const next = await dealsService.findAll({ ...params, page: p })
         loaded = loaded.concat(next.deals || [])
       }
     }
@@ -333,7 +281,7 @@ function rebuildMarkers() {
   if (!markerCluster.value) return
   markerCluster.value.clearLayers()
   markerMap.clear()
-  filteredDeals.value.forEach((deal) => {
+  deals.value.forEach((deal) => {
     const marker = L.marker([Number(deal.latitude), Number(deal.longitude)], {
       icon: createDealIcon(deal, selectedDeal.value?.id === deal.id),
     })
@@ -599,11 +547,11 @@ function handleRecentered() {
               <button @click="category = 'All'" :class="['chip', { active: category === 'All' }]">All</button>
               <button
                 v-for="c in categories"
-                :key="c"
-                @click="category = c"
-                :class="['chip', { active: category === c }]"
+                :key="c.id"
+                @click="category = c.id"
+                :class="['chip', { active: category === c.id }]"
               >
-                {{ c }}
+                {{ c.name }}
               </button>
             </div>
           </div>
@@ -817,7 +765,7 @@ function handleRecentered() {
               <div class="skeleton-card"></div>
             </div>
           </div>
-          <div v-else-if="filteredDeals.length === 0" class="empty-state">
+          <div v-else-if="deals.length === 0" class="empty-state">
             <h3>No deals found</h3>
             <p>Try adjusting your filters.</p>
             <button class="btn btn-outline btn-sm" @click="resetFilters()">Reset filters</button>
@@ -850,16 +798,16 @@ function handleRecentered() {
                 </div>
                 <div class="deal-meta-bottom">
                   <span v-if="userLocation && deal.latitude" class="deal-distance">{{
-                    formatDist(deal.distanceKm)
+                    formatDist((deal as any).distanceKm)
                   }}</span>
                 </div>
               </div>
               </router-link>
             </div>
           </div>
-          <div v-if="filteredDeals.length > PAGE_SIZE" class="load-more-row">
+          <div v-if="deals.length > PAGE_SIZE" class="load-more-row">
             <p class="showing-text">
-              Showing {{ showingCount }} of {{ filteredDeals.length }} deals
+              Showing {{ showingCount }} of {{ deals.length }} deals
             </p>
             <button v-if="hasMore" class="btn btn-primary load-more-btn" @click="loadMore">
               Load more
