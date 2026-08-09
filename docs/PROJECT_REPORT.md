@@ -41,7 +41,7 @@ The project fulfils all three assessment stages defined by the COS30043 rubric.
 
 **Total word count:** ~9,500 words excluding code listings (≈ 10,500 including code and tables). Stage 3 documentation (§6 implementation, §7 UX/UI evaluation, §8 innovation, §9 testing, §10 reflection, §11 deployment) totals ≈ 6,100 words including code and tables, exceeding the 6,000-word target.
 
-> **Note on figures:** This report ships with 23 numbered figures (Appendix B). Each PNG in `docs/figures/` is a **real screengrab** of the running application captured at 1120 px wide against the live hosted backend, with desktop screenshots taken in a Chromium viewport. `fig_18` is a two-window composite of a concurrent-reservation live demo; figures 19–23 cover the final-iteration additions (Explore filters, support chatbot, escalation form, rating, delivery address). To regenerate the `.docx`, run `python docs/build_report.py` from the repository root.
+> **Note on figures:** This report ships with 23 numbered figures (Appendix B). Each PNG in `docs/figures/` is a **real screengrab** of the running application captured at 1120 px wide against the live hosted backend, with desktop screenshots taken in a Chromium viewport. All screenshots are captured in **dark mode** — the token-based theme that ships with the app (§6.5.2) — to present a consistent, high-contrast visual language throughout the document. `fig_18` is a two-window composite of a concurrent-reservation live demo; figures 19–23 cover the final-iteration additions (Explore filters, support chatbot, escalation form, rating, delivery address). To regenerate the `.docx`, run `python docs/build_report.py` from the repository root.
 
 ---
 
