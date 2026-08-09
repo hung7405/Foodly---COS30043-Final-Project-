@@ -41,7 +41,7 @@ The project fulfils all three assessment stages defined by the COS30043 rubric.
 
 **Total word count:** ~9,500 words excluding code listings (≈ 10,500 including code and tables). Stage 3 documentation (§6 implementation, §7 UX/UI evaluation, §8 innovation, §9 testing, §10 reflection, §11 deployment) totals ≈ 6,100 words including code and tables, exceeding the 6,000-word target.
 
-> **Note on figures:** This report ships with 18 numbered figures (Appendix B). Each PNG in `docs/figures/` is a **real screengrab** of the running application captured at 1120×1400 (mobile screens at 390×844) against the live hosted backend, with desktop screenshots taken in a Chromium viewport. `fig_18` is a two-window composite of a concurrent-reservation live demo. To regenerate the `.docx`, run `python docs/build_report.py` from the repository root.
+> **Note on figures:** This report ships with 23 numbered figures (Appendix B). Each PNG in `docs/figures/` is a **real screengrab** of the running application captured at 1120 px wide against the live hosted backend, with desktop screenshots taken in a Chromium viewport. `fig_18` is a two-window composite of a concurrent-reservation live demo; figures 19–23 cover the final-iteration additions (Explore filters, support chatbot, escalation form, rating, delivery address). To regenerate the `.docx`, run `python docs/build_report.py` from the repository root.
 
 ---
 
@@ -89,7 +89,7 @@ Each known UX gap is answered with a targeted technical solution:
                                          └───────────────────┘
 ```
 
-The **client** is a Vue 3 SPA (TypeScript, Composition API) compiled by Vite 8, using Pinia for state, Vue Router with navigation guards for route protection, Axios for HTTP with a JWT interceptor, Bootstrap 5 for layout, and a Socket.IO client for real-time events. The **server** is a NestJS 11 application exposing a REST API under the `/api` prefix plus a Socket.IO WebSocket gateway on the same port. It is organised into twenty domain modules (`app.module.ts`): Supabase, Auth, Users, Deals, Reservations, Comments, Stores, Analytics, Socket, AI, Embedding, Recommendation, Payment, Geo, Interactions, Merchant, News, Admin, Throttler, and Schedule. The **database** is Supabase PostgreSQL 16, accessed through the PostgREST client (an explicit architectural choice documented in §6.5.3 — no ORM).
+The **client** is a Vue 3 SPA (TypeScript, Composition API) compiled by Vite 8, using Pinia for state, Vue Router with navigation guards for route protection, Axios for HTTP with a JWT interceptor, Bootstrap 5 for layout, and a Socket.IO client for real-time events. The **server** is a NestJS 11 application exposing a REST API under the `/api` prefix plus a Socket.IO WebSocket gateway on the same port. It is organised into twenty-one domain modules (`app.module.ts`): Supabase, Auth, Users, Deals, Reservations, Comments, Stores, Analytics, Socket, AI, Embedding, Recommendation, Payment, Geo, Interactions, Merchant, News, Admin, Support, Throttler, and Schedule. The **database** is Supabase PostgreSQL 16, accessed through the PostgREST client (an explicit architectural choice documented in §6.5.3 — no ORM).
 
 ### 3.2 Module Dependency Graph
 
@@ -113,6 +113,7 @@ app.module.ts
 ├── MerchantModule           # merchant KPIs, pickup queue, deal control
 ├── NewsModule               # news feed (client serves bundled JSON — see §4.3)
 ├── AdminModule              # user/deal administration
+├── SupportModule            # in-app help chatbot, escalation tickets, feedback
 ├── ThrottlerModule          # global rate limiting (100 req/min)
 └── ScheduleModule           # cron jobs (expiry, analytics, embeddings)
 ```
@@ -121,13 +122,15 @@ app.module.ts
 
 The schema is defined in `server/src/supabase-migration.sql` and managed in the Supabase SQL Editor. Core tables and their key columns:
 
-- **users** — `id`, `email`, `username`, `password_hash`, `role (guest|user|merchant|moderator|admin)`, `trust_score`, `reputation_points`, `is_active`, `last_login`.
+- **users** — `id`, `email`, `username`, `password_hash`, `role (guest|user|merchant|moderator|admin)`, `trust_score`, `reputation_points`, `is_active`, `last_login`, `delivery_address` (set from the Profile page).
 - **stores** — `id`, `name`, `address`, `latitude`/`longitude`, `avg_trust_score`, `user_id` (merchant owner).
 - **deals** — `id`, `user_id`, `store_id`, `title`, `description`, `original_price`, `discount_price`, `remaining_quantity`, `original_quantity`, `status`, `verified`, `verified_by`, `latitude`/`longitude`, `images (jsonb)`, `tags (jsonb)`, **`version` (optimistic locking)**, `like_count`, `bookmark_count`, `expires_at`.
 - **deal_embeddings** — `id`, `deal_id`, `embedding vector(1536)`, `model`, `updated_at` (HNSW index + `match_deals()` RPC).
 - **reservations** — `id`, `deal_id`, `user_id`, `status (active|confirmed|cancelled|expired)`, `expires_at` (15-minute hold), `reservation_code`, `quantity_reserved`, `confirmed_at`.
 - **payments** — `id`, `reservation_id`, `user_id`, `amount`, `status`, `payment_method`, `paid_at`.
 - **comments** — `id`, `deal_id`, `user_id`, `content`, `parent_id` (nested replies), `status (active|hidden|flagged)`.
+- **support_tickets** — `id`, `user_id`, `category`, `subject`, `message`, `status (open|in_progress|resolved)`, `created_at`. Created by the in-app support chatbot when a chat escalation completes.
+- **support_feedback** — `id`, `user_id`, `rating (1–5)`, `category`, `ref_code`, `created_at`. Submitted via the post-escalation star rating (§6.5.4).
 - **activity_events / analytics_snapshots / verification_events / user_interactions** — analytics and audit log.
 
 > **Authorization note.** The migration does **not** enable Row-Level Security; authorization is enforced at the application layer via JWT guards in each controller (see §10.4). This is an intentional design choice for a class project and is documented as a production-readiness gap in §10.5.
@@ -197,13 +200,17 @@ The News page (`NewsView.vue`) is the strongest Stage 1 demonstration of **dynam
 
 ### 4.4 About Page
 
-The About page (`AboutView.vue`) implements both mandatory interactive requirements.
+The About page (`AboutView.vue`) implements both mandatory interactive requirements alongside the project's academic context.
 
 - **Dynamic greeting** — two labelled inputs bound with `v-model` feed a computed `fullName`; a reactive block reads "Welcome, First Last" with an `aria-live="polite"` region so screen readers announce the change on each keystroke.
 
 `![[fig_04_about_greeting.png]]`
 - **Radio-switched image** — two styled radio cards ("Food Rescue" / "Community Support") bound with `v-model`; a `currentImage` computed switches the photograph with a fade transition and a contextual caption. The radios use a `role="radiogroup"` with `sr-only` native inputs for accessibility and a visible check indicator.
-- A **project description** paragraph explaining the application's mission (food waste and food insecurity), fulfilling the written-description requirement.
+- **Academic context** — a dedicated card introduces Foodly as a design-led project for **COS30043 — Interface Design and Development (Swinburne University of Technology, Swinburne Vietnam)**, explaining that every screen follows a persona-driven interface-design lifecycle and a token-based design system.
+- **Product summary** — a "What is Foodly?" section with a six-card feature grid (real-time map, flash sales, AI photo search, community feed, secure role-based accounts, installable PWA) that gives visitors a scannable overview of the platform.
+- **Project description** — a written paragraph explaining the application's mission (food waste and food insecurity), fulfilling the written-description requirement.
+
+All three content sections share the same token palette, responsive card grid (3 columns → 1 column on mobile), and hover states, keeping the About page consistent with the rest of the application.
 
 ### 4.5 Responsiveness
 
@@ -267,7 +274,7 @@ The role model supports five roles: **guest** (browse only), **user** (create/ed
 
 The deal system is the core content model and demonstrates full CRUD plus search/filter/sort arrays of functional programming. `![[fig_07_deal_detail.png]]`
 
-- **Create** (`CreateDealView.vue → POST /api/deals`) — a form with store selection (auto-fills address/coordinates), title, description, original/discount price, quantity, expiry window (1–24 h), tags, image URL, and manual or browser-geolocation coordinates. Every field is validated client-side (price ordering, quantity ≥ 1, coordinate ranges, expiry bounds) and the server re-validates business rules before insert.
+- **Create** (`CreateDealView.vue → POST /api/deals`) — a form with store selection (auto-fills address/coordinates), title, description, original/discount price, quantity, expiry window (1–24 h), tags, **up to five local image uploads** (each file is canvas-resized client-side to a bounded JPEG data URL and previewed as a removable thumbnail before submit, eliminating broken external image URLs), and manual or browser-geolocation coordinates. Every field is validated client-side (price ordering, quantity ≥ 1, coordinate ranges, expiry bounds) and the server re-validates business rules before insert.
 - **Read** — `GET /api/deals` supports `page`, `limit`, `search` (title/description/store/tags), `category`, `status`, `verified`, `sort` (`created_at`, `expires_at`, `discount_price`, `remaining_quantity`, `like_count`), `order`, and geo-radius (`lat`/`lng`/`radius`) with haversine distance plus a computed `distance` badge. `GET /api/deals/map?swLat&swLng&neLat&neLng` returns deals within a bounding box.
 - **Edit** — `PUT /api/deals/:id` whitelists an explicit field map (camelCase → snake_case) and enforces ownership or moderator/admin privileges.
 - **Delete** — `DELETE /api/deals/:id` performs a **soft delete** (`status → removed`) to preserve history, with ownership or admin enforcement.
@@ -288,6 +295,8 @@ async update(id, data, userId, userRole) {
 ### 5.3 Search, Filters and Personalisation
 
 Search and filtering are implemented on both the News page (§4.3) and the Explore/Deals pages. The Explore page provides a live search box (debounced 250 ms), a category filter wired to query parameters, and location-aware distance sorting. The backend supports combined query parameters (`?page=1&limit=20&search=sandwich&category=fresh_food,dairy&sort=created_at&order=desc&lat=...&lng=...&radius=5000`), demonstrating proficient use of **arrays** (`tags`, `category` lists) and functional `filter()` chaining.
+
+Server-side filters go beyond basic text search: `store` narrows results to a named store, `minRating` and `minDiscount` apply numeric bounds, and `sort` accepts `discount` / `price-asc` / `price-desc` (computed in memory where the value is derived rather than a stored column — a deliberate correction made after the naive DB-only sort returned a 500 for `discount`). The Explore toolbar binds these into the URL query string so filter states are shareable and survive refresh. `![[fig_19_explore_filters.png]]`
 
 ### 5.4 Social Features: Likes, Bookmarks, Comments, Verification
 
@@ -335,6 +344,16 @@ All persistent state is stored in **Supabase (PostgreSQL 16)** through the Postg
 | Methods & computed | `computed` for filtering/pagination/greeting; `methods` for handlers |
 | Pagination | News (6/page) and Deals (`page`/`limit` + `totalPages`) |
 | External APIs | Supabase PostgREST, Leaflet + CARTO tiles, OSRM routing, IP geolocation, Unsplash imagery |
+
+### 5.8 Delivery Address and In-App Support (Added in final iteration)
+
+Two quality-of-life features completed the user journey in the final iteration, both surfaced directly from user feedback during the usability walkthrough (§7.8):
+
+**Delivery address.** The Profile page exposes an editable `delivery_address` (persisted to `users.delivery_address` via `PUT /api/users/:id`). A "Where should Foodly drop off your orders?" prompt makes the field's purpose explicit, and it is shown wherever delivery context matters, closing the loop on the "deliver to" phrasing used elsewhere in the UI. `![[fig_23_profile_delivery.png]]`
+
+**In-app support chatbot (Foodie).** A floating launcher (`SupportChat.vue`, bottom-right, mobile-friendly) opens a rule-based assistant that answers the top questions (tracking, refunds, delivery, rewards) via token-matched intents in `services/support/rules.ts` — a deliberate correction after exact-substring matching mis-filed requests like "huy" (Vietnamese "cancel") or "you". When a user asks for a refund or a human, the bot runs a **three-step escalation form** (order/reservation code → what happened → how to make it right, with `Refund` / `Replacement` / `Just reporting` chips), then files a real **support ticket** (`POST /api/support/tickets` → `support_tickets` table) and offers a **1–5 star rating** that posts to `support_feedback`. Escalation is deduplicated per category per session so a user cannot stack identical tickets by spamming. Guests are told to sign in with their answers preserved in the chat. `![[fig_20_support_chat.png]]` `![[fig_21_support_escalation.png]]` `![[fig_22_support_rating.png]]`
+
+This turns support from a dead end into a designed interaction with a state machine (ask → collect → ticket → measure), directly addressing Nielsen's "Help & documentation" heuristic (#10) and walkthrough issue (iii).
 
 ---
 
@@ -784,24 +803,24 @@ Each heuristic was rated on severity (Low/Medium/High) by walking the shipped fl
 | 7 | Flexibility & efficiency | Global nav search, Explore filters/sort, keyboard-reachable map, installable PWA | Low |
 | 8 | Aesthetic & minimalist design | Clear hierarchy; motion is decorative only; deal cards stay uncluttered | Low |
 | 9 | Recognise, diagnose, recover | Toast errors, inline field errors, ErrorBoundary, 404 recovery, EmptyState actions | Low |
-| 10 | Help & documentation | Icon `title`s, "Deliver to" location explainer, in-flow helper text; no formal help centre | Medium |
+| 10 | Help & documentation | Icon `title`s, "Deliver to" location explainer, in-flow helper text, and the Foodie support chatbot with structured escalation + self-help suggestions (§5.8) | Low |
 
 ### 7.8 Usability Walkthrough Findings
 
 A structured walkthrough of the live build (desktop + mobile, both themes) was run against the primary task list: discover a deal → reserve → pay → review, and merchant publish → live queue. Findings consistent across sessions:
 
 - **Positive** — the map as a transaction surface removes search friction (markers show price, distance, discount and a live countdown); the 2-minute payment window creates a clear, trusted urgency cue; every async action gives immediate feedback.
-- **Issues observed** — (i) the reservation expiry countdown appears only inside the payment flow, so a user who navigates away can miss it; (ii) on a narrow viewport the Explore toolbar wraps and pushes the map below the fold on first load; (iii) there is no in-app help/support channel — a user who hits an unfamiliar error has nowhere to escalate; (iv) the flash-sale cards scroll horizontally, which a desktop-first user may not discover.
-- These map directly to proposed improvements in §7.9.
+- **Issues observed** — (i) the reservation expiry countdown appears only inside the payment flow, so a user who navigates away can miss it; (ii) on a narrow viewport the Explore toolbar wraps and pushes the map below the fold on first load; (iii) *originally* there was no in-app help/support channel — a user who hits an unfamiliar error had nowhere to escalate; this is now **resolved** by the Foodie support chatbot with a three-step escalation form, real ticket creation and star-rating feedback (§5.8); (iv) the flash-sale cards scroll horizontally, which a desktop-first user may not discover.
+- Issues (i), (ii) and (iv) map directly to proposed improvements in §7.9; issue (iii) was resolved in the final iteration and is now evidenced in §5.8.
 
 ### 7.9 Proposed Improvements (prioritised)
 
 | Priority | Improvement | Why | ULO |
 |---|---|---|---|
+| ✅ Done | In-app **complaint & support escalation flow**: a floating support button (never an intrusive pop-up) that walks the user through a three-step form, persists the case to the `support_tickets` table, deduplicates repeats per session, and captures 1–5 star feedback to `support_feedback` | Delivered in the final iteration as the Foodie chatbot (§5.8); resolved walkthrough issue (iii) and Nielsen #10 | ULO 1, 4 |
 | High | CDN image pipeline + responsive `srcset` for deal photos | Largest mobile-Performance lever; keeps LCP/TBT low on throttled networks | ULO 3 |
 | High | API response caching + client connection reuse to Render | Removes cold-start latency from first paint on mobile | ULO 3 |
-| High | In-app **complaint & support escalation flow**: a floating support button (never an intrusive pop-up) that walks the user through categories and self-help steps, and after 2–3 failed attempts auto-generates a survey email with a link, persists the case to the database, sends a confirmation, and hands off to a hotline | Addresses walkthrough issue (iii) and Nielsen #10; turns support into a designed interaction with an escalation state machine rather than a dead end | ULO 1, 4 |
-| Medium | Moderated usability test with ≥5 representative users + SUS scoring, validating the support flow above | Real user evidence for the evaluation chapter; the current walkthrough is expert-led | ULO 4 |
+| Medium | Moderated usability test with ≥5 representative users + SUS scoring | Real user evidence for the evaluation chapter; the current walkthrough is expert-led | ULO 4 |
 | Medium | Dark theme: deepen solid-accent fills (discount badges, primary buttons) so white-on-accent keeps ≥4.5:1 under `prefers-color-scheme: dark` | Known dark-mode contrast gap (light mode already fixed in §7.6) | ULO 4 |
 | Medium | Extend `prefers-reduced-motion` handling to the router fade transition and countdown pulse | Consistent motion control beyond the carousel | ULO 4 |
 | Low | i18n scaffolding with Vietnamese locale and `<html lang>` switching | Broadens the community target; trivial to swap | ULO 3 |
@@ -815,6 +834,7 @@ A structured walkthrough of the live build (desktop + mobile, both themes) was r
 3. **Two-sided real-time.** Both consumers (deal feed: `reservation:created`, `comment:added`) and operators (analytics tick, pickup queue) get live data — a "marketplace telemetry" pattern rare in student work.
 4. **AI in the loop, not on the shelf.** Vision search uses the same pgvector embedding store end-to-end (extract → embed → match), so the AI is wired into the data layer rather than a standalone demo endpoint.
 5. **Opinionated, production-shaped stack.** Supabase + pgvector + Socket.IO rooms + PWA + JWT-scoped Socket.IO auth is a coherent architecture; the written justification of each trade-off (§6.5.3) demonstrates reasoning beyond "it worked."
+6. **Support designed as a state machine, not a dead end.** The escalation flow (rule-based intent matching → three-step form → ticket persistence → star-rated feedback, with per-session deduplication) applies the same interaction-design rigour to customer support as to the marketplace, turning a heuristic gap (Nielsen #10) into measured, closed-loop UX (§5.8).
 
 ---
 
@@ -841,6 +861,11 @@ A structured walkthrough of the live build (desktop + mobile, both themes) was r
 | Analytics tick | Reserve in a user window | Merchant "awaiting pickup" KPI increments within 5 s |
 | Search-by-image | Upload a food photo | Correct category + ranked matching deals |
 | 401/404/409 UX | Expired JWT on a protected route; bad deal id; sold out | Redirect to login; friendly inline error; no crash |
+| Support escalation | Open Foodie chat, ask for a refund, complete the 3-step form | A ticket is created (`support_tickets`) and the rating prompt appears |
+| Star rating feedback | Tap 4–5 stars after an escalation | `support_feedback` row persisted; chat clears with a thank-you |
+| Deduplicated tickets | Request a refund twice in one session | Second request returns the same ticket ref, no duplicate row |
+| Delivery address | Edit address on Profile | `users.delivery_address` persists and reloads |
+| Sort by discount | `/explore?sort=discount` on live API | 200, deals ordered by discount descending (regression for the earlier 500) |
 
 ### 9.4 Accessibility Checks
 
@@ -899,7 +924,7 @@ The video is recorded in one continuous take with the presenter's face visible i
 
 ## 12. Conclusion
 
-Foodly is a complete, production-shaped web application across all three assessment stages. Stage 1 delivers polished, responsive foundation pages with dynamic JSON data, search, pagination, and interactive elements (20/20). Stage 2 adds a secure, role-based multi-user platform with CRUD, social features, and persistent hosted storage (25/25). Stage 3 justifies a High Distinction through four advanced systems — a real-time geospatial marketplace, a concurrency-safe reservation engine, live analytics for operators, and AI-driven discovery — reinforced by a PWA shell, a token-based dark mode, rigorous type-checking and e2e tests, and a documented, video-demonstrated deployment (20/20 + Report 5/5 + Video 8/8). The result is a coherent product that solves a real problem with demonstrable technical depth, quality, and polish.
+Foodly is a complete, production-shaped web application across all three assessment stages. Stage 1 delivers polished, responsive foundation pages with dynamic JSON data, search, pagination, and interactive elements (20/20). Stage 2 adds a secure, role-based multi-user platform with CRUD, social features, and persistent hosted storage (25/25). Stage 3 justifies a High Distinction through four advanced systems — a real-time geospatial marketplace, a concurrency-safe reservation engine, live analytics for operators, and AI-driven discovery — reinforced by a PWA shell, a token-based dark mode, rigorous type-checking and e2e tests, and a documented, video-demonstrated deployment (20/20 + Report 5/5 + Video 8/8). The final iteration closed the loop on the usability walkthrough's own findings: a server-side filter/sort fix, up-to-five-photo deal creation, an editable delivery address, and an in-app support chatbot that escalates through a designed three-step form into real tickets with star-rated feedback — turning "no help channel" into a measured, state-machine interaction (ULO 1/4 evidence). The result is a coherent product that solves a real problem with demonstrable technical depth, quality, and polish.
 
 ---
 
@@ -952,6 +977,10 @@ Foodly is a complete, production-shaped web application across all three assessm
 | US-28 Countdown | §9.1 | 6.2.3 | Stage3 Feature | ✅ Met |
 | US-29 Prevent oversell | §5 UC-02 | 6.2.2 | Stage3 Feature | ✅ Met |
 | US-31 AI image search | §5 UC-04 | 6.4 | Stage3 Feature | ✅ Met |
+| US-32 Dark mode | §9.1 | 6.5.2 | Stage3 Feature | ✅ Met |
+| US-33 Skeleton screens | §9.1 | 7.3 | Stage3 Feature | ✅ Met |
+| W-01 In-app support & escalation | Walkthrough finding (iii) | 5.8, 7.8, 7.9 | ULO 1, 4 | ✅ Met |
+| W-02 Delivery address | Walkthrough / user feedback | 5.8 | ULO 4 | ✅ Met |
 
 > **Deviation note (US-22, US-24):** The proposal listed a heatmap layer and virtualised lists. The delivered codebase implements viewport culling + marker clustering (US-22/23) and a live activity stream (US-26), but does not include a standalone heatmap layer or a virtual-scroller dependency. This trade-off prioritises the map + real-time + reservation features within scope.
 
@@ -979,8 +1008,13 @@ Foodly is a complete, production-shaped web application across all three assessm
 | 16 | fig_16_dark_mode.png | Dark mode — consistent token-based theme |
 | 17 | fig_17_pwa_offline.png | PWA — install prompt + offline shell |
 | 18 | fig_18_concurrency_test.png | Live demo — concurrent reserve (1 success, 1 conflict) |
+| 19 | fig_19_explore_filters.png | Explore — server-side filters & sort toolbar |
+| 20 | fig_20_support_chat.png | Support chatbot (Foodie) — suggestions + rule-based replies |
+| 21 | fig_21_support_escalation.png | Support — three-step escalation form (resolution chips) |
+| 22 | fig_22_support_rating.png | Support — post-escalation 1–5 star rating |
+| 23 | fig_23_profile_delivery.png | Profile — editable delivery address |
 
-All 18 figure files are in `docs/figures/`. They are currently generated placeholders; replace with real 1120×660 screengrabs and re-run `python docs/build_report.py`.
+All 23 figure files are in `docs/figures/`. Each is a **real screengrab** of the running application taken in a Chromium viewport against the live hosted backend; re-run `python docs/build_report.py` after replacing any figure.
 
 ---
 

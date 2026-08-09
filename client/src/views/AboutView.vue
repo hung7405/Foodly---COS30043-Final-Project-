@@ -38,6 +38,91 @@ const currentImage = computed(() => {
       </div>
     </section>
 
+    <!-- Academic Project Section -->
+    <section class="section course-section" aria-label="Academic project context">
+      <div class="container-narrow">
+        <div class="course-card">
+          <span class="course-badge">Academic Project</span>
+          <h2 class="section-title">A Design-Led Project for COS30043</h2>
+          <p class="course-text">
+            {{ SITE_NAME }} is a student project built for
+            <strong>COS30043 — Interface Design and Development</strong> at
+            <strong>Swinburne University of Technology, Swinburne Vietnam</strong>. The assignment required a complete
+            interface-design lifecycle — from user personas and interaction flows, through wireframing and prototyping,
+            to a production-ready web application evaluated against WCAG accessibility and usability heuristics.
+          </p>
+          <p class="course-text">
+            Every screen in {{ SITE_NAME }} was designed with the user at the centre: clear feedback for every action,
+            progressive disclosure over clutter, a token-based design system that keeps the interface consistent across
+            light and dark themes, and mobile-first responsive layouts that adapt from a phone to a desktop without
+            losing a single feature.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- What is Foodly Section -->
+    <section class="section summary-section" aria-label="What is Foodly">
+      <div class="container-narrow">
+        <h2 class="section-title">What is {{ SITE_NAME }}?</h2>
+        <p class="summary-lead">
+          {{ SITE_NAME }} is a real-time food-rescue marketplace that connects stores with discounted, near-expiry food
+          to people who want it — before it is wasted.
+        </p>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <svg class="feature-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            <h3>Real-Time Map</h3>
+            <p>Deals appear live on an interactive map with prices, distance and a reserve button — the map is the marketplace.</p>
+          </div>
+          <div class="feature-card">
+            <svg class="feature-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
+            <h3>Flash Sales</h3>
+            <p>Discounted surprise bags with live countdowns and a fair, concurrency-safe reservation system.</p>
+          </div>
+          <div class="feature-card">
+            <svg class="feature-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+            <h3>AI Photo Search</h3>
+            <p>Upload a photo of a dish and Foodly finds matching deals nearby using AI vision and embeddings.</p>
+          </div>
+          <div class="feature-card">
+            <svg class="feature-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            <h3>Community Feed</h3>
+            <p>A live activity stream keeps the community connected as food is rescued, reserved and shared.</p>
+          </div>
+          <div class="feature-card">
+            <svg class="feature-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <polyline points="9 12 11 14 15 10" />
+            </svg>
+            <h3>Secure Accounts</h3>
+            <p>Role-based access for members, merchants, moderators and admins keeps every interaction safe and audited.</p>
+          </div>
+          <div class="feature-card">
+            <svg class="feature-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
+            <h3>Installable PWA</h3>
+            <p>Foodly works offline and installs to your home screen like a native app, with dark-mode support.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Dynamic Greeting Section -->
     <section class="section greeting-section" aria-label="Dynamic greeting">
       <div class="container-narrow">
@@ -353,6 +438,80 @@ const currentImage = computed(() => {
   margin-bottom: 20px;
 }
 
+.course-card {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 36px;
+  text-align: center;
+}
+
+.course-badge {
+  display: inline-block;
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 6px 14px;
+  border-radius: 999px;
+  margin-bottom: 16px;
+}
+
+.course-text {
+  font-size: 1.0625rem;
+  color: var(--color-text-secondary);
+  line-height: 1.8;
+  margin-bottom: 16px;
+}
+
+.summary-lead {
+  text-align: center;
+  font-size: 1.125rem;
+  color: var(--color-text-secondary);
+  line-height: 1.8;
+  max-width: 680px;
+  margin: 0 auto 32px;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.feature-card {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  transition: all var(--transition-fast);
+}
+
+.feature-card:hover {
+  border-color: var(--color-accent);
+  transform: translateY(-2px);
+}
+
+.feature-icon {
+  color: var(--color-accent);
+  margin-bottom: 12px;
+}
+
+.feature-card h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+
+.feature-card p {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
 @media (max-width: 768px) {
   .radio-group {
     flex-direction: column;
@@ -364,6 +523,12 @@ const currentImage = computed(() => {
   }
   .dynamic-image-card img {
     height: 250px;
+  }
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+  .course-card {
+    padding: 28px 20px;
   }
 }
 </style>
