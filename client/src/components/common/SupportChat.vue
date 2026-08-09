@@ -29,8 +29,36 @@ const typing = ref(false)
 const listEl = ref<HTMLElement | null>(null)
 const pending = ref<PendingEscalation | null>(null)
 const activeTickets = new Map<string, string>()
+const ratingVisible = ref(false)
+const rated = ref(false)
+let lastFeedback = { category: '', refCode: '' }
 let nextId = 1
 const CHAT_KEY = 'foodly:chat'
+
+function bootMessage(): ChatMsg {
+  return {
+    id: nextId++,
+    from: 'bot',
+    text: `Hi! I'm Foodie, Foodly's support assistant 🍱\nAsk about orders, refunds, delivery — or request a human anytime.`,
+    suggestions: greetingSuggestions,
+    timing: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+  }
+}
+
+function resetChat() {
+  pending.value = null
+  activeTickets.clear()
+  ratingVisible.value = false
+  rated.value = false
+  messages.value = [bootMessage()]
+  persist()
+  scrollDown()
+}
+
+function closeChat() {
+  open.value = false
+  resetChat()
+}
 
 function parseStored(raw: string): ChatMsg[] | null {
   try {
@@ -50,14 +78,7 @@ onMounted(() => {
     if (restored?.length) messages.value = restored
   }
   if (!messages.value.length) {
-    const boot: ChatMsg = {
-      id: nextId++,
-      from: 'bot',
-      text: `Hi! I'm Foodie, Foodly's support assistant 🍱\nAsk about orders, refunds, delivery — or request a human anytime.`,
-      suggestions: greetingSuggestions,
-      timing: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }
-    messages.value = [boot]
+    messages.value = [bootMessage()]
   }
 })
 
@@ -151,6 +172,7 @@ async function stepForm(raw: string) {
 async function submitForm(p: PendingEscalation) {
   pending.value = null
   activeTickets.set(p.category, p.refCode)
+  lastFeedback = { category: p.category, refCode: p.refCode }
   const message =
     'Escalated from chat (' + p.refCode + ')\n' +
     'Topic: ' + p.category + '\n' +
@@ -159,6 +181,7 @@ async function submitForm(p: PendingEscalation) {
     'Requested: ' + p.resolution
   if (!auth.isAuthenticated) {
     await botSay("I couldn't file this yet because you're not signed in. Sign in and repeat your request — your answers are saved in this chat (ref " + p.refCode + ').')
+    promptRating()
     return
   }
   try {
@@ -166,6 +189,27 @@ async function submitForm(p: PendingEscalation) {
     await botSay("raised ticket #" + p.refCode + ' — noted' + (p.orderRef === 'not provided' ? '' : ' (order ' + p.orderRef + ')') + ". You'll hear back via email within 24h.")
   } catch {
     await botSay('Your issue is logged as ticket #' + p.refCode + ' — our team will follow up.')
+  }
+  promptRating()
+}
+
+function promptRating() {
+  if (rated.value) return
+  rated.value = true
+  ratingVisible.value = true
+  push('bot', 'One last thing — how was my help? Tap a star to rate 1–5:')
+}
+
+async function rate(n: number) {
+  ratingVisible.value = false
+  push('user', '★'.repeat(n) + '☆'.repeat(5 - n) + ' (' + n + '/5)')
+  supportService.createFeedback({ rating: n, category: lastFeedback.category, refCode: lastFeedback.refCode }).catch(() => {})
+  if (n >= 4) {
+    await botSay("Yay, I'm glad I could help! 🎉 Thanks for the feedback — I'll clear this conversation so we start fresh next time.")
+    await new Promise((r) => setTimeout(r, 2500))
+    resetChat()
+  } else {
+    await botSay("I'm sorry I couldn't fully resolve this today. Our customer care team will follow up with you within 24 hours.")
   }
 }
 </script>
@@ -181,7 +225,15 @@ async function submitForm(p: PendingEscalation) {
             <strong>Foodie · Support</strong>
             <small>Online now · replies instantly</small>
           </div>
-          <button type="button" class="chat-close" aria-label="Close chat" @click="open = false">✕</button>
+          <div class="chat-actions">
+            <button type="button" class="chat-clear" aria-label="Clear chat" title="Clear chat" @click="resetChat()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                <path d="M10 11v6M14 11v6" />
+              </svg>
+            </button>
+            <button type="button" class="chat-close" aria-label="Close chat" @click="closeChat()">✕</button>
+          </div>
         </header>
         <div ref="listEl" class="chat-body" tabindex="0">
           <div v-for="m in messages" :key="m.id" class="msg-row" :class="m.from">
@@ -195,6 +247,13 @@ async function submitForm(p: PendingEscalation) {
           </div>
           <div v-if="typing" class="msg-row bot">
             <div class="msg-bubble typing">Foodie is typing<span>…</span></div>
+          </div>
+          <div v-if="ratingVisible" class="msg-row bot">
+            <div class="msg-bubble">
+              <div class="star-row" role="radiogroup" aria-label="Rate your experience">
+                <button v-for="n in 5" :key="n" type="button" class="star" :aria-label="n + ' out of 5 stars'" @click="rate(n)">★</button>
+              </div>
+            </div>
           </div>
         </div>
         <footer class="chat-input-row">
@@ -286,6 +345,12 @@ async function submitForm(p: PendingEscalation) {
   font-size: 0.72rem;
   opacity: 0.9;
 }
+.chat-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.chat-clear,
 .chat-close {
   border: none;
   background: transparent;
@@ -294,9 +359,30 @@ async function submitForm(p: PendingEscalation) {
   cursor: pointer;
   padding: 6px;
   border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
+.chat-clear:hover,
 .chat-close:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+.star-row {
+  display: flex;
+  gap: 4px;
+}
+.star {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #d8b45a;
+  cursor: pointer;
+  padding: 2px;
+  transition: transform 0.15s ease;
+}
+.star:hover {
+  transform: scale(1.2);
 }
 .chat-body {
   flex: 1;

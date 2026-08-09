@@ -30,6 +30,10 @@ export const supportService = {
     const { data } = await api.post('/support/tickets', payload)
     return data
   },
+  async createFeedback(payload: { rating: number; category?: string; refCode?: string }) {
+    const { data } = await api.post('/support/feedback', payload)
+    return data
+  },
 }
 
 export const dealsService = {
