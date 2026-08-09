@@ -43,7 +43,6 @@ const RULES: Rule[] = [
       'For your refund: keep your reservation code handy. I can log the request now and the team will confirm via email.',
     ],
     escalate: true,
-    suggestions: ['Send refund ticket'],
   },
   {
     category: 'wrong_item',

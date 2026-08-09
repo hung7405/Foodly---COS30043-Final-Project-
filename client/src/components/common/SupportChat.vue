@@ -12,12 +12,23 @@ interface ChatMsg {
   timing?: string
 }
 
+interface PendingEscalation {
+  step: number
+  category: string
+  refCode: string
+  orderRef: string
+  issue: string
+  resolution: string
+}
+
 const auth = useAuthStore()
 const open = ref(false)
 const messages = ref<ChatMsg[]>([])
 const input = ref('')
 const typing = ref(false)
 const listEl = ref<HTMLElement | null>(null)
+const pending = ref<PendingEscalation | null>(null)
+const activeTickets = new Map<string, string>()
 let nextId = 1
 const CHAT_KEY = 'foodly:chat'
 
@@ -65,34 +76,96 @@ function push(from: 'user' | 'bot', text: string, suggestions?: string[]) {
   scrollDown()
 }
 
+async function botSay(text: string, suggestions?: string[]) {
+  typing.value = true
+  await scrollDown()
+  await new Promise((r) => setTimeout(r, 450 + Math.random() * 450))
+  typing.value = false
+  push('bot', text, suggestions)
+}
+
 async function send(text?: string) {
   const raw = (text ?? input.value).trim()
   if (!raw || typing.value) return
   input.value = ''
   push('user', raw)
 
+  if (pending.value) {
+    await stepForm(raw)
+    return
+  }
+
   const result: BotReply = getBotReply(raw)
-  typing.value = true
-  await scrollDown()
-  await new Promise((r) => setTimeout(r, 450 + Math.random() * 450))
-  typing.value = false
 
-  push('bot', result.reply, result.suggestions)
+  if (!result.escalate) {
+    await botSay(result.reply, result.suggestions)
+    return
+  }
 
-  if (result.escalate) {
-    const refCode = 'FLY-' + Math.random().toString(36).slice(2, 7).toUpperCase()
-    const ticketText = auth.isAuthenticated ? await persistedTicket(refCode, raw, result.category) : 'Your issue is stored as ticket ' + refCode + ' with our team.'
-    await new Promise((r) => setTimeout(r, 400))
-    push('bot', ticketText)
+  const already = activeTickets.get(result.category)
+  if (already) {
+    await botSay("We've already opened ticket #" + already + ' for this — a human will follow up. Anything else I can help with?', CHAT_SUGGESTIONS)
+    return
+  }
+
+  pending.value = {
+    step: 0,
+    category: result.category,
+    refCode: 'FLY-' + Math.random().toString(36).slice(2, 7).toUpperCase(),
+    orderRef: '',
+    issue: '',
+    resolution: '',
+  }
+  await botSay(
+    result.reply + "\n\nTo get this to the right team, I just need 3 quick answers.\n1️⃣ Your order/reservation code (or type 'skip').",
+  )
+}
+
+async function stepForm(raw: string) {
+  const p = pending.value
+  if (!p) return
+  if (['cancel', 'quit', 'stop', 'huy', 'thoi', 'thôi'].includes(raw.toLowerCase())) {
+    pending.value = null
+    await botSay('No problem — I cancelled that form. Ask me anything else!', CHAT_SUGGESTIONS)
+    return
+  }
+  if (p.step === 0) {
+    p.orderRef = raw === 'skip' ? 'not provided' : raw
+    p.step = 1
+    await botSay("2️⃣ In 1-2 sentences, what happened? (e.g. 'order was missing one item')")
+    return
+  }
+  if (p.step === 1) {
+    p.issue = raw
+    p.step = 2
+    await botSay('3️⃣ How should we make it right?', ['Refund', 'Replacement', 'Just reporting'])
+    return
+  }
+  if (p.step === 2) {
+    p.resolution = raw
+    p.step = 3
+    await submitForm(p)
   }
 }
 
-async function persistedTicket(refCode: string, userText: string, category?: string): Promise<string> {
+async function submitForm(p: PendingEscalation) {
+  pending.value = null
+  activeTickets.set(p.category, p.refCode)
+  const message =
+    'Escalated from chat (' + p.refCode + ')\n' +
+    'Topic: ' + p.category + '\n' +
+    'Order ref: ' + p.orderRef + '\n' +
+    'Issue: ' + p.issue + '\n' +
+    'Requested: ' + p.resolution
+  if (!auth.isAuthenticated) {
+    await botSay("I couldn't file this yet because you're not signed in. Sign in and repeat your request — your answers are saved in this chat (ref " + p.refCode + ').')
+    return
+  }
   try {
-    await supportService.createTicket({ category: category ?? 'chat', subject: 'Chat escalation ' + refCode, message: 'Escalated from chat (' + refCode + ')\n' + (category ? 'Topic: ' + category + '\n' : '') + 'User: ' + userText })
-    return "raised ticket #" + refCode + " with our team. You'll hear back via email."
+    await supportService.createTicket({ category: p.category, subject: 'Chat escalation ' + p.refCode, message })
+    await botSay("raised ticket #" + p.refCode + ' — noted' + (p.orderRef === 'not provided' ? '' : ' (order ' + p.orderRef + ')') + ". You'll hear back via email within 24h.")
   } catch {
-    return 'Your issue is logged as ticket #' + refCode + ' — our team will follow up.'
+    await botSay('Your issue is logged as ticket #' + p.refCode + ' — our team will follow up.')
   }
 }
 </script>
