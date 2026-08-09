@@ -314,3 +314,23 @@ END $$;
 -- reservations -> deals -> stores.user_id.
 ALTER TABLE stores ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id);
 CREATE INDEX IF NOT EXISTS idx_stores_user_id ON stores (user_id);
+
+-- ─────────────────────────────────────────────────────────────
+-- Delivery address for users (incremental — run AFTER the base
+-- script if it was applied before this section existed)
+-- ─────────────────────────────────────────────────────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS delivery_address TEXT;
+
+-- ─────────────────────────────────────────────────────────────
+-- Support tickets (rule-based support chatbot escalation)
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID REFERENCES users(id) ON DELETE CASCADE,
+  category   VARCHAR(50) NOT NULL DEFAULT 'general',
+  subject    VARCHAR(120),
+  message    TEXT NOT NULL,
+  status     VARCHAR(20) NOT NULL DEFAULT 'open',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_user_id ON support_tickets (user_id);
