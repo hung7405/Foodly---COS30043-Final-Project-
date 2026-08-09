@@ -43,10 +43,11 @@ export class DealsService {
     page?: number; limit?: number; search?: string; category?: string;
     sort?: string; order?: 'ASC' | 'DESC'; status?: string; verified?: string;
     lat?: number; lng?: number; radius?: number; userId?: string;
+    store?: string; minRating?: number; minDiscount?: number;
   }) {
     const page = Math.max(Number(query.page) || 1, 1)
     const limit = Math.min(Math.max(Number(query.limit) || 20, 1), 100)
-    const sort = ['created_at', 'expires_at', 'discount_price', 'remaining_quantity', 'like_count'].includes(String(query.sort)) ? String(query.sort) : 'created_at'
+    const sort = ['created_at', 'expires_at', 'discount_price', 'remaining_quantity', 'like_count', 'discount', 'price-asc', 'price-desc'].includes(String(query.sort)) ? String(query.sort) : 'created_at'
     const order = String(query.order).toUpperCase() === 'ASC' ? 'ASC' : 'DESC'
 
     let supabaseQuery = this.supabase
@@ -80,6 +81,26 @@ export class DealsService {
       filtered = filtered.filter(deal => dealMatchesCategory(deal, String(query.category)))
     }
 
+    if (query.store) {
+      const s = String(query.store).toLowerCase()
+      filtered = filtered.filter(deal => deal.store?.name?.toLowerCase().includes(s))
+    }
+
+    if (query.minRating) {
+      const min = Number(query.minRating)
+      filtered = filtered.filter(deal => Math.round((Number(deal.store?.avg_trust_score) || 0) / 20) >= min)
+    }
+
+    if (query.minDiscount) {
+      const min = Number(query.minDiscount)
+      filtered = filtered.filter(deal => {
+        const orig = Number(deal.original_price)
+        const disc = Number(deal.discount_price)
+        const pct = orig && disc ? Math.round((1 - disc / orig) * 100) : 0
+        return pct >= min
+      })
+    }
+
     const lat = Number(query.lat)
     const lng = Number(query.lng)
     const radius = Number(query.radius || 5)
@@ -87,7 +108,20 @@ export class DealsService {
       filtered = filtered
         .map(deal => ({ ...deal, distanceKm: this.distanceKm(lat, lng, Number(deal.latitude), Number(deal.longitude)) }))
       filtered = filtered.filter((deal: any) => deal.distanceKm <= radius)
-      filtered.sort((a: any, b: any) => a.distanceKm - b.distanceKm)
+    }
+
+    if (sort === 'discount') {
+      filtered = filtered.sort((a: any, b: any) => {
+        const pctA = a.original_price && a.discount_price ? (1 - a.discount_price / a.original_price) : 0
+        const pctB = b.original_price && b.discount_price ? (1 - b.discount_price / b.original_price) : 0
+        return pctB - pctA
+      })
+    } else if (sort === 'price-asc') {
+      filtered = filtered.sort((a: any, b: any) => (Number(a.discount_price) || 0) - (Number(b.discount_price) || 0))
+    } else if (sort === 'price-desc') {
+      filtered = filtered.sort((a: any, b: any) => (Number(b.discount_price) || 0) - (Number(a.discount_price) || 0))
+    } else if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      filtered = filtered.sort((a: any, b: any) => a.distanceKm - b.distanceKm)
     }
 
     const total = filtered.length
