@@ -13,3 +13,6 @@ _bmad/
 _bmad-output/
 .opencode/
 skills-lock.json
+
+.vercel
+.env*
