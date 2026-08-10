@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, MaxLength, IsOptional } from 'class-validator'
+import { IsEmail, IsString, MinLength, MaxLength, IsOptional, IsIn } from 'class-validator'
 
 export class RegisterDto {
   @IsEmail()
@@ -28,4 +28,8 @@ export class RegisterDto {
   @IsString()
   @MaxLength(255)
   deliveryAddress?: string
+
+  @IsOptional()
+  @IsIn(['user', 'merchant'])
+  role?: 'user' | 'merchant'
 }

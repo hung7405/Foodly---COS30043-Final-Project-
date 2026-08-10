@@ -6,7 +6,7 @@ import { useAuthStore } from '../stores/auth.store'
 const router = useRouter()
 const auth = useAuthStore()
 
-const form = ref({ email: '', username: '', password: '', confirmPassword: '', firstName: '', lastName: '' })
+const form = ref({ email: '', username: '', password: '', confirmPassword: '', firstName: '', lastName: '', role: 'user' as 'user' | 'merchant' })
 const fieldErrors = ref<Record<string, string>>({})
 const error = ref('')
 const isSubmitting = ref(false)
@@ -51,7 +51,8 @@ async function handleSubmit() {
       form.value.username,
       form.value.password,
       form.value.firstName,
-      form.value.lastName
+      form.value.lastName,
+      form.value.role
     )
     router.push('/explore')
   } catch (err: any) {
@@ -142,6 +143,34 @@ async function handleSubmit() {
             @input="clearFieldError('username')"
           />
           <span v-if="fieldErrors.username" id="username-error" class="field-error">{{ fieldErrors.username }}</span>
+        </div>
+
+        <div class="field">
+          <label>I am a…</label>
+          <div class="role-picker" role="radiogroup" aria-label="Account type">
+            <button
+              type="button"
+              class="role-option"
+              :class="{ active: form.role === 'user' }"
+              role="radio"
+              :aria-checked="form.role === 'user'"
+              @click="form.role = 'user'"
+            >
+              <strong>Customer</strong>
+              <small>Browse and reserve deals</small>
+            </button>
+            <button
+              type="button"
+              class="role-option"
+              :class="{ active: form.role === 'merchant' }"
+              role="radio"
+              :aria-checked="form.role === 'merchant'"
+              @click="form.role = 'merchant'"
+            >
+              <strong>Merchant</strong>
+              <small>Post and manage deals</small>
+            </button>
+          </div>
         </div>
 
         <div class="row g-3">
@@ -269,6 +298,42 @@ async function handleSubmit() {
 }
 .field input.invalid:focus {
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+.role-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.role-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.role-option strong {
+  font-size: 0.9375rem;
+}
+.role-option small {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+.role-option:hover {
+  border-color: var(--color-accent);
+}
+.role-option.active {
+  border-color: var(--color-accent);
+  background: var(--color-accent-light);
+}
+.role-option.active strong {
+  color: var(--color-accent);
 }
 .field-error {
   display: block;

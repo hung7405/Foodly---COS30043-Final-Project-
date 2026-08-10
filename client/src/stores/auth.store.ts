@@ -54,11 +54,18 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function register(email: string, username: string, password: string, firstName?: string, lastName?: string) {
+  async function register(
+    email: string,
+    username: string,
+    password: string,
+    firstName?: string,
+    lastName?: string,
+    role: 'user' | 'merchant' = 'user'
+  ) {
     isLoading.value = true
     error.value = null
     try {
-      const result = await authService.register(email, username, password, firstName, lastName)
+      const result = await authService.register(email, username, password, firstName, lastName, role)
       token.value = result.token
       user.value = result.user
       localStorage.setItem('token', result.token)

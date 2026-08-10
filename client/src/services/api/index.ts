@@ -4,8 +4,15 @@ export { api as http }
 import type { User } from '../../types'
 
 export const authService = {
-  async register(email: string, username: string, password: string, firstName?: string, lastName?: string) {
-    const { data } = await api.post('/auth/register', { email, username, password, firstName, lastName })
+  async register(
+    email: string,
+    username: string,
+    password: string,
+    firstName?: string,
+    lastName?: string,
+    role: 'user' | 'merchant' = 'user'
+  ) {
+    const { data } = await api.post('/auth/register', { email, username, password, firstName, lastName, role })
     return data
   },
 

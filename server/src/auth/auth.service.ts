@@ -10,7 +10,14 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async register(email: string, username: string, password: string, firstName?: string, lastName?: string) {
+  async register(
+    email: string,
+    username: string,
+    password: string,
+    firstName?: string,
+    lastName?: string,
+    role: 'user' | 'merchant' = 'user',
+  ) {
     const { data: existing } = await this.supabase.client
       .from('users')
       .select('id')
@@ -29,6 +36,7 @@ export class AuthService {
         password_hash: passwordHash,
         first_name: firstName,
         last_name: lastName,
+        role,
       })
       .select()
       .single()
