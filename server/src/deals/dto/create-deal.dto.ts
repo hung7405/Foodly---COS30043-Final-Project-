@@ -46,5 +46,9 @@ export class CreateDealDto {
   images?: string[]
 
   @IsOptional()
+  @IsString()
+  expiresAt?: string
+
+  @IsOptional()
   metadata?: Record<string, any>
 }
