@@ -181,6 +181,17 @@ export class DealsService {
     if (!Number.isFinite(Number(data.originalPrice)) || Number(data.originalPrice) < Number(data.discountPrice)) throw new BadRequestException('Original price must be greater than discount price')
     if (!Number.isFinite(Number(data.latitude)) || !Number.isFinite(Number(data.longitude))) throw new BadRequestException('A valid location is required')
 
+    let storeId: string | null = null
+    if (data.storeId) {
+      const { data: store, error: storeError } = await this.supabase
+        .from('stores')
+        .select('id, is_active')
+        .eq('id', data.storeId)
+        .maybeSingle()
+      if (storeError || !store || store.is_active === false) throw new BadRequestException('Store not found')
+      storeId = store.id
+    }
+
     const remainingQuantity = Math.max(Number(data.remainingQuantity) || 1, 1)
     const payload = {
       user_id: userId,
@@ -194,6 +205,7 @@ export class DealsService {
       latitude: Number(data.latitude),
       longitude: Number(data.longitude),
       address: data.address ?? null,
+      store_id: storeId,
       images: Array.isArray(data.images) ? data.images : [],
       tags: Array.isArray(data.tags) ? data.tags : [],
     }
@@ -210,6 +222,17 @@ export class DealsService {
     this.analyticsService.recordEvent({ userId, eventType: 'deal_created', dealId: saved.id }).catch(() => {})
 
     return this.sanitizeDeal(saved)
+  }
+
+  private async validateStore(storeId: string | null): Promise<string | null> {
+    if (!storeId) return null
+    const { data: store, error: storeError } = await this.supabase
+      .from('stores')
+      .select('id, is_active')
+      .eq('id', storeId)
+      .maybeSingle()
+    if (storeError || !store || store.is_active === false) throw new BadRequestException('Store not found')
+    return store.id
   }
 
   async update(id: string, data: Partial<Deal>, userId: string, userRole: string) {
@@ -234,6 +257,7 @@ export class DealsService {
       images: 'images',
       tags: 'tags',
       address: 'address',
+      storeId: 'store_id',
       latitude: 'latitude',
       longitude: 'longitude',
       expiresAt: 'expires_at',
@@ -245,6 +269,7 @@ export class DealsService {
         updates[snake] =
           camel === 'expiresAt' ? new Date(value).toISOString() :
           camel === 'remainingQuantity' ? Math.max(Number(value) || 0, 0) :
+          camel === 'storeId' ? await this.validateStore(value) :
           (typeof value === 'number' || !Number.isNaN(Number(value))) && ['originalPrice', 'discountPrice', 'latitude', 'longitude'].includes(camel) ? Number(value) :
           value
       }

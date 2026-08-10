@@ -31,6 +31,10 @@ export class CreateDealDto {
   address?: string
 
   @IsOptional()
+  @IsString()
+  storeId?: string
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   tags?: string[]
