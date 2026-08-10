@@ -212,6 +212,28 @@ function logout() {
           </span>
           <span class="link-arrow">→</span>
         </router-link>
+        <router-link to="/dashboard" class="profile-link-card">
+          <span class="link-icon">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 20v-8M10 20V4M16 20v-6M22 20H2" />
+            </svg>
+          </span>
+          <span class="link-text">
+            <strong>Live Analytics</strong>
+            <small>{{ auth.user?.role === 'admin' ? 'Platform KPIs in real time' : 'Admin only — platform analytics' }}</small>
+          </span>
+          <span class="link-arrow">→</span>
+        </router-link>
       </div>
 
       <button class="btn btn-outline logout-btn" @click="logout">Sign Out</button>
