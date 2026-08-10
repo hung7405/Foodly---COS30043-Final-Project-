@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { SITE_NAME } from '../../utils/constants'
+import { useAuthStore } from '../../stores/auth.store'
+
+const auth = useAuthStore()
 </script>
 
 <template>
@@ -32,7 +35,14 @@ import { SITE_NAME } from '../../utils/constants'
         <div class="footer-col">
           <h4>Community</h4>
           <router-link to="/feed">Feed</router-link>
-          <router-link to="/register">Join Now</router-link>
+          <router-link v-if="!auth.isAuthenticated" to="/register">Join Now</router-link>
+          <router-link v-if="auth.isAuthenticated" to="/profile">My Profile</router-link>
+        </div>
+        <div class="footer-col">
+          <h4>Connect</h4>
+          <a href="https://zalo.me/0813815081">Zalo: 0813815081</a>
+          <a href="#">Facebook</a>
+          <a href="#">Instagram</a>
         </div>
       </div>
       <div class="footer-bottom">
@@ -85,6 +95,12 @@ import { SITE_NAME } from '../../utils/constants'
   grid-template-columns: repeat(3, 1fr);
   gap: 24px;
   margin-bottom: 32px;
+}
+
+@media (min-width: 992px) {
+  .footer-links {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 .footer-col h4 {
