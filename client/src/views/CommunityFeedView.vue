@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { getSocket } from '../services/socket/socket'
+import api from '../services/api/axios'
 
 interface Activity {
   id: number
@@ -26,7 +27,23 @@ function iconInnerHtml(type: string) {
   return FEED_ICONS[type] || FEED_ICONS.default
 }
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    const { data: history } = await api.get('/feed', { params: { limit: 30 } })
+    activities.value = (history || []).map((item: any) => ({
+      id: item.id,
+      type: item.type || 'default',
+      message: item.message || 'New activity',
+      user: item.user || 'Community Member',
+      time: new Date(item.time),
+    }))
+    if (activities.value.length) {
+      activitySeq = Math.max(...activities.value.map((a) => a.id), 0)
+    }
+  } catch {
+    // feed works without history — live events still apply
+  }
+
   const socket = getSocket()
   isConnected.value = socket.connected
 

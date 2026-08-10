@@ -115,6 +115,12 @@ export class SocketGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   // Emitter methods — called by services
   emitDealCreated(deal: any) {
     this.server.emit('deal:created', deal)
+    this.server.to('feed:global').emit('feed:activity', {
+      type: 'deal',
+      message: 'posted a new deal',
+      user: deal?.user?.username || deal?.user?.firstName || 'Community Member',
+      dealId: deal?.id,
+    })
   }
 
   emitDealUpdated(dealId: string, changes: any) {

@@ -23,6 +23,7 @@ import { EmbeddingModule } from './embedding/embedding.module'
 import { MerchantModule } from './merchant/merchant.module'
 import { RewardsModule } from './rewards/rewards.module'
 import { SupportModule } from './support/support.module'
+import { FeedModule } from './feed/feed.module'
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { SupportModule } from './support/support.module'
     MerchantModule,
     RewardsModule,
     SupportModule,
+    FeedModule,
     HealthModule,
   ],
   providers: [
