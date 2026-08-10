@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { recommendationsService, dealsService, http } from '../services/api'
 import BannerCarousel from '../components/BannerCarousel.vue'
 import { formatVND } from '../utils/currency'
@@ -8,8 +8,11 @@ import { useAuthStore } from '../stores/auth.store'
 import type { Deal } from '../types'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const homeAddress = computed(() => auth.deliveryAddress || 'Home')
+
+const accessDenied = ref(route.query.error === 'unauthorized')
 
 const recommendedDeals = ref<Deal[]>([])
 const flashDeals = ref<Deal[]>([])
@@ -253,6 +256,10 @@ function dealRating(deal: any) {
 
 <template>
   <div class="home-page">
+    <div v-if="accessDenied" class="access-banner" role="alert">
+      <span>Live Analytics and admin tools are available to admin accounts only.</span>
+      <button type="button" class="access-banner-close" @click="accessDenied = false" aria-label="Dismiss notice">×</button>
+    </div>
     <section class="landing-hero" aria-label="Foodly — intelligent food commerce">
       <div class="hero-blob hero-blob--1" aria-hidden="true"></div>
       <div class="hero-blob hero-blob--2" aria-hidden="true"></div>
@@ -565,6 +572,33 @@ function dealRating(deal: any) {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px 80px;
+}
+
+.access-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 12px 16px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: var(--radius-sm);
+  color: #92400e;
+  font-size: 0.875rem;
+}
+.access-banner-close {
+  border: none;
+  background: transparent;
+  color: #92400e;
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+.access-banner-close:hover {
+  background: rgba(146, 64, 14, 0.1);
 }
 
 .flash-section,

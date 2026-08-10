@@ -212,7 +212,7 @@ function logout() {
           </span>
           <span class="link-arrow">→</span>
         </router-link>
-        <router-link to="/dashboard" class="profile-link-card">
+        <router-link v-if="auth.user?.role === 'admin'" to="/dashboard" class="profile-link-card">
           <span class="link-icon">
             <svg
               width="22"
@@ -230,7 +230,7 @@ function logout() {
           </span>
           <span class="link-text">
             <strong>Live Analytics</strong>
-            <small>{{ auth.user?.role === 'admin' ? 'Platform KPIs in real time' : 'Admin only — platform analytics' }}</small>
+            <small>Platform KPIs in real time</small>
           </span>
           <span class="link-arrow">→</span>
         </router-link>
