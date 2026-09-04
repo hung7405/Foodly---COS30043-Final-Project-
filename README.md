@@ -35,7 +35,7 @@
 
 ## Overview
 
-Foodly is a **real-time geospatial platform** that connects communities with discounted and near-expiry food products. By combining live community intelligence, interactive map exploration, and transaction-safe reservation mechanics, the platform reduces food waste while helping users save money — all delivered through a premium, accessible interface.
+Foodly is a **real-time geospatial platform** that connects communities with discounted and near-expiry food products. By combining live community intelligence, interactive map exploration, and transaction-safe reservation mechanics, the platform reduces food waste while helping users save money — all delivered through a premium, accessible interface. Project URL: https://client-swart-xi-75.vercel.app/
 
 **Current Status: ✅ Fully Operational**
 - Server: `http://localhost:3000` (NestJS 11)
